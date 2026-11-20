@@ -1,0 +1,139 @@
+name: Melayurveda CRM CI/CD Pipeline
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================================
+  # 1. Code Quality, Lint & Static Type Checking
+  # ============================================================================
+  lint-and-typecheck:
+    name: Lint & Static Type Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20.x LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Monorepo Dependencies
+        run: npm ci
+
+      - name: Run Monorepo Linting
+        run: npm run lint
+
+  # ============================================================================
+  # 2. Automated Test & SLA Benchmark Suite
+  # ============================================================================
+  test-and-verify:
+    name: Test & Performance SLA Verification
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck]
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: melayurveda_user
+          POSTGRES_PASSWORD: melayurveda_dev_pass_change_in_prod
+          POSTGRES_DB: melayurveda_crm
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      PORT: 4100
+      API_PREFIX: /api/v1
+      DATABASE_URL: postgresql://melayurveda_user:melayurveda_dev_pass_change_in_prod@127.0.0.1:5433/melayurveda_crm?schema=public&connection_limit=20&pool_timeout=30
+      JWT_ACCESS_SECRET: test_jwt_access_secret_key_melayurveda_2026_super_secure
+      JWT_ACCESS_EXPIRATION: 15m
+      JWT_REFRESH_SECRET: test_jwt_refresh_secret_key_melayurveda_2026_rotation_secure
+      JWT_REFRESH_EXPIRATION: 7d
+      COOKIE_SECURE: false
+      COOKIE_SAME_SITE: lax
+      INITIAL_ADMIN_EMAIL: admin@melayurveda.com
+      INITIAL_ADMIN_PASSWORD: Melayurveda@Admin2026!
+      INITIAL_ADMIN_FIRST_NAME: Super
+      INITIAL_ADMIN_LAST_NAME: Admin
+      INITIAL_ADMIN_PHONE: 9876543210
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20.x LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Monorepo Dependencies
+        run: npm ci
+
+      - name: Apply Prisma Schema & Generate Client
+        run: |
+          npx prisma db push --schema=apps/backend/prisma/schema.prisma
+          npx prisma generate --schema=apps/backend/prisma/schema.prisma
+
+      - name: Seed Initial Administrator & Personas
+        run: npx ts-node -P apps/backend/tsconfig.build.json apps/backend/prisma/seed.ts
+
+      - name: Run Backend Unit Tests (Jest)
+        run: npm run test --workspace=apps/backend
+
+      - name: Run Full Multi-Panel End-to-End System Test (Phase 22)
+        run: npm run test:e2e:system
+
+      - name: Run Enterprise Security Penetration Suite (Phase 23)
+        run: npm run test:security
+
+      - name: Run Performance Benchmark & SLA Verification (Phase 24)
+        run: npm run test:perf
+
+  # ============================================================================
+  # 3. Production Frontend & Backend Compilations
+  # ============================================================================
+  build-applications:
+    name: Build Production Artifacts
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20.x LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Monorepo Dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate --schema=apps/backend/prisma/schema.prisma
+
+      - name: Compile Backend NestJS Core
+        run: npm run build --workspace=@melayurveda/backend
+
+      - name: Compile Frontend Next.js 15 Standalone
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+          NEXT_PUBLIC_API_URL: /api/v1
+        run: npm run build --workspace=@melayurveda/frontend

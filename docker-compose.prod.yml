@@ -1,0 +1,147 @@
+# ==============================================================================
+# MELAYURVEDA CRM - ENTERPRISE PRODUCTION DOCKER COMPOSE TOPOLOGY
+# Multi-Container Stack: Nginx Gateway + Next.js Frontend + NestJS API + PostgreSQL 16
+# ==============================================================================
+
+version: '3.8'
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. PostgreSQL 16 Enterprise Database Container
+  # ----------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: melayurveda_postgres_prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - melayurveda_internal_network
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4096M
+        reservations:
+          cpus: '1.0'
+          memory: 2048M
+
+  # ----------------------------------------------------------------------------
+  # 2. NestJS Core REST API Container
+  # ----------------------------------------------------------------------------
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    container_name: melayurveda_backend_prod
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4100
+      API_PREFIX: /api/v1
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public&connection_limit=20&pool_timeout=30
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_ACCESS_EXPIRATION: ${JWT_ACCESS_EXPIRATION:-15m}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-7d}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      COOKIE_SAME_SITE: ${COOKIE_SAME_SITE:-lax}
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://crm.melayurveda.com}
+    expose:
+      - "4100"
+    networks:
+      - melayurveda_internal_network
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 2048M
+        reservations:
+          cpus: '0.5'
+          memory: 1024M
+
+  # ----------------------------------------------------------------------------
+  # 3. Next.js 15 Standalone 5-Panel Frontend Container
+  # ----------------------------------------------------------------------------
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    container_name: melayurveda_frontend_prod
+    restart: always
+    depends_on:
+      - backend
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: "0.0.0.0"
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api/v1}
+      NEXT_PUBLIC_APP_NAME: "Melayurveda CRM"
+      NEXT_PUBLIC_COMPANY_NAME: "MELAYURVEDA INDIA PVT. LTD."
+    expose:
+      - "3000"
+    networks:
+      - melayurveda_internal_network
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 2048M
+        reservations:
+          cpus: '0.5'
+          memory: 1024M
+
+  # ----------------------------------------------------------------------------
+  # 4. Nginx Reverse Proxy, Security Hardening & Edge Gateway
+  # ----------------------------------------------------------------------------
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: melayurveda_gateway_prod
+    restart: always
+    depends_on:
+      - backend
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - melayurveda_internal_network
+      - melayurveda_public_network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1024M
+        reservations:
+          cpus: '0.25'
+          memory: 512M
+
+volumes:
+  postgres_prod_data:
+    name: melayurveda_postgres_prod_data
+
+networks:
+  melayurveda_internal_network:
+    name: melayurveda_internal_network
+    internal: true
+  melayurveda_public_network:
+    name: melayurveda_public_network
+    driver: bridge
