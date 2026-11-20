@@ -3,8 +3,8 @@
 | Bundle # | Bundle Name | Scope / Key Endpoints | Controller | Service | DTOs | Auth Guards | Tests | Swagger | Status |
 |:---:|:---|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | **01** | Authentication | `/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/me` | AuthController | AuthService | LoginDto, AuthResponseDto | JwtAuthGuard | Unit (4/4) + Live E2E (5/5) PASSED | Configured & Documented | **COMPLETE** |
-| **02** | Users & Employees | `/employees`, `/employees/:id`, auto-ID generator | Planned | Planned | Planned | RolesGuard | Planned | Planned | NOT_STARTED |
-| **03** | Roles & Permissions | `/roles`, `/roles/permissions` | Planned | Planned | Planned | PermissionsGuard | Planned | Planned | NOT_STARTED |
+| **02** | Users & Employees | `/employees`, `/employees/:id`, auto-ID generator | UsersController | UsersService | CreateEmployeeDto, UpdateEmployeeDto, ToggleStatusDto | JwtAuthGuard, RolesGuard | Unit (6/6) + Live E2E (8/8) PASSED | Configured & Documented | **COMPLETE** |
+| **03** | Roles & Permissions | `/roles`, `/roles/matrix` | RolesController | N/A (Static metadata & Matrix) | RoleMetadata, PermissionMatrix | JwtAuthGuard, RolesGuard | Live E2E (2/2) PASSED | Configured & Documented | **COMPLETE** |
 | **04** | Lead Sources | `/lead-sources`, webhook ingestion endpoints | Planned | Planned | Planned | RolesGuard | Planned | Planned | NOT_STARTED |
 | **05** | Lead Management | `/leads`, `/leads/manual`, deduplication engine | Planned | Planned | Planned | PrivacyInterceptor | Planned | Planned | NOT_STARTED |
 | **06** | Lead Assignment | `/leads/assign/manual`, `/leads/assign/round-robin` | Planned | Planned | Planned | RolesGuard | Planned | Planned | NOT_STARTED |
