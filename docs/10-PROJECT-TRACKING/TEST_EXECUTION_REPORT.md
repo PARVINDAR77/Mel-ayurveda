@@ -158,10 +158,33 @@
 | Unit: Restock Calculations | Unit | `InventoryService.restock()` | **PASS** | New available = old available + quantity |
 | Unit: Dispatch State Check | Unit | `DispatchService.createShipment()` | **PASS** | Validates order confirmed/billed status |
 
-## 12. Test Plan Roadmap
+## 12. Test Execution Details: Bundle 14 (Executive Dashboards & Analytics Reporting)
+| Test Suite | Scope | Target | Result | Latency |
+|:---|:---|:---|:---:|:---:|
+| Super Admin Master Dashboard | HTTP E2E | `GET /api/v1/analytics/dashboard/admin` | **PASS (200)** | Full lead metrics, source distribution, sales reps |
+| Auto-Resolved Admin Dashboard | HTTP E2E | `GET /api/v1/analytics/dashboard` | **PASS (200)** | Correctly routes to Admin view |
+| Salesperson Pipeline Dashboard | HTTP E2E | `GET /api/v1/analytics/dashboard/sales` | **PASS (200)** | Rep KPIs, calls today, follow-ups agenda |
+| Strict Zero Lead Source Privacy | HTTP E2E | Salesperson dashboard payload | **PASS (ZERO LEAK)** | 0% source, campaign, or marketing metadata |
+| Auto-Resolved Sales Dashboard | HTTP E2E | `GET /api/v1/analytics/dashboard` | **PASS (200)** | Correctly routes to Sales view |
+| Pending Review Triage Dashboard | HTTP E2E | `GET /api/v1/analytics/dashboard/pending` | **PASS (200)** | Queue velocity, SLA bottlenecks, decisions today |
+| Approval Authority Sign-off KPIs | HTTP E2E | `GET /api/v1/analytics/dashboard/approval` | **PASS (200)** | Pending claims, commercial impact, formulations |
+| Management Commercial Dashboard | HTTP E2E | `GET /api/v1/analytics/dashboard/management`| **PASS (200)** | Customers, fulfillment, GST tax liability, inventory |
+| RBAC Guard: Sales accessing Admin | HTTP E2E | Sales -> `/analytics/dashboard/admin` | **PASS (403)** | ForbiddenException |
+| RBAC Guard: Sales accessing Mgmt | HTTP E2E | Sales -> `/analytics/dashboard/management` | **PASS (403)** | ForbiddenException |
+| RBAC Guard: Pending accessing Admin | HTTP E2E | Pending -> `/analytics/dashboard/admin` | **PASS (403)** | ForbiddenException |
+| Unauthenticated Access Defense | HTTP E2E | Anonymous -> `/analytics/dashboard` | **PASS (401)** | UnauthorizedException |
+| Admin Cross-Access Verification | HTTP E2E | Admin accessing all 5 role views | **PASS (200)** | All 5 views accessible |
+| Unit: Admin Dashboard Aggregates | Unit | `AnalyticsService.getAdminDashboard()` | **PASS** | Source distribution & sales team metrics |
+| Unit: Sales Zero Source Invariant | Unit | `AnalyticsService.getSalesDashboard()` | **PASS** | Strict zero source fields verified |
+| Unit: Pending Review Queue Stats | Unit | `AnalyticsService.getPendingReviewDashboard()`| **PASS** | Overdue SLA & decisions breakdown |
+| Unit: Approval Queue & Commercial | Unit | `AnalyticsService.getApprovalDashboard()` | **PASS** | Order value & top product categories |
+| Unit: Management Fulfillment & Tax | Unit | `AnalyticsService.getManagementDashboard()`| **PASS** | Delivery rate, CGST/SGST/IGST totals |
+| Unit: Dynamic Role Dispatcher | Unit | `AnalyticsService.getDashboard()` | **PASS** | Correct delegation per RoleType |
+
+## 13. Test Plan Roadmap
 | Category | Tool | Planned Test Count | Target Pass Rate | Status |
 |:---|:---|:---:|:---:|:---:|
-| Unit Tests (Services & DTOs) | Jest | ~150 tests | 100% | 67 PASSED |
-| API Integration Tests | Supertest | ~80 tests across 15 bundles | 100% | 99 PASSED |
-| Security Penetration Tests | Supertest / Custom | ~25 tests (Source privacy, IDOR) | 100% | 15 PASSED |
+| Unit Tests (Services & DTOs) | Jest | ~150 tests | 100% | 74 PASSED |
+| API Integration Tests | Supertest | ~80 tests across 15 bundles | 100% | 113 PASSED |
+| Security Penetration Tests | Supertest / Custom | ~25 tests (Source privacy, IDOR) | 100% | 18 PASSED |
 | End-to-End User Journeys | Playwright | 12 critical flows | 100% | PLANNED |
