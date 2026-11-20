@@ -2,7 +2,7 @@
 
 | Bundle # | Bundle Name | Scope / Key Endpoints | Controller | Service | DTOs | Auth Guards | Tests | Swagger | Status |
 |:---:|:---|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **01** | Authentication | `/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/me` | Planned | Planned | Planned | JwtAuthGuard | Planned | Planned | NOT_STARTED |
+| **01** | Authentication | `/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/me` | AuthController | AuthService | LoginDto, AuthResponseDto | JwtAuthGuard | Unit (4/4) + Live E2E (5/5) PASSED | Configured & Documented | **COMPLETE** |
 | **02** | Users & Employees | `/employees`, `/employees/:id`, auto-ID generator | Planned | Planned | Planned | RolesGuard | Planned | Planned | NOT_STARTED |
 | **03** | Roles & Permissions | `/roles`, `/roles/permissions` | Planned | Planned | Planned | PermissionsGuard | Planned | Planned | NOT_STARTED |
 | **04** | Lead Sources | `/lead-sources`, webhook ingestion endpoints | Planned | Planned | Planned | RolesGuard | Planned | Planned | NOT_STARTED |
