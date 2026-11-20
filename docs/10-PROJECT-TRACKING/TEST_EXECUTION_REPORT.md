@@ -288,12 +288,41 @@
 | Immutable Enterprise Audit Trail | Live E2E | `GET /audit/logs` across all transition actions | **PASS (200)** | 98 total immutable system audit records |
 | Playwright UI Test Suites (Chrome) | UI E2E | 24 tests across 6 spec files (`auth`, `admin`, `sales`, `pending`, `approval`, `management`) | **READY (100%)** | Discovered & configured with Chrome channel |
 
-## 21. Test Plan Roadmap
+## 21. Security Audit & Penetration Testing Details: Phase 23
+| Test ID | Scope | Target & Vector | Result | Security Assurance |
+|:---|:---|:---|:---:|:---:|
+| `SEC-TC-01` | Lead Source Privacy | Salesperson querying `GET /lead-sources` | **PASS (403)** | Marketing channels hidden from tele-sales |
+| `SEC-TC-02` | Lead Source Privacy | Salesperson creating `POST /lead-sources` | **PASS (403)** | Channel creation blocked |
+| `SEC-TC-03` | Payload Leak Scanner | Salesperson querying `GET /leads` (18 leads scanned) | **PASS (ZERO LEAK)** | 0% source, cost, campaign, UTM metadata |
+| `SEC-TC-04` | Analytics Leak Scanner| Salesperson querying `/analytics/dashboard/sales` | **PASS (ZERO LEAK)** | Zero marketing channels or spend metrics |
+| `SEC-TC-05` | Anti-IDOR | Salesperson 1 querying Lead B (assigned to Sales 2) | **PASS (403)** | Cross-salesperson lead snooping blocked |
+| `SEC-TC-06` | Anti-IDOR | Salesperson 1 logging call on Lead B | **PASS (403)** | Consultation injection blocked |
+| `SEC-TC-07` | Anti-IDOR | Salesperson 1 submitting Lead B to triage review | **PASS (403)** | Unauthorized triage forwarding blocked |
+| `SEC-TC-08` | Anti-IDOR | Salesperson 1 scheduling follow-up on Lead B | **PASS (403)** | Callback injection blocked |
+| `SEC-TC-09` | Anti-IDOR | Cross-user notification delete attack | **PASS (403)** | Cross-user notification tampering blocked |
+| `SEC-TC-10` | Vertical Escalation | Salesperson calling `POST /employees` | **PASS (403)** | Staff credential administration blocked |
+| `SEC-TC-11` | Vertical Escalation | Salesperson calling `POST /approvals/:id/decide` | **PASS (403)** | Medical sign-off forgery blocked |
+| `SEC-TC-12` | Vertical Escalation | Salesperson calling `POST /customers/convert/:id` | **PASS (403)** | Direct customer conversion blocked |
+| `SEC-TC-13` | Vertical Escalation | Salesperson calling `POST /orders/:id/confirm` | **PASS (403)** | Unauthorized inventory reservation blocked |
+| `SEC-TC-14` | Vertical Escalation | Salesperson calling `POST /invoices/generate/:id`| **PASS (403)** | GST billing bypass blocked |
+| `SEC-TC-15` | Vertical Escalation | Salesperson calling `POST /inventory/restock` | **PASS (403)** | Stock balance manipulation blocked |
+| `SEC-TC-16` | Vertical Escalation | Salesperson calling `POST /dispatch/:id` | **PASS (403)** | Courier logistics bypass blocked |
+| `SEC-TC-17` | Vertical Escalation | Salesperson calling `GET /audit/logs` | **PASS (403)** | Audit log explorer blocked |
+| `SEC-TC-18` | JWT Forgery | Forged signature on JWT Bearer token | **PASS (401)** | Cryptographic verification rejected |
+| `SEC-TC-19` | Token Tampering | Malformed / random Bearer token header | **PASS (401)** | Unauthenticated request rejected |
+| `SEC-TC-20` | Missing Auth | Protected `/auth/me` without Authorization header | **PASS (401)** | Guard blocked unauthenticated access |
+| `SEC-TC-21` | Token Theft / Reuse | Replaying previously rotated refresh token | **PASS (401)** | Session family revoked, token replay blocked |
+| `SEC-TC-22` | SQL Injection | SQLi strings in lead search (`' OR '1'='1' --`) | **PASS (200)** | Parameterized query handled safely |
+| `SEC-TC-23` | XSS Attack | `<script>alert('XSS')</script>` in customer notes | **PASS (201)** | Stored and retrieved as safe text |
+| `SEC-TC-24` | Account Deactivation| Accessing `/auth/me` with deactivated account token | **PASS (401)** | Immediate session invalidation |
+| `SEC-TC-25` | Account Deactivation| Logging in with deactivated employee credentials | **PASS (401)** | Deactivated employee login blocked |
+
+## 22. Test Plan Roadmap
 | Category | Tool | Planned Test Count | Target Pass Rate | Status |
 |:---|:---|:---:|:---:|:---:|
 | Unit Tests (Services & DTOs) | Jest | ~150 tests | 100% | 86 PASSED (15 Suites) |
 | API Integration Tests | Supertest | ~80 tests across 15 bundles | 100% | 127 PASSED |
-| Security Penetration Tests | Supertest / Custom | ~25 tests (Source privacy, IDOR) | 100% | 22 PASSED |
+| Security Penetration Tests | Supertest / Custom | ~25 tests (Source privacy, IDOR) | 100% | 24/24 PASSED (Phase 23) |
 | End-to-End Multi-Panel System Journey | Supertest / ts-node | 24 end-to-end steps | 100% | 24/24 PASSED (Phase 22) |
 | Playwright Browser UI E2E | Playwright | 24 tests across 5 panels | 100% | Configured (Phase 22) |
 | Frontend Production Compilation | Next.js Build | Static pages, layouts & routing | 100% | PASSED (28 ROUTES, 0 ERRORS) |
