@@ -1,0 +1,33 @@
+# Melayurveda CRM Implementation Status Tracker
+
+## 1. Master Phase Tracker (Phases 00 to 26)
+
+| Phase | Phase Name | Status | Completed Tasks | Pending Tasks | Next Step |
+|:---|:---|:---:|:---|:---|:---|
+| **Phase 00** | Repository Inspection & Documentation Foundation | **COMPLETE** | Workspace inspected; all 71 markdown architecture documents authored; git repository initialized. | None | Phase 01 sign-off |
+| **Phase 01** | Architecture Blueprint & Database Verification | **COMPLETE** | Verified 5 CRM panels, Lead Lifecycle, Lead Source Privacy, and Prisma Schema. | Stakeholder review | Phase 02 environment setup |
+| **Phase 02** | Project Foundation & Local Environment | **NOT_STARTED** | None | Monorepo setup (Next.js + NestJS), Docker Compose, root scripts | Initialize monorepo packages |
+| **Phase 03** | PostgreSQL & Prisma Schema Engineering | **NOT_STARTED** | Prisma models drafted in docs | Initialize Prisma, create initial migration, verify indexes & constraints | Run initial migration |
+| **Phase 04** | Authentication, Argon2id & Security Guardrails | **NOT_STARTED** | Auth specs documented | Implement Argon2id, JWT strategy, refresh token rotation, login/logout | Bundle 01 Auth API |
+| **Phase 05** | User, Role & Employee API Services | **NOT_STARTED** | Role matrix documented | Bundle 02 (Employees) & Bundle 03 (Roles/Permissions) | Auto-generate MEL-XXX IDs |
+| **Phase 06** | Lead Ingestion & Management APIs | **NOT_STARTED** | Source privacy specs ready | Bundle 04 (Sources) & Bundle 05 (Lead CRUD & Manual Intake) | Implement Lead Privacy DTO |
+| **Phase 07** | Lead Distribution & Assignment Engine | **NOT_STARTED** | Assignment strategies defined | Bundle 06 (Manual & Round-robin distribution) | Assignment history tracking |
+| **Phase 08** | Calling Workflow & Follow-up Scheduler | **NOT_STARTED** | Calling schema defined | Bundle 07 (Call Logs) & Bundle 08 (Follow-up scheduler) | Prevent call log edits |
+| **Phase 09** | Pending Review Queue & Decision API | **NOT_STARTED** | Pending workflow defined | Bundle 09 (Pending submission, triage queue, 4-way decision) | Reviewer claiming lock |
+| **Phase 10** | Final Approval Engine & State Machine | **NOT_STARTED** | Approval checklist defined | Bundle 10 (Approval queue, sign-off, rejection audit) | Enable customer conversion |
+| **Phase 11** | Customer Conversion & Profile API | **NOT_STARTED** | Customer schema defined | Bundle 11 (Convert approved lead to Customer) | Unique MEL-CUST ID |
+| **Phase 12** | Products, Disease Categories & Orders | **NOT_STARTED** | Catalog specs defined | Bundle 12 (Ayurvedic formulations, draft order, final confirm) | Stock reservation transaction |
+| **Phase 13** | Operations, Invoicing, Inventory & Dispatch | **NOT_STARTED** | GST & logistics specs ready | Bundle 13 (Tax invoice, inventory ledger, courier AWB tracking) | GST calculation |
+| **Phase 14** | Executive Dashboards & Analytics Reporting | **NOT_STARTED** | Panel KPI specs defined | Bundle 14 (5 panel analytics endpoints) | Aggregated queries |
+| **Phase 15** | Notification Bus & Enterprise Audit Logging | **NOT_STARTED** | Audit schema defined | Bundle 15 (In-app notifications, immutable audit log queries) | Interceptor wiring |
+| **Phase 16** | Next.js Design System & Layout Infrastructure | **NOT_STARTED** | Design tokens defined | Tailwind config, fonts, shared layout, sidebar, auth context | Component library |
+| **Phase 17** | Panel 01: Super Admin Frontend | **NOT_STARTED** | Admin UX specs defined | Admin dashboard, employee CRUD, lead assignment UI, source analytics | Hook up to NestJS APIs |
+| **Phase 18** | Panel 02: Salesperson Frontend | **NOT_STARTED** | Sales UX specs defined | Sales dashboard, My Leads table, Calling drawer, Pending submission | Verify source hidden |
+| **Phase 19** | Panel 03: Pending Review Frontend | **NOT_STARTED** | Pending UX specs defined | Pending queue, dossier view, 4-way decision buttons | Real-time queue refresh |
+| **Phase 20** | Panel 04: Approval Authority Frontend | **NOT_STARTED** | Approval UX specs defined | Approval queue, dossier review, Approve/Reject/Send Back | Medical verification |
+| **Phase 21** | Panel 05: Management & Operations Frontend | **NOT_STARTED** | Management UX specs defined | Customer CRM, product catalogue, order flow, billing, dispatch | Order fulfillment |
+| **Phase 22** | End-to-End System Integration Testing | **NOT_STARTED** | E2E scenarios documented | Playwright test execution across all 5 panels | Full lead journey test |
+| **Phase 23** | Security Audit & Penetration Testing | **NOT_STARTED** | Security test matrix ready | OWASP checks, IDOR verification, source privacy leak tests | Security sign-off |
+| **Phase 24** | Performance Profiling & Optimization | **NOT_STARTED** | Performance SLAs defined | Load testing with k6/artillery, query profiling, index optimization | p95 < 200ms verification |
+| **Phase 25** | Production Deployment & CI/CD Pipeline | **NOT_STARTED** | Docker & cloud specs ready | Dockerfiles, GitHub Actions CI/CD, production environment secrets | Deployment dry-run |
+| **Phase 26** | Production Readiness Sign-Off | **NOT_STARTED** | Acceptance criteria defined | Final stakeholder walkthrough, backup drills, handover documentation | Production launch |
