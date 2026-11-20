@@ -248,11 +248,22 @@
 | Clinical Triage Decision History | UI Page | `/pending/history` | **PASS (200)** | Immutable audit table of reviewed submissions |
 | Panel 03 Compilation & Routing | Next.js Build | 18 static routes generated | **PASS (0 ERRORS)** | Static optimization complete |
 
-## 18. Test Plan Roadmap
+## 18. Frontend Test Execution Details: Phase 20 (Panel 04: Approval Authority Frontend)
+| Test Suite | Scope | Target | Result | Latency |
+|:---|:---|:---|:---:|:---:|
+| Approval Verification Dashboard | UI Page | `/approval` | **PASS (200)** | Sign-off KPIs, disease category volume, pending queue preview |
+| Centralized FIFO Approval Queue | UI Page | `/approval/queue` | **PASS (200)** | Queue filters (All, Unclaimed, Claimed), priority badges |
+| Officer Claim Concurrency Lock | UI Action | `Claim` button (`PATCH /approvals/:id/claim`) | **PASS (200)** | Anti-collision claim state active |
+| Medical & Commercial Dossier Drawer | UI Drawer | `Dossier` trigger (`GET /approvals/:id`) | **PASS (200)** | Full clinical details, Panel 03 triage history, call logs |
+| 3-Way Final Sign-Off Modal Workflow | UI Modal | `Sign-Off` modal (`POST /approvals/:id/decide`) | **PASS (200)** | APPROVE (unlocks conversion), REJECT, SEND_BACK |
+| Sign-Off Audit Decision Log | UI Page | `/approval/history` | **PASS (200)** | Immutable audit table of finalized approvals & notes |
+| Panel 04 Compilation & Routing | Next.js Build | 21 static routes generated | **PASS (0 ERRORS)** | Static optimization complete |
+
+## 19. Test Plan Roadmap
 | Category | Tool | Planned Test Count | Target Pass Rate | Status |
 |:---|:---|:---:|:---:|:---:|
 | Unit Tests (Services & DTOs) | Jest | ~150 tests | 100% | 86 PASSED |
 | API Integration Tests | Supertest | ~80 tests across 15 bundles | 100% | 127 PASSED |
 | Security Penetration Tests | Supertest / Custom | ~25 tests (Source privacy, IDOR) | 100% | 22 PASSED |
-| Frontend Production Compilation | Next.js Build | Static pages, layouts & routing | 100% | PASSED (18 ROUTES, 0 ERRORS) |
+| Frontend Production Compilation | Next.js Build | Static pages, layouts & routing | 100% | PASSED (21 ROUTES, 0 ERRORS) |
 | End-to-End User Journeys | Playwright | 12 critical flows | 100% | PLANNED |
