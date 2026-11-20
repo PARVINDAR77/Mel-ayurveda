@@ -52,10 +52,22 @@
 | Duplicate Phone Detection | HTTP E2E | `GET /api/v1/leads/check-duplicate?phone=9876543210` | **PASS (200)** | Duplicate detected |
 | Update Lead by Salesperson | HTTP E2E | `PATCH /api/v1/leads/:id` on assigned lead | **PASS (200)** | Notes updated |
 
-## 5. Test Plan Roadmap
+## 5. Test Execution Details: Bundle 06 (Lead Assignment Engine)
+| Test Suite | Scope | Target | Result | Latency |
+|:---|:---|:---|:---:|:---:|
+| Reject Inactive Assignee | Unit | `LeadAssignmentsService.validateAssignee()` | **PASS** | BadRequestException |
+| Reject Non-Sales Role | Unit | `LeadAssignmentsService.validateAssignee()` | **PASS** | BadRequestException |
+| Manual Single Assignment | HTTP E2E | `POST /api/v1/lead-assignments/assign` | **PASS (201)** | `MEL-LEAD-000103` -> `MEL-SAL-001` |
+| Reassignment with Reason | HTTP E2E | `POST /api/v1/lead-assignments/reassign` | **PASS (201)** | `MEL-LEAD-000103` -> `MEL-SAL-002` |
+| Assignment History Trail | HTTP E2E | `GET /api/v1/lead-assignments/lead/:id` | **PASS (200)** | 2 history records preserved |
+| Automated Round-Robin | HTTP E2E | `POST /api/v1/lead-assignments/distribute/round-robin` | **PASS (200)** | Evenly distributed |
+| Unassigned Intake Queue | HTTP E2E | `GET /api/v1/lead-assignments/unassigned` | **PASS (200)** | Accurate backlog |
+| RBAC Assignment Guard | HTTP E2E | Salesperson attempting lead assignment | **PASS (403)** | Forbidden Guard |
+
+## 6. Test Plan Roadmap
 | Category | Tool | Planned Test Count | Target Pass Rate | Status |
 |:---|:---|:---:|:---:|:---:|
-| Unit Tests (Services & DTOs) | Jest | ~150 tests | 100% | 17 PASSED |
-| API Integration Tests | Supertest | ~80 tests across 15 bundles | 100% | 23 PASSED |
-| Security Penetration Tests | Supertest / Custom | ~25 tests (Source privacy, IDOR) | 100% | 7 PASSED |
+| Unit Tests (Services & DTOs) | Jest | ~150 tests | 100% | 19 PASSED |
+| API Integration Tests | Supertest | ~80 tests across 15 bundles | 100% | 29 PASSED |
+| Security Penetration Tests | Supertest / Custom | ~25 tests (Source privacy, IDOR) | 100% | 9 PASSED |
 | End-to-End User Journeys | Playwright | 12 critical flows | 100% | PLANNED |
