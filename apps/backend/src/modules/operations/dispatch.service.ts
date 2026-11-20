@@ -18,6 +18,58 @@ export class DispatchService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
+   * List all shipments with order, customer, and invoice details
+   */
+  async findAll(page = 1, limit = 20, status?: ShipmentStatus) {
+    const skip = (page - 1) * limit;
+    const where: any = {};
+    if (status) where.status = status;
+
+    const [total, data] = await Promise.all([
+      this.prisma.shipment.count({ where }),
+      this.prisma.shipment.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          order: {
+            include: {
+              customer: {
+                select: {
+                  id: true,
+                  customerCode: true,
+                  fullName: true,
+                  phoneNumber: true,
+                  city: true,
+                  state: true,
+                },
+              },
+              invoice: {
+                select: {
+                  id: true,
+                  invoiceNumber: true,
+                  grandTotal: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  /**
    * Assign courier partner, generate consignment record, and advance order to SHIPPED
    */
   async createShipment(

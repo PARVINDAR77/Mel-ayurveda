@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { DispatchService } from './dispatch.service';
 import { CreateShipmentDto } from './dto/create-shipment.dto';
@@ -7,7 +7,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
-import { RoleType } from '@prisma/client';
+import { RoleType, ShipmentStatus } from '@prisma/client';
 
 @ApiTags('Operations & Courier Dispatch (Bundle 13)')
 @ApiBearerAuth()
@@ -15,6 +15,18 @@ import { RoleType } from '@prisma/client';
 @Controller('dispatch')
 export class DispatchController {
   constructor(private readonly dispatchService: DispatchService) {}
+
+  @Get()
+  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT)
+  @ApiOperation({ summary: 'List all consignment shipments with pagination' })
+  @ApiResponse({ status: 200, description: 'Shipments list returned' })
+  async findAll(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('status') status?: ShipmentStatus,
+  ) {
+    return this.dispatchService.findAll(Number(page) || 1, Number(limit) || 20, status);
+  }
 
   @Post(':orderId')
   @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT)

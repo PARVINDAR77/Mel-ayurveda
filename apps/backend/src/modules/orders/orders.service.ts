@@ -318,6 +318,12 @@ export class OrdersService {
           createdBy: {
             select: { id: true, employeeCode: true, firstName: true, lastName: true },
           },
+          invoice: {
+            select: { id: true, invoiceNumber: true, grandTotal: true },
+          },
+          shipment: {
+            select: { id: true, trackingAwb: true, courierPartner: true, status: true },
+          },
         },
       }),
     ]);
