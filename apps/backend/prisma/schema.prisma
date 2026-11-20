@@ -362,6 +362,8 @@ model Customer {
   convertedFrom   Lead?      @relation(fields: [convertedFromId], references: [id])
   orders          Order[]
 
+  @@index([createdAt])
+  @@index([fullName])
   @@map("customers")
 }
 
@@ -451,6 +453,7 @@ model Order {
 
   @@index([customerId])
   @@index([status])
+  @@index([createdAt])
   @@map("orders")
 }
 
@@ -465,6 +468,8 @@ model OrderItem {
   order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product     Product  @relation(fields: [productId], references: [id])
 
+  @@index([orderId])
+  @@index([productId])
   @@map("order_items")
 }
 
@@ -481,6 +486,7 @@ model Invoice {
 
   order         Order     @relation(fields: [orderId], references: [id])
 
+  @@index([issuedAt])
   @@map("invoices")
 }
 
@@ -517,6 +523,8 @@ model InventoryTransaction {
 
   inventory   Inventory       @relation(fields: [inventoryId], references: [id])
 
+  @@index([inventoryId, createdAt])
+  @@index([type])
   @@map("inventory_transactions")
 }
 
@@ -543,6 +551,7 @@ model Shipment {
 
   order           Order          @relation(fields: [orderId], references: [id])
 
+  @@index([status, createdAt])
   @@map("shipments")
 }
 
