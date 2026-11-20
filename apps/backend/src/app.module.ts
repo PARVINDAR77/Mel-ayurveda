@@ -10,6 +10,7 @@ import { LeadsModule } from './modules/leads/leads.module';
 import { LeadAssignmentsModule } from './modules/lead-assignments/lead-assignments.module';
 import { CallingModule } from './modules/calling/calling.module';
 import { FollowUpsModule } from './modules/follow-ups/follow-ups.module';
+import { PendingReviewsModule } from './modules/pending-reviews/pending-reviews.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { FollowUpsModule } from './modules/follow-ups/follow-ups.module';
     LeadAssignmentsModule,
     CallingModule,
     FollowUpsModule,
+    PendingReviewsModule,
   ],
 })
 export class AppModule {}
