@@ -18,7 +18,7 @@ export class PendingQueueQueryDto {
   @IsEnum(PendingQueueFilter)
   filter?: PendingQueueFilter;
 
-  @ApiPropertyOptional({ description: 'Filter by search term in patient name, phone, or lead code' })
+  @ApiPropertyOptional({ description: 'Filter by search term in customer name, phone, or lead code' })
   @IsOptional()
   @IsString()
   search?: string;

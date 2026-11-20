@@ -97,7 +97,7 @@ export default function MyAssignedLeadsPage() {
     },
     {
       key: 'customerName',
-      header: 'Patient Name',
+      header: 'Customer Name',
       render: (item) => (
         <div>
           <span className="font-semibold text-slate-900">{item.customerName}</span>
@@ -109,9 +109,9 @@ export default function MyAssignedLeadsPage() {
     },
     {
       key: 'productInterest',
-      header: 'Treatment Interest',
+      header: 'Medicine / Product Interest',
       render: (item) => (
-        <span className="font-medium text-slate-700">{item.productInterest || 'General Consultation'}</span>
+        <span className="font-medium text-slate-700">{item.productInterest || 'General Product Inquiry'}</span>
       ),
     },
     {
@@ -163,10 +163,10 @@ export default function MyAssignedLeadsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
           <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-            My Assigned Patient Leads
+            My Assigned Product Leads
           </h2>
           <p className="text-xs text-slate-500">
-            Patients allocated to your consultation desk. All marketing source tags are strictly quarantined.
+            Customer product inquiries allocated to your sales desk. All marketing source tags are strictly quarantined.
           </p>
         </div>
 
@@ -215,7 +215,7 @@ export default function MyAssignedLeadsPage() {
         columns={columns}
         data={leads}
         searchKey="customerName"
-        searchPlaceholder="Search assigned patients by name or phone..."
+        searchPlaceholder="Search assigned customer leads by name or phone..."
         isLoading={isLoading}
         emptyMessage="No assigned leads in your portfolio."
       />
@@ -224,12 +224,12 @@ export default function MyAssignedLeadsPage() {
       <Modal
         isOpen={isManualModalOpen}
         onClose={() => setIsManualModalOpen(false)}
-        title="Create Inbound Patient Lead"
-        description="Register a walk-in or incoming phone inquiry. Automatically allocated to your desk."
+        title="Create Inbound Product Lead"
+        description="Register a walk-in or incoming phone product inquiry. Automatically allocated to your desk."
       >
         <form onSubmit={handleCreateManualLead} className="space-y-3.5">
           <Input
-            label="Patient Full Name"
+            label="Customer Full Name"
             value={manualForm.customerName}
             onChange={(e) => setManualForm({ ...manualForm, customerName: e.target.value })}
             placeholder="e.g. Ramesh Patel"
@@ -304,13 +304,13 @@ export default function MyAssignedLeadsPage() {
 
           <div className="space-y-1">
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
-              Initial Consultation Notes
+              Customer Inquiry & Product Notes
             </label>
             <textarea
               value={manualForm.notes}
               onChange={(e) => setManualForm({ ...manualForm, notes: e.target.value })}
               rows={2}
-              placeholder="Patient reported symptoms, age, prior treatments..."
+              placeholder="Customer requirements, preferred medicines/formulations, dosage inquiries..."
               className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-forest-700"
             />
           </div>

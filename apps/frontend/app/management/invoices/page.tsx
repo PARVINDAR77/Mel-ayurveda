@@ -333,7 +333,7 @@ export default function GSTInvoicingPage() {
             <div className="grid grid-cols-2 gap-4 border-b border-slate-200 pb-4 text-xs">
               <div>
                 <span className="font-bold text-slate-700 uppercase tracking-wider text-[10px] block mb-1">
-                  Bill To / Patient:
+                  Bill To / Customer:
                 </span>
                 <p className="font-semibold text-slate-900">{invoiceDetail.order?.customer?.fullName}</p>
                 <p className="text-slate-500 font-mono text-[11px] mt-0.5">

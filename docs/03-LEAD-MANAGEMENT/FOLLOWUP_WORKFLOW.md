@@ -1,7 +1,7 @@
 # Follow-Up Workflow Specification
 
 ## 1. Follow-Up Lifecycle
-Follow-ups ensure that prospective patients who request additional consultation time or callbacks are contacted reliably without leads slipping through the cracks.
+Follow-ups ensure that prospective customers who request additional consultation time or callbacks are contacted reliably without leads slipping through the cracks.
 
 ```mermaid
 flowchart LR

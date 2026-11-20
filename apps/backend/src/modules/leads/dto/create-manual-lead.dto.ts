@@ -13,7 +13,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { LeadPriority } from '@prisma/client';
 
 export class CreateManualLeadDto {
-  @ApiProperty({ example: 'Rajesh Patel', description: 'Patient / Prospect full name' })
+  @ApiProperty({ example: 'Rajesh Patel', description: 'Customer / Prospect full name' })
   @IsString()
   @IsNotEmpty({ message: 'Customer name is required' })
   @MinLength(2)

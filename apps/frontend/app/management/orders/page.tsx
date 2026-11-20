@@ -52,7 +52,7 @@ export default function FormulationOrdersPage() {
 
   // Cancel Order Modal state
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
-  const [cancelReason, setCancelReason] = useState('Patient requested cancellation');
+  const [cancelReason, setCancelReason] = useState('Customer requested cancellation');
   const [isCancelling, setIsCancelling] = useState(false);
 
   // Action Loading state
@@ -408,10 +408,10 @@ export default function FormulationOrdersPage() {
             <Badge variant="role">Formulation Orders</Badge>
           </div>
           <h2 className="mt-1 text-2xl font-black text-slate-900 tracking-tight">
-            Patient Formulation Orders & Inventory Allocation
+            Ayurvedic Medicine & Product Orders
           </h2>
           <p className="text-xs text-slate-500">
-            Compile sales drafts with customized Ayurvedic regimens, atomically reserve warehouse stock on confirmation, and generate GST invoices.
+            Compile customer sales drafts with Ayurvedic medicines, atomically reserve warehouse stock on confirmation, and generate GST invoices.
           </p>
         </div>
 
@@ -701,8 +701,8 @@ export default function FormulationOrdersPage() {
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        title="Create Patient Formulation Draft Order"
-        description="Select verified customer, attach prescribed Ayurvedic items, and specify payment mode."
+        title="Create Medicine & Product Draft Order"
+        description="Select verified customer, attach Ayurvedic medicines & products, and specify payment mode."
         maxWidth="lg"
       >
         <form onSubmit={handleCreateDraftSubmit} className="space-y-4 text-xs">
@@ -855,7 +855,7 @@ export default function FormulationOrdersPage() {
               required
               value={cancelReason}
               onChange={(e) => setCancelReason(e.target.value)}
-              placeholder="e.g. Patient refused treatment, delivery unserviceable..."
+              placeholder="e.g. Customer cancelled order, delivery unserviceable..."
               className="w-full rounded-md border border-slate-300 bg-white p-2 text-xs text-slate-900 focus:border-red-600 focus:outline-none"
             />
           </div>

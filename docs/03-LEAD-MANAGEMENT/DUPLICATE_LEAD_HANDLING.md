@@ -16,7 +16,7 @@ When a newly ingested lead matches an existing phone number:
 - If the existing lead was created or contacted within the past 30 days and is currently `ASSIGNED`, `CONTACTED`, `FOLLOW_UP_REQUIRED`, or `INTERESTED`:
   - The incoming inquiry is **NOT** assigned to a new salesperson.
   - An entry is logged in `lead_duplicate_attempts` linking the new inquiry metadata to the original lead.
-  - The currently assigned salesperson receives an in-app notification: *"Patient re-engaged via [Channel]"*.
+  - The currently assigned salesperson receives an in-app notification: *"Customer re-engaged via [Channel]"*.
 
 ### Policy B: Stale Lead (Older than 30 Days & Terminal State)
 - If the previous lead is in a terminal state (`NOT_INTERESTED`, `REJECTED`) or inactive for > 60 days:

@@ -43,7 +43,7 @@ Every required system invariant—including **Five Role-Based CRM Panels**, **10
 
 ### Panel 03: Pending Leads Panel (\`MEL-PND-XXX\`)
 - **Document**: [PENDING_PANEL.md](file:///D:/Melayurveda/docs/02-USER-ROLES/PENDING_PANEL.md)
-- **Primary Function**: Intermediate clinical quality audit and dispute resolution. Reviewers claim pending leads (\`UNDER_REVIEW\`), examine consultation trails, re-contact patients if needed, and execute a 4-way decision: \`APPROVE\`, \`REJECT\`, \`REQUEST_FOLLOW_UP\`, or \`SEND_BACK\`.
+- **Primary Function**: Intermediate clinical quality audit and dispute resolution. Reviewers claim pending leads (\`UNDER_REVIEW\`), examine consultation trails, re-contact customers if needed, and execute a 4-way decision: \`APPROVE\`, \`REJECT\`, \`REQUEST_FOLLOW_UP\`, or \`SEND_BACK\`.
 
 ### Panel 04: Approval Panel (\`MEL-APR-XXX\`)
 - **Document**: [APPROVAL_PANEL.md](file:///D:/Melayurveda/docs/02-USER-ROLES/APPROVAL_PANEL.md)
@@ -64,7 +64,7 @@ stateDiagram-v2
     ASSIGNED --> CONTACTED: First Calling Attempt
     CONTACTED --> FOLLOW_UP_REQUIRED: Busy / Callback Scheduled
     FOLLOW_UP_REQUIRED --> CONTACTED: Callback Executed
-    CONTACTED --> INTERESTED: Patient Wants Regimen
+    CONTACTED --> INTERESTED: Customer Wants Regimen
     CONTACTED --> NOT_INTERESTED: Prospect Declines
     CONTACTED --> INVALID_NUMBER: Phone Disconnected
     CONTACTED --> REJECTED: Disqualified / Ineligible
@@ -113,7 +113,7 @@ stateDiagram-v2
   9. \`FollowUp\` (Scheduled callbacks with overdue alerts)
   10. \`PendingReview\` (Quality audit queue and dossiers)
   11. \`ApprovalRequest\` (Final medical/commercial approvals)
-  12. \`Customer\` (Converted patient records)
+  12. \`Customer\` (Converted customer records)
   13. \`ProductCategory\` (Ayurvedic therapeutic domains)
   14. \`Product\` (Formulations, SKUs, pricing, GST rates)
   15. \`Order\` (Sales drafts and confirmed purchases)

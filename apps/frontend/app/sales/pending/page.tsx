@@ -23,7 +23,7 @@ function PendingSubmissionsContent() {
 
   const [leads, setLeads] = useState<any[]>([]);
   const [selectedLeadId, setSelectedLeadId] = useState<string>(preselectedLeadId || '');
-  const [reason, setReason] = useState('High intent patient qualified for clinical formulation');
+  const [reason, setReason] = useState('High intent customer qualified for product formulation');
   const [salesNotes, setSalesNotes] = useState('');
   const [isLoadingLeads, setIsLoadingLeads] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -91,10 +91,10 @@ function PendingSubmissionsContent() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
           <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-            Submit Qualified Patient to Clinical Review
+            Submit Customer Lead for Product Verification
           </h2>
           <p className="text-xs text-slate-500">
-            Forward consulted patients to Panel 03 Pending Review queue for quality verification and medical validation.
+            Forward customer product inquiries to Panel 03 Pending Review queue for formulation, pricing, and order verification.
           </p>
         </div>
 
@@ -135,17 +135,17 @@ function PendingSubmissionsContent() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Send className="h-4 w-4 text-forest-800" />
-            Clinical Triage Submission Form
+            Product & Order Verification Form
           </CardTitle>
           <CardDescription>
-            Provide consultation assessment for the Panel 03 reviewing team
+            Provide inquiry and product recommendation details for the Panel 03 reviewing team
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmitReview} className="space-y-4">
             <div className="space-y-1">
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
-                Select Consulted Patient Lead
+                Select Consulted Customer Lead
               </label>
               {isLoadingLeads ? (
                 <div className="text-xs text-slate-400 py-2">Loading eligible leads...</div>
@@ -171,22 +171,22 @@ function PendingSubmissionsContent() {
             </div>
 
             <Input
-              label="Triage Justification / Medical Reason"
+              label="Verification Justification / Product Regimen"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="e.g. Confirmed arthritis diagnosis, requested 60-day formulation"
+              placeholder="e.g. Confirmed joint pain relief kit, requested 60-day formulation course"
               required
             />
 
             <div className="space-y-1">
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
-                Consultant Clinical Notes
+                Consultant Product & Order Notes
               </label>
               <textarea
                 value={salesNotes}
                 onChange={(e) => setSalesNotes(e.target.value)}
                 rows={4}
-                placeholder="Include medical history, symptoms, agreed pricing/terms, and any special clinical considerations..."
+                placeholder="Include customer requirements, recommended medicines/kits, agreed pricing/terms..."
                 className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-forest-700"
                 required
               />

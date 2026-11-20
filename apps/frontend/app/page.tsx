@@ -83,11 +83,11 @@ export default function HomePage() {
           Enterprise Ayurvedic CRM • 5 Panels Active
         </Badge>
         <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-slate-900 leading-tight">
-          Clinical Healthcare & Patient Lead Operations System
+          Ayurvedic Medicines & Product Order Operations System
         </h1>
         <p className="mt-4 max-w-2xl text-base text-slate-600 leading-relaxed">
           MELAYURVEDA INDIA PVT. LTD. enterprise lead-to-delivery system. Featuring strict lead
-          source privacy quarantine, immutable calling audit trails, multi-gate clinical reviews,
+          source privacy quarantine, immutable calling audit trails, multi-gate product reviews,
           GST billing, and courier dispatch.
         </p>
 

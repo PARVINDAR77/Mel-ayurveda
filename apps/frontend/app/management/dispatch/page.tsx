@@ -434,7 +434,7 @@ export default function CourierDispatchPage() {
             >
               <option value="IN_TRANSIT">IN_TRANSIT - In transit through hub</option>
               <option value="DELIVERED">
-                DELIVERED - Successfully handed to patient (Fulfills order & payment)
+                DELIVERED - Successfully delivered to customer (Fulfills order & payment)
               </option>
               <option value="RTO">
                 RTO - Return to Origin / Refused (Restocks reserved warehouse stock)

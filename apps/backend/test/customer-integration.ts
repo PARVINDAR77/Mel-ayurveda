@@ -51,7 +51,7 @@ async function runCustomerIntegrationTest() {
     console.log(`- Authenticated: Admin, Ramesh (Sales), Priya (Pending), Amit (Approval), Neha (${nehaLogin.body.user.employeeCode} - Management)`);
 
     // 2. Create a test lead
-    console.log('\n2. Creating a test patient lead assigned to Ramesh...');
+    console.log('\n2. Creating a test customer lead assigned to Ramesh...');
     const phone = '99' + Math.floor(10000000 + Math.random() * 90000000);
     const leadRes = await request(server)
       .post('/api/v1/leads/manual')
@@ -89,7 +89,7 @@ async function runCustomerIntegrationTest() {
         leadId: lead.id,
         callOutcome: 'INTERESTED',
         durationSeconds: 150,
-        notes: 'Patient confirmed package and pricing.',
+        notes: 'Customer confirmed package and pricing.',
       });
 
     // Submit to Pending Review

@@ -19,7 +19,7 @@ test.describe('Panel 05: Management & Operations Frontend', () => {
 
   test('customer crm renders customer listing, approved lead converter, and dossier drawer', async ({ page }) => {
     await page.goto('/management/customers');
-    await expect(page.locator('text=Patient Customer Profiles & Conversion Engine')).toBeVisible();
+    await expect(page.locator('text=Customer Profiles & Conversion Engine')).toBeVisible();
     await expect(page.locator('text=Convert Approved Lead')).toBeVisible();
   });
 
@@ -31,7 +31,7 @@ test.describe('Panel 05: Management & Operations Frontend', () => {
 
   test('formulation orders page renders draft orders, confirmation, and stock reservation', async ({ page }) => {
     await page.goto('/management/orders');
-    await expect(page.locator('text=Patient Formulation Orders & Inventory Allocation')).toBeVisible();
+    await expect(page.locator('text=Ayurvedic Medicine & Product Orders')).toBeVisible();
     await expect(page.locator('text=New Draft Order')).toBeVisible();
   });
 

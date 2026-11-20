@@ -15,7 +15,7 @@ test.describe('Panel 01: Super Admin Master Frontend', () => {
 
     // Verify executive KPI cards
     await expect(page.locator('text=Total System Leads')).toBeVisible();
-    await expect(page.locator('text=Converted Patients')).toBeVisible();
+    await expect(page.locator('text=Converted Customers')).toBeVisible();
     await expect(page.locator('text=Gross Sales Volume')).toBeVisible();
   });
 

@@ -47,7 +47,7 @@ async function runPendingReviewIntegrationTest() {
     console.log(`- Personas authenticated: Admin, Ramesh (${rameshLogin.body.user.employeeCode}), Suresh, Priya (${priyaLogin.body.user.employeeCode})`);
 
     // 2. Create 2 test leads assigned to Ramesh Patel
-    console.log('\n2. Creating 2 test patient leads assigned to Ramesh...');
+    console.log('\n2. Creating 2 test customer leads assigned to Ramesh...');
     const phoneA = '97' + Math.floor(10000000 + Math.random() * 90000000);
     const phoneB = '97' + Math.floor(10000000 + Math.random() * 90000000);
 
@@ -100,7 +100,7 @@ async function runPendingReviewIntegrationTest() {
       .send({
         leadId: leadA.id,
         reason: 'Chronic multi-morbidity: Liver sensitivity with osteoarthritis',
-        salesNotes: 'Patient cannot take standard guggulu formulations. Needs clinical verification.',
+        salesNotes: 'Customer cannot take standard guggulu formulations. Needs formulation verification.',
       });
 
     console.log(`- Submit A status: HTTP ${submitARes.status}, Lead State: ${submitARes.body.leadStatus}`);
@@ -155,7 +155,7 @@ async function runPendingReviewIntegrationTest() {
       .set('Authorization', `Bearer ${priyaToken}`);
 
     console.log(`- Dossier returned: HTTP ${dossierRes.status}`);
-    console.log(`  Patient: ${dossierRes.body.lead.customerName}, Submitter: ${dossierRes.body.submittedBy.firstName} (${dossierRes.body.submittedBy.employeeCode})`);
+    console.log(`  Customer: ${dossierRes.body.lead.customerName}, Submitter: ${dossierRes.body.submittedBy.firstName} (${dossierRes.body.submittedBy.employeeCode})`);
     console.log(`  Reason: ${dossierRes.body.reason}`);
     if (dossierRes.status !== 200 || !dossierRes.body.lead) {
       throw new Error('Dossier retrieval verification failed');
@@ -211,7 +211,7 @@ async function runPendingReviewIntegrationTest() {
       .set('Authorization', `Bearer ${rameshToken}`)
       .send({
         leadId: leadB.id,
-        reason: 'Patient requests 40% discount for 6-month diabetic regimen',
+        reason: 'Customer requests 40% discount for 6-month diabetic regimen',
       });
     const reviewBId = submitBRes.body.review.id;
 

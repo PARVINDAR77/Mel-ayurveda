@@ -78,7 +78,7 @@ async function runFullSystemE2ETest() {
     // -------------------------------------------------------------------------
     // STEP 2: Lead Ingestion & Duplicate Phone Defense
     // -------------------------------------------------------------------------
-    console.log('\n--- STEP 2: Patient Lead Ingestion & Anti-Duplicate Collision Guard ---');
+    console.log('\n--- STEP 2: Customer Lead Ingestion & Anti-Duplicate Collision Guard ---');
     const uniquePhone = `982${Math.floor(1000000 + Math.random() * 9000000)}`;
 
     // 2.1 Fetch a valid marketing source as Super Admin
@@ -90,7 +90,7 @@ async function runFullSystemE2ETest() {
     }
     const leadSourceId = sourcesRes.body[0].id;
 
-    // 2.2 Create Ingested Patient Lead
+    // 2.2 Create Ingested Customer Lead
     const leadRes = await request(server)
       .post('/api/v1/leads/manual')
       .set('Authorization', `Bearer ${adminToken}`)
@@ -105,7 +105,7 @@ async function runFullSystemE2ETest() {
     if (leadRes.status !== 201) throw new Error(`Lead creation failed: ${leadRes.status} ${JSON.stringify(leadRes.body)}`);
     const leadId = leadRes.body.id;
     const leadCode = leadRes.body.leadCode;
-    recordPass(`Patient Lead ${leadCode} ingested with status NEW (Phone: ${uniquePhone})`);
+    recordPass(`Customer Lead ${leadCode} ingested with status NEW (Phone: ${uniquePhone})`);
 
     // 2.3 Duplicate Phone Defense Verification via /leads/check-duplicate
     const dupRes = await request(server)
@@ -181,7 +181,7 @@ async function runFullSystemE2ETest() {
         leadId,
         callOutcome: 'INTERESTED',
         durationSeconds: 245,
-        notes: 'Patient suffering from chronic knee arthritis for 2 years. Recommended 60-day Artho-Care dosage.',
+        notes: 'Customer inquiring for chronic knee joint ache for 2 years. Recommended 60-day Artho-Care dosage.',
       });
     if (callRes.status !== 201) throw new Error(`Call logging failed: ${callRes.status}`);
     recordPass('Consultation call logged (245s, INTERESTED). Lead status advanced to CONTACTED');
@@ -193,7 +193,7 @@ async function runFullSystemE2ETest() {
       .send({
         leadId,
         reason: 'DOSAGE_VERIFICATION',
-        salesNotes: 'Verified patient medical history; dosage parameters require senior Ayurvedic doctor review.',
+        salesNotes: 'Verified customer medicine interest; dosage parameters require senior Ayurvedic doctor review.',
       });
     if (submitReviewRes.status !== 201) {
       throw new Error(`Review submission failed: ${submitReviewRes.status} ${JSON.stringify(submitReviewRes.body)}`);
@@ -220,7 +220,7 @@ async function runFullSystemE2ETest() {
       .set('Authorization', `Bearer ${pndToken}`)
       .send({
         decision: 'APPROVE',
-        reviewerNotes: 'Clinical indications confirmed. Patient cleared for formal commercial sign-off.',
+        reviewerNotes: 'Formulation indications confirmed. Customer cleared for formal commercial sign-off.',
       });
     if (decideReviewRes.status !== 200 && decideReviewRes.status !== 201) {
       throw new Error(`Review decision failed: ${decideReviewRes.status}`);

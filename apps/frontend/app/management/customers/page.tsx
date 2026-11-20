@@ -288,10 +288,10 @@ export default function CustomerCRMPage() {
             <Badge variant="role">Customer CRM</Badge>
           </div>
           <h2 className="mt-1 text-2xl font-black text-slate-900 tracking-tight">
-            Patient Customer Profiles & Conversion Engine
+            Customer Profiles & Conversion Engine
           </h2>
           <p className="text-xs text-slate-500">
-            Convert medically approved patient leads into permanent customer records with lifetime clinical order history.
+            Convert approved customer leads into permanent customer records with lifetime order & product history.
           </p>
         </div>
 
@@ -540,8 +540,8 @@ export default function CustomerCRMPage() {
       <Modal
         isOpen={isConvertModalOpen}
         onClose={() => setIsConvertModalOpen(false)}
-        title="Convert Approved Patient Lead to Customer"
-        description="Select a medically signed-off lead to establish their permanent customer profile."
+        title="Convert Approved Lead to Customer"
+        description="Select an approved product lead to establish their permanent customer profile."
         maxWidth="md"
       >
         <form onSubmit={handleConvertSubmit} className="space-y-4 text-xs">
@@ -616,12 +616,12 @@ export default function CustomerCRMPage() {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Clinical Treatment Notes</label>
+                <label className="block font-semibold text-slate-700 mb-1">Product & Regimen Notes</label>
                 <input
                   type="text"
                   value={convertNotes}
                   onChange={(e) => setConvertNotes(e.target.value)}
-                  placeholder="Ayurvedic regimen remarks, patient preferences..."
+                  placeholder="Ayurvedic medicine remarks, customer preferences..."
                   className="w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 focus:border-forest-600 focus:outline-none"
                 />
               </div>

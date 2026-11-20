@@ -34,7 +34,7 @@
 - **Direct Merchant Gateway Settlement**: The CRM captures payment records, transaction reference IDs, and payment statuses (UPI, COD, NetBanking, Card), but does not act as an automated payment processing merchant aggregator.
 - **Automated Medical Diagnosis / AI Prescriptions**: In strict compliance with Ayush Ministry regulations, the CRM does not generate automated health claims or clinical prescriptions. All treatment mapping is human-directed.
 - **Third-Party Telephony Hardware Switchboards**: The CRM provides software-level call outcome recording and click-to-dial tel-link protocols; direct integration with proprietary PBX PRI hardware lines is out-of-scope for the primary release.
-- **Public Patient Portal**: The system is an internal enterprise operations CRM, not an external patient-facing self-service app.
+- **Public Customer Portal**: The system is an internal enterprise operations CRM, not an external customer-facing self-service app.
 
 ## 3. Project Assumptions & Dependencies
 - Deployment environment supports Docker 24+ and Node.js 20+ runtime.

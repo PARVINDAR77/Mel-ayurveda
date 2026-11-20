@@ -109,7 +109,7 @@ export default function PendingReviewDashboardPage() {
                 {data.queue.overdueReviewsCount} Review{data.queue.overdueReviewsCount > 1 ? 's' : ''} Exceeding 24h SLA!
               </h4>
               <p className="text-xs text-red-700 mt-0.5">
-                These patient submissions were forwarded over 24 hours ago and require immediate clinical assessment.
+                These customer lead submissions were forwarded over 24 hours ago and require immediate product verification.
               </p>
             </div>
           </div>
@@ -251,7 +251,7 @@ export default function PendingReviewDashboardPage() {
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider">
                   <tr>
                     <th className="px-3 py-3">Lead Code</th>
-                    <th className="px-3 py-3">Patient Name</th>
+                    <th className="px-3 py-3">Customer Name</th>
                     <th className="px-3 py-3">Consultant Reason</th>
                     <th className="px-3 py-3">Priority</th>
                     <th className="px-3 py-3">Submitted</th>
@@ -262,7 +262,7 @@ export default function PendingReviewDashboardPage() {
                   {isLoading ? (
                     <tr>
                       <td colSpan={6} className="py-8 text-center text-slate-400">
-                        Loading triage queue...
+                        Loading verification queue...
                       </td>
                     </tr>
                   ) : queue.length === 0 ? (
@@ -278,7 +278,7 @@ export default function PendingReviewDashboardPage() {
                           {item.lead?.leadCode || item.leadId?.slice(0, 8)}
                         </td>
                         <td className="px-3 py-2.5 font-semibold text-slate-900">
-                          {item.lead?.customerName || 'Patient'}
+                          {item.lead?.customerName || 'Customer'}
                         </td>
                         <td className="px-3 py-2.5 text-slate-600 truncate max-w-[200px]">
                           {item.reason}

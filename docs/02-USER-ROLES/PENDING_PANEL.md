@@ -21,7 +21,7 @@ The **Pending Leads Panel** serves as the intermediate triage, quality control, 
 
 ### 2.3 Comprehensive Audit Dossier
 Clicking "Review" presents the full lead dossier:
-- **Patient Profile**: Contact details, geographic location, health inquiries.
+- **Customer Profile**: Contact details, geographic location, health inquiries.
 - **Consultation Trail**: Complete chronological call logs created by the original salesperson.
 - **Submission Context**: Salesperson's stated reason, consultation summary, and proposed Ayurvedic regimen.
 - **Secondary Contact Facility**: Interface allowing the pending reviewer to place an audit verification call and log secondary call notes.
@@ -31,4 +31,4 @@ The reviewer must execute one of four strictly audited decisions:
 1. **APPROVE (Forward to Approval Queue)**: Lead meets quality and clinical standards; forwards to Panel 04 with status `APPROVAL_REQUESTED`.
 2. **REJECT (Permanent Disqualification)**: Lead is invalid, non-responsive, or disqualified; requires detailed rejection category and rationale. Status -> `REJECTED`.
 3. **REQUEST_FOLLOW_UP**: Reviewer notes missing clinical details; lead returned to salesperson with specific follow-up instructions. Status -> `FOLLOW_UP_REQUIRED`.
-4. **SEND_BACK**: Lead consultation had flaws or missing patient consent; returned to salesperson's active workspace with corrective feedback. Status -> `CONTACTED`.
+4. **SEND_BACK**: Lead consultation had flaws or missing customer consent; returned to salesperson's active workspace with corrective feedback. Status -> `CONTACTED`.

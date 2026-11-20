@@ -69,7 +69,7 @@ export default function SalesDashboardPage() {
             Consultant Calling Dashboard
           </h2>
           <p className="text-xs text-slate-500">
-            Assigned patient consultations, daily calling targets, and scheduled clinical follow-ups.
+            Assigned customer inquiries, daily calling targets, and scheduled product follow-ups.
           </p>
         </div>
 
@@ -171,7 +171,7 @@ export default function SalesDashboardPage() {
         <StatCard
           title="Closing Conversion"
           value={`${data?.pipeline?.conversionRate ?? 0}%`}
-          subtitle={`${data?.pipeline?.convertedLeads ?? 0} patients converted`}
+          subtitle={`${data?.pipeline?.convertedLeads ?? 0} customers converted`}
           icon={TrendingUp}
           colorTheme="gold"
         />
@@ -188,7 +188,7 @@ export default function SalesDashboardPage() {
                 View All
               </Link>
             </div>
-            <CardDescription>Status breakdown of your assigned patient leads</CardDescription>
+            <CardDescription>Status breakdown of your assigned customer leads</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between py-1.5 border-b border-slate-100 text-xs">
@@ -204,7 +204,7 @@ export default function SalesDashboardPage() {
               <Badge variant="warning">{data?.pipeline?.followUpRequiredLeads ?? 0}</Badge>
             </div>
             <div className="flex items-center justify-between py-1.5 border-b border-slate-100 text-xs">
-              <span className="font-medium text-slate-700">Submitted to Clinical Review</span>
+              <span className="font-medium text-slate-700">Submitted to Product Review</span>
               <Badge variant="warning">{data?.pipeline?.pendingReviewLeads ?? 0}</Badge>
             </div>
             <div className="flex items-center justify-between py-1.5 border-b border-slate-100 text-xs">
@@ -225,7 +225,7 @@ export default function SalesDashboardPage() {
               <div>
                 <CardTitle>Priority Calling Queue</CardTitle>
                 <CardDescription>
-                  Urgent and high-priority assigned patients requiring consultation
+                  Urgent and high-priority assigned customer inquiries requiring product consultation
                 </CardDescription>
               </div>
               <Link href="/sales/calling">
@@ -241,9 +241,9 @@ export default function SalesDashboardPage() {
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider">
                   <tr>
                     <th className="px-3 py-3">Lead Code</th>
-                    <th className="px-3 py-3">Patient Name</th>
+                    <th className="px-3 py-3">Customer Name</th>
                     <th className="px-3 py-3">Phone</th>
-                    <th className="px-3 py-3">Interest / Condition</th>
+                    <th className="px-3 py-3">Medicine / Product Interest</th>
                     <th className="px-3 py-3">Priority</th>
                     <th className="px-3 py-3">Status</th>
                     <th className="px-3 py-3 text-right">Action</th>

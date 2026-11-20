@@ -135,10 +135,10 @@ function CallingWorkspaceContent() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
           <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-            Consultant Calling Workspace
+            Product Sales & Calling Workspace
           </h2>
           <p className="text-xs text-slate-500">
-            Dialing queue, patient clinical dossier, immutable consultation logging, and follow-up scheduler.
+            Dialing queue, customer inquiry details, immutable consultation logging, and follow-up scheduler.
           </p>
         </div>
       </div>
@@ -162,14 +162,14 @@ function CallingWorkspaceContent() {
         </div>
       )}
 
-      {/* Main Grid: Left side lead selector & patient info; Right side call form & history */}
+      {/* Main Grid: Left side lead selector & customer info; Right side call form & history */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column (4 cols): Lead Selector */}
         <div className="lg:col-span-4 space-y-4">
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">Assigned Calling Queue</CardTitle>
-              <CardDescription>Select a patient to open active consultation desk</CardDescription>
+              <CardDescription>Select a customer to open active consultation desk</CardDescription>
             </CardHeader>
             <CardContent className="p-2 space-y-1 max-h-[500px] overflow-y-auto">
               {isLoadingLeads ? (
@@ -213,7 +213,7 @@ function CallingWorkspaceContent() {
         <div className="lg:col-span-8 space-y-4">
           {selectedLead ? (
             <>
-              {/* Patient Banner */}
+              {/* Customer Banner */}
               <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
@@ -246,21 +246,21 @@ function CallingWorkspaceContent() {
                       className="inline-flex items-center gap-2 rounded-lg bg-emerald-700 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-800 shadow-sm transition"
                     >
                       <PhoneCall className="h-4 w-4" />
-                      Dial Patient
+                      Call Customer
                     </a>
                   </div>
                 </div>
 
                 <div className="mt-4 pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                   <div>
-                    <span className="text-slate-400 font-medium">Ayurvedic Interest:</span>{' '}
+                    <span className="text-slate-400 font-medium">Medicine / Product Interest:</span>{' '}
                     <span className="font-semibold text-slate-800">
-                      {selectedLead.productInterest || 'General Consultation'}
+                      {selectedLead.productInterest || 'General Product Inquiry'}
                     </span>
                   </div>
                   {selectedLead.notes && (
                     <div>
-                      <span className="text-slate-400 font-medium">Initial Notes:</span>{' '}
+                      <span className="text-slate-400 font-medium">Customer Notes:</span>{' '}
                       <span className="text-slate-700">{selectedLead.notes}</span>
                     </div>
                   )}
@@ -275,7 +275,7 @@ function CallingWorkspaceContent() {
                     Log Consultation Outcome
                   </CardTitle>
                   <CardDescription>
-                    Records an immutable append-only call record and advances patient lifecycle
+                    Records an immutable append-only call record and advances customer lead lifecycle
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -290,9 +290,9 @@ function CallingWorkspaceContent() {
                           onChange={(e) => setOutcome(e.target.value)}
                           className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-forest-700"
                         >
-                          <option value="INTERESTED">INTERESTED - Qualified for Treatment</option>
+                          <option value="INTERESTED">INTERESTED - Qualified for Product Kit</option>
                           <option value="FOLLOW_UP_REQUIRED">FOLLOW_UP_REQUIRED - Needs Callback</option>
-                          <option value="BUSY_CALL_LATER">BUSY_CALL_LATER - Patient Busy</option>
+                          <option value="BUSY_CALL_LATER">BUSY_CALL_LATER - Customer Busy</option>
                           <option value="NO_ANSWER">NO_ANSWER - Did Not Pick Up</option>
                           <option value="NOT_INTERESTED">NOT_INTERESTED - Declined</option>
                           <option value="INVALID_NUMBER">INVALID_NUMBER - Wrong Number</option>
@@ -317,13 +317,13 @@ function CallingWorkspaceContent() {
 
                     <div className="space-y-1">
                       <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
-                        Consultation Clinical Notes
+                        Product Consultation Notes
                       </label>
                       <textarea
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
                         rows={3}
-                        placeholder="Patient symptoms, pain severity, duration of ailment, recommended formulation..."
+                        placeholder="Customer health requirements, pain points, recommended medicines, formulation kit..."
                         className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-forest-700"
                         required
                       />
@@ -390,7 +390,7 @@ function CallingWorkspaceContent() {
                     <div className="py-6 text-center text-xs text-slate-400">Loading history...</div>
                   ) : callHistory.length === 0 ? (
                     <div className="py-6 text-center text-xs text-slate-400">
-                      No previous call logs recorded for this patient.
+                      No previous call logs recorded for this customer.
                     </div>
                   ) : (
                     <div className="divide-y divide-slate-100">

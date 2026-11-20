@@ -40,7 +40,7 @@ export class RolesController {
         role: RoleType.PENDING_REVIEWER,
         title: 'Quality & Clinical Review Officer',
         prefix: 'MEL-PND-',
-        description: 'Triage queue, investigating complex leads, patient re-contact, and 4-way decision resolution',
+        description: 'Triage queue, investigating complex leads, customer re-contact, and 4-way decision resolution',
         panelUrl: '/pending/queue',
       },
       {

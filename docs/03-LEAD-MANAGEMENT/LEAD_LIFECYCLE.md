@@ -12,11 +12,11 @@ stateDiagram-v2
     CONTACTED --> FOLLOW_UP_REQUIRED: Busy / Callback Requested
     FOLLOW_UP_REQUIRED --> CONTACTED: Follow-up Call Made
     
-    CONTACTED --> NOT_INTERESTED: Patient Declines Regimen
+    CONTACTED --> NOT_INTERESTED: Customer Declines Regimen
     CONTACTED --> INVALID_NUMBER: Phone Unreachable / Disconnected
     CONTACTED --> REJECTED: Ineligible / Disqualified
     
-    CONTACTED --> INTERESTED: Patient Seeking Treatment
+    CONTACTED --> INTERESTED: Customer Seeking Medicine / Product
     INTERESTED --> PENDING_REVIEW: Disputed / Complex Regimen
     INTERESTED --> APPROVAL_REQUESTED: Standard Qualified Lead
     
@@ -46,7 +46,7 @@ stateDiagram-v2
 | `ASSIGNED` | Allocated to Sales | Assigned to a specific salesperson (`MEL-SAL-XXX`); pending initial consultation call. |
 | `CONTACTED` | Contact Initiated | At least one call outcome has been recorded by the assigned salesperson. |
 | `FOLLOW_UP_REQUIRED` | Follow-Up Scheduled | Call outcome requires a future scheduled contact; explicit follow-up timestamp recorded. |
-| `INTERESTED` | Qualified Interest | Patient expressed definitive interest in Melayurveda Ayurvedic formulations. |
+| `INTERESTED` | Qualified Interest | Customer expressed definitive interest in Melayurveda Ayurvedic formulations. |
 | `PENDING_REVIEW` | In Pending Queue | Submitted by salesperson for triage, pricing validation, or clinical verification. |
 | `UNDER_REVIEW` | Audit Active | Claimed by a pending reviewer (`MEL-PND-XXX`) for active audit and verification call. |
 | `APPROVAL_REQUESTED`| Approval Queue | Passed initial triage and waiting for final sign-off from Approval Officer. |

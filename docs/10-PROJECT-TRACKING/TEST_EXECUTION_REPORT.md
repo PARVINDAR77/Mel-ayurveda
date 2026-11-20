@@ -231,10 +231,10 @@
 |:---|:---|:---|:---:|:---:|
 | Salesperson Calling Dashboard | UI Page | `/sales` | **PASS (200)** | Daily quota progress, pipeline breakdown, priority queue |
 | Strict Zero Lead Source Privacy | UI Code Review | All `/sales/*` screens | **PASS (ZERO LEAK)** | 0% source, campaign, or marketing metadata displayed |
-| My Assigned Leads Workspace | UI Page | `/sales/leads` | **PASS (200)** | Patient table, priority filters, manual lead modal |
+| My Assigned Leads Workspace | UI Page | `/sales/leads` | **PASS (200)** | Customer table, priority filters, manual lead modal |
 | Interactive Calling Workspace | UI Page | `/sales/calling` | **PASS (200)** | Dialing drawer, consultation logger, call history |
 | Follow-Up Agenda Calendar | UI Page | `/sales/follow-ups` | **PASS (200)** | Overdue alerts, one-click completion & callback |
-| Clinical Review Submission | UI Page | `/sales/pending` | **PASS (200)** | Qualified patient triage forwarding form |
+| Clinical Review Submission | UI Page | `/sales/pending` | **PASS (200)** | Qualified customer triage forwarding form |
 | Panel 02 Compilation & Routing | Next.js Build | 15 static routes generated | **PASS (0 ERRORS)** | Static optimization complete |
 
 ## 17. Frontend Test Execution Details: Phase 19 (Panel 03: Pending Review Frontend)
@@ -243,7 +243,7 @@
 | Pending Review Triage Dashboard | UI Page | `/pending` | **PASS (200)** | Queue velocity, SLA breach banner, decisions breakdown |
 | Centralized FIFO Triage Queue | UI Page | `/pending/queue` | **PASS (200)** | Chronological submissions table, urgency badges |
 | Reviewer Claim Collision Lock | UI Action | `Claim Review` button | **PASS (200)** | Claim state & concurrency locking |
-| Clinical Patient Dossier Drawer | UI Drawer | `Dossier` trigger | **PASS (200)** | Patient history, consultation assessment |
+| Customer Dossier Drawer | UI Drawer | `Dossier` trigger | **PASS (200)** | Customer history, consultation assessment |
 | 4-Way Decision Modal Workflow | UI Modal | `Decide` action modal | **PASS (200)** | Approve -> Panel 04, Reject, Follow-up, Send Back |
 | Clinical Triage Decision History | UI Page | `/pending/history` | **PASS (200)** | Immutable audit table of reviewed submissions |
 | Panel 03 Compilation & Routing | Next.js Build | 18 static routes generated | **PASS (0 ERRORS)** | Static optimization complete |

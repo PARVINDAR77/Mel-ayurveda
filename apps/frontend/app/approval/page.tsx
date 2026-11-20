@@ -212,8 +212,8 @@ export default function ApprovalDashboardPage() {
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider">
                   <tr>
                     <th className="px-3 py-3">Lead Code</th>
-                    <th className="px-3 py-3">Patient Name</th>
-                    <th className="px-3 py-3">Treatment / Condition</th>
+                    <th className="px-3 py-3">Customer Name</th>
+                    <th className="px-3 py-3">Medicine / Product Inquiry</th>
                     <th className="px-3 py-3">Priority</th>
                     <th className="px-3 py-3">Forwarded</th>
                     <th className="px-3 py-3 text-right">Action</th>
@@ -229,7 +229,7 @@ export default function ApprovalDashboardPage() {
                   ) : queue.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="py-8 text-center text-slate-400">
-                        Zero pending approvals! All medical dossiers signed off.
+                        Zero pending approvals! All product verification dossiers signed off.
                       </td>
                     </tr>
                   ) : (
@@ -239,10 +239,10 @@ export default function ApprovalDashboardPage() {
                           {req.lead?.leadCode || req.leadId?.slice(0, 8)}
                         </td>
                         <td className="px-3 py-2.5 font-semibold text-slate-900">
-                          {req.lead?.customerName || 'Patient'}
+                          {req.lead?.customerName || 'Customer'}
                         </td>
                         <td className="px-3 py-2.5 text-slate-600">
-                          {req.lead?.productInterest || 'Ayurvedic Treatment'}
+                          {req.lead?.productInterest || 'Ayurvedic Product'}
                         </td>
                         <td className="px-3 py-2.5">
                           <Badge variant="priority">{req.lead?.priority || 'NORMAL'}</Badge>

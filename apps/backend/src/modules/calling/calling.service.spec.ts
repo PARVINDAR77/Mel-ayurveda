@@ -104,7 +104,7 @@ describe('CallingService Unit Tests', () => {
         leadId: mockLead.id,
         callOutcome: CallOutcome.INTERESTED,
         durationSeconds: 120,
-        notes: 'Patient confirmed interest in treatment package',
+        notes: 'Customer confirmed interest in herbal medicine package',
       },
       mockUserSales,
     );

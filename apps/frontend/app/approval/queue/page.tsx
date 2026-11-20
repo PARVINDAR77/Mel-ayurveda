@@ -137,7 +137,7 @@ export default function ApprovalQueuePage() {
       }
 
       await apiClient.post(`/approvals/${decideItem.id}/decide`, payload);
-      setSuccessMsg(`Sign-off decision recorded: ${decision}. Patient state synchronized.`);
+      setSuccessMsg(`Sign-off decision recorded: ${decision}. Lead status synchronized.`);
       setDecideItem(null);
       fetchQueue();
     } catch (err: any) {
@@ -158,11 +158,11 @@ export default function ApprovalQueuePage() {
       ),
     },
     {
-      key: 'patient',
-      header: 'Patient Details',
+      key: 'customer',
+      header: 'Customer Details',
       render: (item) => (
         <div>
-          <span className="font-semibold text-slate-900">{item.lead?.customerName || 'Patient'}</span>
+          <span className="font-semibold text-slate-900">{item.lead?.customerName || 'Customer'}</span>
           <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono mt-0.5">
             <Phone className="h-3 w-3 text-slate-400" />
             <span>{item.lead?.phoneNumber}</span>
@@ -357,7 +357,7 @@ export default function ApprovalQueuePage() {
         <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
           <input
             type="text"
-            placeholder="Search patient, phone, lead code..."
+            placeholder="Search customer, phone, lead code..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full sm:w-64 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:border-forest-600 focus:outline-none focus:ring-1 focus:ring-forest-600"
@@ -383,16 +383,16 @@ export default function ApprovalQueuePage() {
           setDossierId(null);
           setDossierData(null);
         }}
-        title="Comprehensive Medical & Commercial Dossier"
+        title="Comprehensive Product & Commercial Dossier"
         width="lg"
       >
         {loadingDossier ? (
-          <div className="py-16 text-center text-xs text-slate-400">Loading full clinical dossier...</div>
+          <div className="py-16 text-center text-xs text-slate-400">Loading product dossier...</div>
         ) : !dossierData ? (
           <div className="py-16 text-center text-xs text-slate-400">Dossier not found</div>
         ) : (
           <div className="space-y-6 text-xs text-slate-700">
-            {/* Lead & Patient Header */}
+            {/* Lead & Customer Header */}
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
               <div className="flex items-start justify-between">
                 <div>
@@ -537,7 +537,7 @@ export default function ApprovalQueuePage() {
         isOpen={!!decideItem}
         onClose={() => setDecideItem(null)}
         title="Execute Medical & Commercial Sign-Off"
-        description={`Authoritative review for patient ${decideItem?.lead?.customerName} (${decideItem?.lead?.leadCode})`}
+        description={`Authoritative review for customer inquiry ${decideItem?.lead?.customerName} (${decideItem?.lead?.leadCode})`}
         maxWidth="md"
       >
         <form onSubmit={handleDecisionSubmit} className="space-y-4 text-xs">
@@ -615,24 +615,24 @@ export default function ApprovalQueuePage() {
                   <option value="CLINICAL_VERIFIED_PRICING_CLEARED">
                     CLINICAL_VERIFIED_PRICING_CLEARED - Regimen & commercial terms verified
                   </option>
-                  <option value="DOSAGE_ASSESSED_PATIENT_READY">
-                    DOSAGE_ASSESSED_PATIENT_READY - Formulation dosage validated, patient cleared
+                  <option value="DOSAGE_ASSESSED_CUSTOMER_READY">
+                    DOSAGE_ASSESSED_CUSTOMER_READY - Formulation dosage validated, customer order cleared
                   </option>
                   <option value="STANDARD_FORMULATION_CONFIRMED">
-                    STANDARD_FORMULATION_CONFIRMED - Routine therapeutic order approved
+                    STANDARD_FORMULATION_CONFIRMED - Routine product formulation order approved
                   </option>
                 </>
               )}
               {decision === 'REJECT' && (
                 <>
                   <option value="MEDICAL_CONTRAINDICATION">
-                    MEDICAL_CONTRAINDICATION - Patient co-morbidities prohibit formulation
+                    MEDICAL_CONTRAINDICATION - Customer health contraindications prohibit formulation
                   </option>
                   <option value="COMMERCIAL_UNVIABILITY">
                     COMMERCIAL_UNVIABILITY - Financial or delivery constraints unviable
                   </option>
-                  <option value="PATIENT_UNWILLING">
-                    PATIENT_UNWILLING - Patient refused verified formulation terms
+                  <option value="CUSTOMER_UNWILLING">
+                    CUSTOMER_UNWILLING - Customer declined verified formulation terms
                   </option>
                   <option value="DUPLICATE_ORDER">
                     DUPLICATE_ORDER - Identical order already processed
@@ -642,13 +642,13 @@ export default function ApprovalQueuePage() {
               {decision === 'SEND_BACK' && (
                 <>
                   <option value="INSUFFICIENT_CLINICAL_HISTORY">
-                    INSUFFICIENT_CLINICAL_HISTORY - Missing vital Ayurvedic prakriti/vikriti details
+                    INSUFFICIENT_CLINICAL_HISTORY - Missing vital Ayurvedic medicine/regimen details
                   </option>
                   <option value="PRICING_DISCREPANCY">
                     PRICING_DISCREPANCY - Quotation does not match standard dosage MRP
                   </option>
-                  <option value="PATIENT_CALLBACK_REQUIRED">
-                    PATIENT_CALLBACK_REQUIRED - Tele-consultant needs to re-verify regimen duration
+                  <option value="CUSTOMER_CALLBACK_REQUIRED">
+                    CUSTOMER_CALLBACK_REQUIRED - Tele-consultant needs to re-verify regimen duration with customer
                   </option>
                 </>
               )}
@@ -667,10 +667,10 @@ export default function ApprovalQueuePage() {
                 className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-forest-600 focus:outline-none"
               >
                 <option value="PENDING_PANEL">
-                  Panel 03: Clinical Review Queue (Re-verify triage dossier)
+                  Panel 03: Product Review Queue (Re-verify product verification dossier)
                 </option>
                 <option value="SALESPERSON">
-                  Panel 02: Tele-Salesperson (Re-dial patient for clarification)
+                  Panel 02: Tele-Salesperson (Re-contact customer for clarification)
                 </option>
               </select>
             </div>

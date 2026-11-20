@@ -134,7 +134,7 @@ async function runSecurityPenetrationTests() {
       .post('/api/v1/leads/manual')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
-        customerName: 'Patient Assigned To Salesperson 1',
+        customerName: 'Customer Assigned To Salesperson 1',
         phoneNumber: phoneA,
         assignToEmployeeId: sales1Id,
       });
@@ -144,7 +144,7 @@ async function runSecurityPenetrationTests() {
       .post('/api/v1/leads/manual')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
-        customerName: 'Patient Assigned To Salesperson 2',
+        customerName: 'Customer Assigned To Salesperson 2',
         phoneNumber: phoneB,
         assignToEmployeeId: sales2Id,
       });

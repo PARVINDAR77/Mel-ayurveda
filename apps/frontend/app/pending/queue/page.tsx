@@ -105,11 +105,11 @@ export default function PendingReviewQueuePage() {
       ),
     },
     {
-      key: 'patient',
-      header: 'Patient Details',
+      key: 'customer',
+      header: 'Customer Details',
       render: (item) => (
         <div>
-          <span className="font-semibold text-slate-900">{item.lead?.customerName || 'Patient'}</span>
+          <span className="font-semibold text-slate-900">{item.lead?.customerName || 'Customer'}</span>
           <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono mt-0.5">
             <Phone className="h-3 w-3 text-slate-400" />
             <span>{item.lead?.phoneNumber}</span>
@@ -215,10 +215,10 @@ export default function PendingReviewQueuePage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
           <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-            Centralized FIFO Clinical Triage Queue
+            Centralized FIFO Product Verification Queue
           </h2>
           <p className="text-xs text-slate-500">
-            Review submitted patient dossiers, lock claims to prevent reviewer collisions, and execute 4-way triage decisions.
+            Review submitted product & order dossiers, lock claims to prevent reviewer collisions, and execute 4-way verification decisions.
           </p>
         </div>
 
@@ -268,8 +268,8 @@ export default function PendingReviewQueuePage() {
       <Modal
         isOpen={!!decideReview}
         onClose={() => setDecideReview(null)}
-        title={`Clinical Review: ${decideReview?.lead?.leadCode || decideReview?.id?.slice(0, 8)}`}
-        description={`Patient: ${decideReview?.lead?.customerName} (${decideReview?.lead?.phoneNumber})`}
+        title={`Product Review: ${decideReview?.lead?.leadCode || decideReview?.id?.slice(0, 8)}`}
+        description={`Customer: ${decideReview?.lead?.customerName} (${decideReview?.lead?.phoneNumber})`}
         maxWidth="xl"
       >
         <form onSubmit={handleDecision} className="space-y-4">
@@ -285,7 +285,7 @@ export default function PendingReviewQueuePage() {
 
           <div className="space-y-1.5">
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
-              Select Triage Decision
+              Select Verification Decision
             </label>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -320,7 +320,7 @@ export default function PendingReviewQueuePage() {
                   <span>REJECT</span>
                 </div>
                 <span className="text-[11px] text-slate-500">
-                  Patient ineligible for Ayurvedic formulation
+                  Customer or formulation ineligible for product kit
                 </span>
               </button>
 
@@ -338,7 +338,7 @@ export default function PendingReviewQueuePage() {
                   <span>REQUEST FOLLOW-UP</span>
                 </div>
                 <span className="text-[11px] text-slate-500">
-                  Needs additional clinical tests or info
+                  Needs additional product dosage or inquiry info
                 </span>
               </button>
 
@@ -364,13 +364,13 @@ export default function PendingReviewQueuePage() {
 
           <div className="space-y-1">
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
-              Reviewer Clinical Feedback & Evaluation Notes
+              Reviewer Evaluation & Verification Notes
             </label>
             <textarea
               value={reviewerNotes}
               onChange={(e) => setReviewerNotes(e.target.value)}
               rows={3}
-              placeholder="Clinical evaluation findings, dosage recommendations, or return-to-sales reason..."
+              placeholder="Product evaluation findings, dosage recommendations, or return-to-sales reason..."
               className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-forest-700"
               required
             />
@@ -397,17 +397,17 @@ export default function PendingReviewQueuePage() {
         </form>
       </Modal>
 
-      {/* Clinical Dossier Drawer */}
+      {/* Product & Customer Dossier Drawer */}
       <Drawer
         isOpen={!!dossierReview}
         onClose={() => setDossierReview(null)}
-        title={`Patient Dossier: ${dossierReview?.lead?.customerName || 'Patient'}`}
+        title={`Customer Dossier: ${dossierReview?.lead?.customerName || 'Customer'}`}
         subtitle={`Lead ID: ${dossierReview?.lead?.leadCode}`}
       >
         <div className="space-y-4 text-xs">
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-slate-600">Patient Phone:</span>
+              <span className="font-semibold text-slate-600">Customer Phone:</span>
               <span className="font-mono font-bold text-slate-900">
                 {dossierReview?.lead?.phoneNumber}
               </span>
@@ -419,9 +419,9 @@ export default function PendingReviewQueuePage() {
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-slate-600">Treatment Interest:</span>
+              <span className="font-semibold text-slate-600">Medicine / Product Interest:</span>
               <span className="font-semibold text-slate-900">
-                {dossierReview?.lead?.productInterest || 'General Consultation'}
+                {dossierReview?.lead?.productInterest || 'General Product Inquiry'}
               </span>
             </div>
             <div className="flex items-center justify-between">

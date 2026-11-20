@@ -146,7 +146,7 @@ async function runLeadIntegrationTest() {
       .patch(`/api/v1/leads/${lead1Res.body.id}`)
       .set('Authorization', `Bearer ${salesToken}`)
       .send({
-        notes: 'Consultation completed. Patient agreed to 3-month course.',
+        notes: 'Consultation completed. Customer agreed to 3-month course.',
       });
     console.log('Status:', updateRes.status);
     console.log('Updated Notes:', updateRes.body.notes);

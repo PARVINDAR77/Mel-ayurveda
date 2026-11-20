@@ -15,11 +15,11 @@
 
 ## 3. Panel 03 – Pending Review Dashboard
 - **Queue Overview**: Total Pending, Overdue Reviews (>24h SLA), In Review, Completed Today.
-- **Triage Table**: Lead ID, Patient Name, Mobile, Submitting Salesperson, Elapsed Time (`Since`), Priority, "Review" action.
+- **Triage Table**: Lead ID, Customer Name, Mobile, Submitting Salesperson, Elapsed Time (`Since`), Priority, "Review" action.
 
 ## 4. Panel 04 – Approval Authority Dashboard
 - **Verification Summary**: Total Requests, New Requests, Under Review, Approved Today.
-- **Approval Cards**: Patient summary, prescribed formulations, commercial terms, Salesperson attribution, Action buttons (Approve [Green], Reject [Red], Send Back [Blue]).
+- **Approval Cards**: Customer summary, prescribed formulations, commercial terms, Salesperson attribution, Action buttons (Approve [Green], Reject [Red], Send Back [Blue]).
 
 ## 5. Panel 05 – Management Dashboard
 - **Commercial Operations**: Total Customers, Orders, Total Sales (₹ Lakhs), Delivery Success Rate (%).

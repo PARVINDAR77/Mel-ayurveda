@@ -10,7 +10,7 @@ A production-grade, highly secure, role-based Lead Management, Clinical Quality 
 1. **Five Dedicated Role-Based Panels**:
    - **Panel 01: Super Admin** – Complete organization control, employee provisioning, lead distribution engine, source analytics, and master reports.
    - **Panel 02: Salesperson** – High-velocity tele-sales consultation, persistent calling history, outcome logging, and follow-up management with **100% Lead Source Privacy**.
-   - **Panel 03: Pending Leads** – Clinical quality audit queue, patient re-contact, and 4-way resolution routing (Approve, Reject, Follow-up, Send Back).
+   - **Panel 03: Pending Leads** – Medicine formulation audit queue, customer re-contact, and 4-way resolution routing (Approve, Reject, Follow-up, Send Back).
    - **Panel 04: Approval Authority** – Final commercial and medical sign-off gatekeeper preventing non-compliant order conversions.
    - **Panel 05: Management** – Customer CRM, disease-wise Ayurvedic formulation catalog, sales draft confirmation, GST invoicing, inventory ledger, and courier dispatch tracking.
 

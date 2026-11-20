@@ -65,8 +65,8 @@ export default function FollowUpsAgendaPage() {
       },
     },
     {
-      key: 'patient',
-      header: 'Patient Details',
+      key: 'customer',
+      header: 'Customer Details',
       render: (item) => (
         <div>
           <span className="font-semibold text-slate-900">{item.lead?.customerName || 'N/A'}</span>
@@ -101,7 +101,7 @@ export default function FollowUpsAgendaPage() {
       header: 'Consultation Agenda Notes',
       render: (item) => (
         <span className="text-xs text-slate-700">
-          {item.reminderNotes || 'Follow up with patient'}
+          {item.reminderNotes || 'Follow up with customer'}
         </span>
       ),
     },

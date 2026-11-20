@@ -43,7 +43,7 @@ The system is fully implemented, verified, and packaged for production deploymen
 
 ### Invariant 2: Clinical Triage & Final Sign-Off Separation of Duties
 - Tele-sales cannot directly convert leads or approve clinical prescriptions.
-- Panel 03 Pending Reviewers triage patient dossiers with reviewer anti-collision locks.
+- Panel 03 Pending Reviewers triage customer dossiers with reviewer anti-collision locks.
 - Panel 04 Approval Officers hold exclusive authority to execute `APPROVE`, which unlocks conversion in Panel 05.
 
 ### Invariant 3: Atomic Inventory Reservation & Statutory GST Billing

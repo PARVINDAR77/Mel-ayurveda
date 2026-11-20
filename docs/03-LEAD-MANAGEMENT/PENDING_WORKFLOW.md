@@ -4,8 +4,8 @@
 The **Pending Review Workflow** safeguards company standards for clinical suitability, treatment expectations, and commercial agreements.
 
 ### Submission Triggers
-- Patient reports chronic multi-morbidity (e.g., severe rheumatoid arthritis with diabetic complications).
-- Patient requests customized multi-month regimen discounts exceeding standard sales limits.
+- Customer inquiry notes complex health history or contraindications (e.g., severe arthritis with diabetic complications).
+- Customer requests customized multi-month medicine regimen discounts exceeding standard sales limits.
 - Customer disputes contact or identity details requiring verification.
 
 ## 2. Step-by-Step Pending Process

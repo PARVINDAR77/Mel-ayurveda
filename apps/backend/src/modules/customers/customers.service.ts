@@ -45,7 +45,7 @@ export class CustomersService {
   }
 
   /**
-   * Convert an APPROVED patient lead into a permanent Customer CRM record.
+   * Convert an APPROVED customer product lead into a permanent Customer CRM record.
    * STRICT INVARIANTS:
    * 1. Only leads in APPROVED state can be converted.
    * 2. Idempotency: Re-converting an already converted lead is rejected (HTTP 409).
@@ -163,7 +163,7 @@ export class CustomersService {
   }
 
   /**
-   * Directly creates a customer (e.g. walk-in clinic patient)
+   * Directly creates a customer (e.g. direct retail or medicine inquiry customer)
    */
   async createCustomer(dto: CreateCustomerDto, user: AuthenticatedUser) {
     const existing = await this.prisma.customer.findUnique({

@@ -28,7 +28,7 @@ export class FollowUpsController {
 
   @Post()
   @Roles(RoleType.SUPER_ADMIN, RoleType.SALESPERSON, RoleType.MANAGEMENT)
-  @ApiOperation({ summary: 'Schedule a new callback for a patient lead' })
+  @ApiOperation({ summary: 'Schedule a new callback for a customer product lead' })
   @ApiResponse({ status: 201, description: 'Follow-up callback scheduled successfully' })
   async createFollowUp(
     @Body() dto: CreateFollowUpDto,

@@ -84,11 +84,11 @@ export default function ApprovalHistoryPage() {
       ),
     },
     {
-      key: 'patient',
-      header: 'Patient Details',
+      key: 'customer',
+      header: 'Customer Details',
       render: (item) => (
         <div>
-          <span className="font-semibold text-slate-900">{item.lead?.customerName || 'Patient'}</span>
+          <span className="font-semibold text-slate-900">{item.lead?.customerName || 'Customer'}</span>
           <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono mt-0.5">
             <Phone className="h-3 w-3 text-slate-400" />
             <span>{item.lead?.phoneNumber}</span>
@@ -235,7 +235,7 @@ export default function ApprovalHistoryPage() {
         <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 w-full sm:w-auto">
           <input
             type="text"
-            placeholder="Search patient, phone, lead code..."
+            placeholder="Search customer, phone, lead code..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full sm:w-80 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:border-forest-600 focus:outline-none focus:ring-1 focus:ring-forest-600"
@@ -254,14 +254,14 @@ export default function ApprovalHistoryPage() {
         emptyMessage="No historical approval decisions found matching current criteria."
       />
 
-      {/* Medical & Commercial Dossier Inspection Drawer */}
+      {/* Product & Commercial Dossier Inspection Drawer */}
       <Drawer
         isOpen={!!dossierId}
         onClose={() => {
           setDossierId(null);
           setDossierData(null);
         }}
-        title="Historical Medical & Commercial Dossier"
+        title="Historical Product & Commercial Dossier"
         width="lg"
       >
         {loadingDossier ? (
@@ -270,7 +270,7 @@ export default function ApprovalHistoryPage() {
           <div className="py-16 text-center text-xs text-slate-400">Dossier not found</div>
         ) : (
           <div className="space-y-6 text-xs text-slate-700">
-            {/* Lead & Patient Header */}
+            {/* Lead & Customer Header */}
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
               <div className="flex items-start justify-between">
                 <div>

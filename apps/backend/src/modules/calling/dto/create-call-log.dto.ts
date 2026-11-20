@@ -36,8 +36,8 @@ export class CreateCallLogDto {
   durationSeconds?: number;
 
   @ApiPropertyOptional({
-    description: 'Detailed patient consultation notes and symptom discussion',
-    example: 'Patient interested in Psoriasis Ayurvedic Oil regimen. Follow up in 3 days.',
+    description: 'Detailed customer consultation notes and product discussion',
+    example: 'Customer interested in Psoriasis Ayurvedic Oil regimen. Follow up in 3 days.',
   })
   @IsOptional()
   @IsString()

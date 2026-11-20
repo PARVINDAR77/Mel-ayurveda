@@ -17,7 +17,7 @@ The schema is partitioned into five tightly governed functional domains:
 
 3. **Engagement & Triage**:
    - `Lead` 1:N `CallLog` (Append-only consultation records)
-   - `Lead` 1:N `FollowUp` (Scheduled patient callbacks)
+   - `Lead` 1:N `FollowUp` (Scheduled customer callbacks)
    - `Lead` 1:N `PendingReview` (Quality audit dossiers)
    - `Lead` 1:N `ApprovalRequest` (Commercial/medical sign-off records)
 

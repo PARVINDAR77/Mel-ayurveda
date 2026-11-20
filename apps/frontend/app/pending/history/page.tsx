@@ -49,11 +49,11 @@ export default function PendingReviewHistoryPage() {
       ),
     },
     {
-      key: 'patient',
-      header: 'Patient Details',
+      key: 'customer',
+      header: 'Customer Details',
       render: (item) => (
         <div>
-          <span className="font-semibold text-slate-900">{item.lead?.customerName || 'Patient'}</span>
+          <span className="font-semibold text-slate-900">{item.lead?.customerName || 'Customer'}</span>
           <span className="block font-mono text-xs text-slate-500">{item.lead?.phoneNumber}</span>
         </div>
       ),
@@ -103,10 +103,10 @@ export default function PendingReviewHistoryPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
           <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-            Clinical Triage Decision History
+            Product Verification Decision History
           </h2>
           <p className="text-xs text-slate-500">
-            Immutable audit log of patient review evaluations, approvals for Panel 04, and return-to-sales records.
+            Immutable audit log of customer inquiry reviews, approvals for Panel 04, and return-to-sales records.
           </p>
         </div>
 

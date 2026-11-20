@@ -115,7 +115,7 @@ export default function AdminDashboardPage() {
         />
 
         <StatCard
-          title="In Clinical Triage"
+          title="In Product Verification"
           value={
             (data?.overview?.pendingReviewLeads ?? 0) +
             (data?.overview?.approvalRequestedLeads ?? 0)

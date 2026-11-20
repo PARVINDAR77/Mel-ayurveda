@@ -30,7 +30,7 @@ export class CustomersController {
   @Post('convert/:leadId')
   @Roles(RoleType.MANAGEMENT, RoleType.SUPER_ADMIN)
   @ApiOperation({
-    summary: 'Convert an APPROVED patient lead into a verified permanent Customer CRM profile',
+    summary: 'Convert an APPROVED customer lead into a verified permanent Customer CRM profile',
   })
   @ApiResponse({ status: 201, description: 'Lead converted to customer' })
   async convertLead(

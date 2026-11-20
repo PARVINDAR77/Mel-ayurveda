@@ -8,7 +8,7 @@ This document defines the definitive business rules, functional mandates, and re
 ### 2.1 Lead Ingestion & Manual Creation
 - **FR-LEAD-01 (Multi-Source Ingestion)**: System must ingest leads via secure webhook endpoints from Facebook Ads, Instagram Ads, Google Ads, Melayurveda Website, WhatsApp Business API, and Direct Inbound.
 - **FR-LEAD-02 (Deduplication)**: Every incoming lead must be checked against existing records by primary phone number (normalized to 10-digit Indian standard `+91` / `[6-9][0-9]{9}`). If an active lead exists within the 30-day sales window, the system must log a duplicate interaction rather than overwriting existing sales ownership.
-- **FR-LEAD-03 (Manual Entry)**: Super Admin must have a dedicated interface to manually input leads with mandatory fields: Customer Full Name, Primary Mobile Number; and optional fields: Alternate Phone, Email, State, City, Full Postal Address, Health Concern / Interested Product Category, Patient Notes, and Priority level (`LOW`, `NORMAL`, `HIGH`, `URGENT`).
+- **FR-LEAD-03 (Manual Entry)**: Super Admin must have a dedicated interface to manually input leads with mandatory fields: Customer Full Name, Primary Mobile Number; and optional fields: Alternate Phone, Email, State, City, Full Postal Address, Health Concern / Interested Product Category, Customer Inquiry Notes, and Priority level (`LOW`, `NORMAL`, `HIGH`, `URGENT`).
 - **FR-LEAD-04 (Creation Traceability)**: Manual leads must automatically record `source_type = MANUAL`, `created_by = authenticated_admin_id`, and system timestamp in UTC.
 
 ### 2.2 Lead Distribution & Assignment
@@ -19,10 +19,10 @@ This document defines the definitive business rules, functional mandates, and re
 
 ### 2.3 Sales Consultation & Calling Management
 - **FR-CALL-01 (Call Outcome Logging)**: After every calling attempt, the salesperson must record a standardized call outcome:
-  - `INTERESTED`: Patient actively seeking treatment; details documented.
-  - `NOT_INTERESTED`: Patient explicitly declined Ayurvedic consultation.
+  - `INTERESTED`: Customer actively seeking product or regimen; details documented.
+  - `NOT_INTERESTED`: Customer explicitly declined Ayurvedic products.
   - `NO_ANSWER`: Call rang out without response.
-  - `BUSY_CALL_LATER`: Patient requested call back at another time.
+  - `BUSY_CALL_LATER`: Customer requested call back at another time.
   - `INVALID_NUMBER`: Wrong number, out of service, or disconnected.
   - `FOLLOW_UP_REQUIRED`: Requires scheduled consultation; mandatory follow-up date/time must be captured.
   - `PENDING_REVIEW`: Disputed lead, special pricing request, or complex medical history requiring review.

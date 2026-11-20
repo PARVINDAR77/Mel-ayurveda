@@ -1,11 +1,11 @@
 # Approval Workflow Specification
 
 ## 1. Purpose & Authority
-The **Approval Workflow** represents the final pre-order verification. It ensures all regulatory, medical, and pricing verifications are fulfilled before patient leads are converted to commercial orders.
+The **Approval Workflow** represents the final pre-order verification. It ensures all regulatory, medical, and pricing verifications are fulfilled before customer leads are converted to commercial orders.
 
 ## 2. Approval Verification Checklist
 Before executing an approval decision, the Approval Officer (`MEL-APR-XXX`) reviews:
-- [ ] Patient identity and delivery address validation.
+- [ ] Customer identity and delivery address validation.
 - [ ] Stated health concern matches approved Ayurvedic therapeutic categories.
 - [ ] Prescribed product formulations contain no contraindications.
 - [ ] Total package price, taxes (GST), and payment mode (COD / Prepaid) are accurate.

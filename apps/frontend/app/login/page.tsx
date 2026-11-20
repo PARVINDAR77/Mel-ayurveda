@@ -93,11 +93,11 @@ export default function LoginPage() {
 
           <div className="mt-12 space-y-4">
             <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl text-slate-100">
-              5-Panel Precision Ayurvedic Lead & Clinical Operations CRM
+              5-Panel Precision Ayurvedic Product & Medicine Sales Operations CRM
             </h2>
             <p className="text-sm text-slate-300 leading-relaxed max-w-lg">
-              A high-security, multi-source patient triage platform with strict lead source data isolation,
-              append-only calling compliance, multi-stage clinical review, GST invoicing, and warehouse dispatch.
+              A high-security, multi-source product inquiry & order fulfillment platform with strict lead source data isolation,
+              append-only calling compliance, multi-stage product review, GST invoicing, and warehouse dispatch.
             </p>
           </div>
         </div>

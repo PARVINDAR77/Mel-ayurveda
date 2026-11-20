@@ -42,7 +42,7 @@ async function runCallingFollowUpIntegrationTest() {
     console.log(`- Admin authenticated. Ramesh: ${rameshLogin.body.user.employeeCode}, Suresh: ${sureshLogin.body.user.employeeCode}`);
 
     // 2. Create a test lead assigned to Ramesh
-    console.log('\n2. Creating a test patient lead assigned to Ramesh Patel...');
+    console.log('\n2. Creating a test customer lead assigned to Ramesh Patel...');
     const phone = '96' + Math.floor(10000000 + Math.random() * 90000000);
     const leadRes = await request(server)
       .post('/api/v1/leads/manual')

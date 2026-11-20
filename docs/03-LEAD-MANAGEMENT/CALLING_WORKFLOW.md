@@ -1,7 +1,7 @@
 # Calling Management Workflow Specification
 
 ## 1. Overview
-Tele-calling is the central interaction point between Melayurveda health consultants and potential patients. Every conversation must be cataloged with an explicit business outcome and consultation notes.
+Tele-calling is the central interaction point between Melayurveda health consultants and potential customers. Every conversation must be cataloged with an explicit business outcome and consultation notes.
 
 ## 2. Call Outcomes & Business Rules
 | Outcome Code | Meaning | Required Fields | Next Lead State |

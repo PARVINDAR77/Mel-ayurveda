@@ -18,7 +18,7 @@ export class ApprovalQueueQueryDto {
   @IsEnum(ApprovalQueueFilter)
   filter?: ApprovalQueueFilter;
 
-  @ApiPropertyOptional({ description: 'Filter by search query matching patient name, phone, or lead code' })
+  @ApiPropertyOptional({ description: 'Filter by search query matching customer name, phone, or lead code' })
   @IsOptional()
   @IsString()
   search?: string;

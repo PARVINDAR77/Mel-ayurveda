@@ -18,7 +18,7 @@ export class DecideApprovalDto {
   decision: ApprovalDecision;
 
   @ApiPropertyOptional({
-    description: 'Structured rationale or category code (e.g. MEDICAL_CONTRAINDICATION, COMMERCIAL_UNVIABILITY, PATIENT_UNWILLING, DUPLICATE_ORDER)',
+    description: 'Structured rationale or category code (e.g. MEDICAL_CONTRAINDICATION, COMMERCIAL_UNVIABILITY, CUSTOMER_UNWILLING, DUPLICATE_ORDER)',
     example: 'COMMERCIAL_UNVIABILITY',
   })
   @IsOptional()
@@ -27,7 +27,7 @@ export class DecideApprovalDto {
 
   @ApiProperty({
     description: 'Detailed medical advisor notes, commercial verification certificate, or rectification guidance',
-    example: 'Verified Ayurvedic therapeutic parameters, dosage limits, and 45-day pricing breakdown. Patient cleared for formal order placement.',
+    example: 'Verified Ayurvedic therapeutic parameters, dosage limits, and 45-day pricing breakdown. Customer cleared for formal order placement.',
   })
   @IsString()
   @IsNotEmpty()

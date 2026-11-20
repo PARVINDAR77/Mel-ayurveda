@@ -1,7 +1,7 @@
 # Panel 04: Approval Panel Specification
 
 ## 1. Overview & Authority
-The **Approval Panel** is the ultimate commercial and clinical sign-off gatekeeper. Staffed by senior medical advisors and commercial controllers, this panel guarantees that all Ayurvedic health packages, pricing structures, and patient consent criteria adhere to company policy before an inquiry becomes a legally recognized customer and order.
+The **Approval Panel** is the ultimate commercial and clinical sign-off gatekeeper. Staffed by senior medical advisors and commercial controllers, this panel guarantees that all Ayurvedic health packages, pricing structures, and customer consent criteria adhere to company policy before an inquiry becomes a legally recognized customer and order.
 
 - **Primary Persona**: Medical Director / Commercial Approval Head.
 - **Identifier Prefix**: `MEL-APR-XXX` (e.g., `MEL-APR-001`).
@@ -32,7 +32,7 @@ Three distinct decision buttons are provided:
    - Automatically unlocks lead conversion in the Management Panel.
 2. **REJECT (Red Action)**:
    - Sets lead status to `REJECTED`.
-   - Mandates selection of a rejection reason code (`MEDICAL_CONTRAINDICATION`, `COMMERCIAL_UNVIABILITY`, `PATIENT_UNWILLING`, `DUPLICATE_ORDER`).
+   - Mandates selection of a rejection reason code (`MEDICAL_CONTRAINDICATION`, `COMMERCIAL_UNVIABILITY`, `CUSTOMER_UNWILLING`, `DUPLICATE_ORDER`).
    - Immutable rejection record stored in `approval_history`.
 3. **SEND_BACK (Blue Action)**:
    - Reverts lead to either Pending Queue or Salesperson workspace for rectifying discrepancies.

@@ -33,7 +33,7 @@ export class ConvertLeadDto {
   @Matches(/^[6-9]\d{9}$/, { message: 'Alternate phone must be a valid 10-digit Indian mobile number' })
   alternatePhone?: string;
 
-  @ApiPropertyOptional({ description: 'Patient email address', example: 'patient@example.com' })
+  @ApiPropertyOptional({ description: 'Customer email address', example: 'customer@example.com' })
   @IsOptional()
   @IsEmail()
   email?: string;

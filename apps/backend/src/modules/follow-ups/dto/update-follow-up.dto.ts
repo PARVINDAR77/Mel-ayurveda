@@ -12,7 +12,7 @@ export class RescheduleFollowUpDto {
 
   @ApiPropertyOptional({
     description: 'Reason for rescheduling or updated conversation notes',
-    example: 'Patient requested afternoon callback instead of morning.',
+    example: 'Customer requested afternoon callback instead of morning.',
   })
   @IsOptional()
   @IsString()

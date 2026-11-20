@@ -47,7 +47,7 @@ async function runApprovalIntegrationTest() {
     console.log(`- Authenticated: Admin, Ramesh (${rameshLogin.body.user.employeeCode}), Priya (${priyaLogin.body.user.employeeCode}), Amit (${amitLogin.body.user.employeeCode})`);
 
     // 2. Create 2 test leads assigned to Ramesh Patel
-    console.log('\n2. Creating 2 test patient leads assigned to Ramesh...');
+    console.log('\n2. Creating 2 test customer leads assigned to Ramesh...');
     const phoneA = '98' + Math.floor(10000000 + Math.random() * 90000000);
     const phoneB = '98' + Math.floor(10000000 + Math.random() * 90000000);
 
@@ -105,7 +105,7 @@ async function runApprovalIntegrationTest() {
       .set('Authorization', `Bearer ${rameshToken}`)
       .send({
         leadId: leadB.id,
-        reason: 'Patient has borderline hypertension requesting shilajit',
+        reason: 'Customer has borderline hypertension requesting shilajit formulation',
       });
     const revBId = submitBRes.body.review.id;
 
@@ -152,7 +152,7 @@ async function runApprovalIntegrationTest() {
       .set('Authorization', `Bearer ${amitToken}`);
 
     console.log(`- Dossier returned: HTTP ${dossierRes.status}`);
-    console.log(`  Patient: ${dossierRes.body.lead.customerName}, Status: ${dossierRes.body.lead.status}`);
+    console.log(`  Customer: ${dossierRes.body.lead.customerName}, Status: ${dossierRes.body.lead.status}`);
     console.log(`  Pending Reviewer Notes: ${dossierRes.body.lead.pendingReviews[0]?.reviewerNotes}`);
     if (dossierRes.status !== 200 || !dossierRes.body.lead) {
       throw new Error('Approval dossier retrieval failed');
@@ -206,7 +206,7 @@ async function runApprovalIntegrationTest() {
       .send({
         decision: 'REJECT',
         decisionReason: 'MEDICAL_CONTRAINDICATION',
-        officerNotes: 'Contraindicated: Patient blood pressure exceeds safety threshold for high-potency formulations. Case closed.',
+        officerNotes: 'Contraindicated: Customer blood pressure exceeds safety threshold for high-potency formulations. Case closed.',
       });
 
     console.log(`- Decision B Response: HTTP ${rejectBRes.status}, Next Lead State: ${rejectBRes.body.nextLeadStatus}`);

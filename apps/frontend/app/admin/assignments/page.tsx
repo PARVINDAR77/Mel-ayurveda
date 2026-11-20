@@ -169,8 +169,8 @@ export default function LeadAssignmentsAdminPage() {
       ),
     },
     {
-      key: 'patient',
-      header: 'Patient Details',
+      key: 'customer',
+      header: 'Customer Details',
       render: (item) => (
         <div>
           <span className="font-semibold text-slate-900">{item.customerName}</span>
@@ -334,7 +334,7 @@ export default function LeadAssignmentsAdminPage() {
         columns={columns}
         data={unassignedLeads}
         searchKey="customerName"
-        searchPlaceholder="Search unassigned leads by patient name..."
+        searchPlaceholder="Search unassigned leads by customer name..."
         isLoading={isLoading}
         emptyMessage="All leads are currently assigned! Queue is clear."
       />
@@ -344,7 +344,7 @@ export default function LeadAssignmentsAdminPage() {
         isOpen={!!assignTargetLead}
         onClose={() => setAssignTargetLead(null)}
         title={`Assign Lead ${assignTargetLead?.leadCode}`}
-        description={`Allocate patient ${assignTargetLead?.customerName} (${assignTargetLead?.phoneNumber}) to a sales consultant.`}
+        description={`Allocate customer inquiry ${assignTargetLead?.customerName} (${assignTargetLead?.phoneNumber}) to a sales consultant.`}
       >
         <form onSubmit={handleSingleAssign} className="space-y-4">
           <div className="space-y-1">

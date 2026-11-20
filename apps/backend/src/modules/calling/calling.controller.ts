@@ -36,7 +36,7 @@ export class CallingController {
     RoleType.APPROVAL_OFFICER,
     RoleType.MANAGEMENT,
   )
-  @ApiOperation({ summary: 'Retrieve chronological call history for a patient lead' })
+  @ApiOperation({ summary: 'Retrieve chronological call history for a customer product lead' })
   @ApiResponse({ status: 200, description: 'Call logs history returned' })
   async getLeadCallLogs(
     @Param('leadId') leadId: string,

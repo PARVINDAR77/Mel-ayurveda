@@ -29,7 +29,7 @@ test.describe('Panel 02: Salesperson Frontend & Strict Lead Source Privacy', () 
 
   test('leads page displays assigned leads table with 0% marketing source columns', async ({ page }) => {
     await page.goto('/sales/leads');
-    await expect(page.locator('text=Assigned Patient Leads')).toBeVisible();
+    await expect(page.locator('text=Assigned Product Leads')).toBeVisible();
 
     // Verify table headers do NOT include Lead Source, Cost, Campaign
     const tableHeader = page.locator('thead');
@@ -43,11 +43,11 @@ test.describe('Panel 02: Salesperson Frontend & Strict Lead Source Privacy', () 
 
     // Verify valid columns exist
     expect(headerText).toContain('Lead Code');
-    expect(headerText).toContain('Patient Name');
+    expect(headerText).toContain('Customer Name');
     expect(headerText).toContain('Status');
   });
 
-  test('calling workspace renders patient details and consultation logger', async ({ page }) => {
+  test('calling workspace renders customer details and consultation logger', async ({ page }) => {
     await page.goto('/sales/calling');
     await expect(page.locator('text=Interactive Tele-Consultation Workspace')).toBeVisible();
     await expect(page.locator('text=Consultation Call Logger')).toBeVisible();

@@ -61,7 +61,7 @@ export default function ManagementDashboardPage() {
             Commercial, Inventory & Logistics Operations
           </h2>
           <p className="text-xs text-slate-500">
-            Fulfill patient conversions, manage formulation inventories, execute GST tax invoicing, and track courier logistics.
+            Fulfill customer conversions, manage formulation inventories, execute GST tax invoicing, and track courier logistics.
           </p>
         </div>
 
@@ -225,7 +225,7 @@ export default function ManagementDashboardPage() {
               <div>
                 <CardTitle>Order Fulfillment Pipeline</CardTitle>
                 <CardDescription>
-                  Live lifecycle distribution of all patient formulation orders
+                  Live lifecycle distribution of all medicine & product orders
                 </CardDescription>
               </div>
               <Link href="/management/orders">

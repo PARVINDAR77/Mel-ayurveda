@@ -233,7 +233,7 @@ export default function LeadSourcesAdminPage() {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         title="Register New Marketing Channel"
-        description="Connect a marketing ad platform or campaign to ingest patient leads."
+        description="Connect a marketing ad platform or campaign to ingest customer product inquiries."
       >
         <form onSubmit={handleCreateSource} className="space-y-4">
           <Input
