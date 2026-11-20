@@ -206,10 +206,21 @@
 | Unit: Audit Record By ID | Unit | `AuditService.findById()` | **PASS** | Detailed record & 404 test |
 | Unit: Audit Summary Aggregation | Unit | `AuditService.getSummary()` | **PASS** | Action grouping verified |
 
-## 14. Test Plan Roadmap
+## 14. Frontend Test Execution Details: Phase 16 (Next.js Design System & Layout)
+| Test Suite | Scope | Target | Result | Latency |
+|:---|:---|:---|:---:|:---:|
+| Next.js 15 Production Build | Build | `next build` (Next.js 15.1.7, React 19) | **PASS (0 ERRORS)** | Static pages & chunks optimized |
+| Core Component Library | Static Types | Button, Badge, Card, Input, StatCard, DataTable, Modal, Drawer | **PASS** | TypeScript strict checks |
+| Auth Context & Token Queue | Static Types | `useAuth()`, refresh token interceptor, rotation queue | **PASS** | Axios interceptor wired |
+| RoleGuard Authorization | Static Types | 5-panel route protection & role rejection screen | **PASS** | Verified across all roles |
+| Sidebar Navigation Isolation | Inspection | Salesperson nav items check | **PASS (ZERO LEAK)** | 0% source/campaign navigation links |
+| Corporate Login Interface | Rendering | `/login` with 5 seeded persona switcher | **PASS** | Persona quick switch ready |
+
+## 15. Test Plan Roadmap
 | Category | Tool | Planned Test Count | Target Pass Rate | Status |
 |:---|:---|:---:|:---:|:---:|
 | Unit Tests (Services & DTOs) | Jest | ~150 tests | 100% | 86 PASSED |
 | API Integration Tests | Supertest | ~80 tests across 15 bundles | 100% | 127 PASSED |
 | Security Penetration Tests | Supertest / Custom | ~25 tests (Source privacy, IDOR) | 100% | 22 PASSED |
+| Frontend Production Compilation | Next.js Build | Static pages, layouts & routing | 100% | PASSED (0 ERRORS) |
 | End-to-End User Journeys | Playwright | 12 critical flows | 100% | PLANNED |
