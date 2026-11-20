@@ -11,6 +11,7 @@ import { LeadAssignmentsModule } from './modules/lead-assignments/lead-assignmen
 import { CallingModule } from './modules/calling/calling.module';
 import { FollowUpsModule } from './modules/follow-ups/follow-ups.module';
 import { PendingReviewsModule } from './modules/pending-reviews/pending-reviews.module';
+import { ApprovalsModule } from './modules/approvals/approvals.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { PendingReviewsModule } from './modules/pending-reviews/pending-reviews.
     CallingModule,
     FollowUpsModule,
     PendingReviewsModule,
+    ApprovalsModule,
   ],
 })
 export class AppModule {}
