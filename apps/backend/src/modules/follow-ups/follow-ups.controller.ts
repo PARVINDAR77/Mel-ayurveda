@@ -24,7 +24,7 @@ import { RoleType } from '@prisma/client';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('follow-ups')
 export class FollowUpsController {
-  constructor(private readonly followUpsService: FollowUpsService) {}
+  constructor(private readonly followUpsService: FollowUpsService) { }
 
   @Post()
   @Roles(RoleType.SUPER_ADMIN, RoleType.SALESPERSON, RoleType.MANAGEMENT)

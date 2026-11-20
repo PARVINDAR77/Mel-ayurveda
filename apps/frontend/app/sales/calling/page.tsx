@@ -181,11 +181,10 @@ function CallingWorkspaceContent() {
                   <div
                     key={l.id}
                     onClick={() => setSelectedLead(l)}
-                    className={`p-3 rounded-lg border transition cursor-pointer ${
-                      selectedLead?.id === l.id
+                    className={`p-3 rounded-lg border transition cursor-pointer ${selectedLead?.id === l.id
                         ? 'border-forest-700 bg-forest-50/60 shadow-sm'
                         : 'border-slate-100 hover:bg-slate-50'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-mono text-xs font-bold text-slate-900">{l.leadCode}</span>
