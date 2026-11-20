@@ -1,10 +1,10 @@
 # Test Execution Report
 
 ## 1. Execution Summary
-- **Current Phase**: Phase 10 (Final Approval Engine & State Machine - Bundle 10)
-- **Total Test Suites Executed**: 8 (Unit & Live HTTP E2E across Bundles 01, 02, 03, 04, 05, 06, 07, 08, 09, 10)
-- **Tests Passed**: 108 / 108 (100% Pass Rate: 45 Unit + 63 Live E2E)
-- **Status**: ALL PHASE 04, 05, 06, 07, 08, 09 & 10 TESTS PASSED
+- **Current Phase**: Phase 11 (Customer Conversion & CRM Profiles - Bundle 11)
+- **Total Test Suites Executed**: 9 (Unit & Live HTTP E2E across Bundles 01 to 11)
+- **Tests Passed**: 127 / 127 (100% Pass Rate: 52 Unit + 75 Live E2E)
+- **Status**: ALL PHASE 04, 05, 06, 07, 08, 09, 10 & 11 TESTS PASSED
 - **Execution Date**: 2026-11-20
 
 ## 2. Test Execution Details: Bundle 01 (Authentication)
@@ -111,10 +111,25 @@
 | Unit: Claim & Concurrency Lock | Unit | `ApprovalsService.claimApproval()` | **PASS** | 3 tests |
 | Unit: Sign-off Decision Engine | Unit | `ApprovalsService.decideApproval()` | **PASS** | 4 tests |
 
-## 9. Test Plan Roadmap
+## 9. Test Execution Details: Bundle 11 (Customer CRM & Conversion Engine)
+| Test Suite | Scope | Target | Result | Latency |
+|:---|:---|:---|:---:|:---:|
+| Reject Unapproved Lead Conversion| HTTP E2E | Convert lead with status ASSIGNED | **PASS (400)** | BadRequestException |
+| RBAC Conversion Guard | HTTP E2E | Salesperson converting lead | **PASS (403)** | Forbidden Guard |
+| Authorized Approved Lead Convert | HTTP E2E | `POST /api/v1/customers/convert/:id` | **PASS (201)** | `MEL-CUST-000102` generated, status `CONVERTED` |
+| Idempotent Duplicate Convert Guard| HTTP E2E | Re-converting already converted lead | **PASS (409)** | ConflictException |
+| Direct Walk-in Registration | HTTP E2E | `POST /api/v1/customers` | **PASS (201)** | `MEL-CUST-000103` generated |
+| List Customers with Counts | HTTP E2E | `GET /api/v1/customers` | **PASS (200)** | Converted lead info attached |
+| Detailed Customer CRM Profile | HTTP E2E | `GET /api/v1/customers/:id` | **PASS (200)** | Full lead origin, calls, orders |
+| Customer Profile Update | HTTP E2E | `PATCH /api/v1/customers/:id` | **PASS (200)** | Contact/address updated |
+| Customer CRM KPI Metrics | HTTP E2E | `GET /api/v1/customers/metrics` | **PASS (200)** | Total, converted, monthly |
+| Unit: Customer Code Generator | Unit | `CustomersService.generateCustomerCode()` | **PASS** | 2 tests |
+| Unit: Conversion Invariant Checks | Unit | `CustomersService.convertLeadToCustomer()` | **PASS** | 4 tests |
+
+## 10. Test Plan Roadmap
 | Category | Tool | Planned Test Count | Target Pass Rate | Status |
 |:---|:---|:---:|:---:|:---:|
-| Unit Tests (Services & DTOs) | Jest | ~150 tests | 100% | 45 PASSED |
-| API Integration Tests | Supertest | ~80 tests across 15 bundles | 100% | 63 PASSED |
-| Security Penetration Tests | Supertest / Custom | ~25 tests (Source privacy, IDOR) | 100% | 14 PASSED |
+| Unit Tests (Services & DTOs) | Jest | ~150 tests | 100% | 52 PASSED |
+| API Integration Tests | Supertest | ~80 tests across 15 bundles | 100% | 75 PASSED |
+| Security Penetration Tests | Supertest / Custom | ~25 tests (Source privacy, IDOR) | 100% | 15 PASSED |
 | End-to-End User Journeys | Playwright | 12 critical flows | 100% | PLANNED |
