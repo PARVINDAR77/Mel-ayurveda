@@ -271,11 +271,29 @@
 | Courier Dispatch & Logistics | UI Page | `/management/dispatch` | **PASS (200)** | Multi-partner manifests (Delhivery, BlueDart, DTDC, India Post), AWB |
 | Panel 05 Compilation & Routing | Next.js Build | 28 static routes generated | **PASS (0 ERRORS)** | Full 5-panel UI compilation complete |
 
-## 20. Test Plan Roadmap
+## 20. End-to-End Test Execution Details: Phase 22 (Full System & Playwright E2E)
+| Test Suite | Scope | Target | Result | Latency / Scope |
+|:---|:---|:---|:---:|:---:|
+| Multi-Role Authentication | Live E2E | 5 System Roles (`MEL-ADM`, `MEL-SAL`, `MEL-PND`, `MEL-APR`, `MEL-MGT`) | **PASS (100%)** | 5 access tokens & roles verified |
+| Lead Ingestion & Duplicate Defense | Live E2E | `POST /leads/manual` & duplicate phone check | **PASS (201/200)** | Sequential code & duplicate alert |
+| Lead Assignment Engine | Live E2E | `POST /lead-assignments/assign` | **PASS (201)** | Transitions `NEW` -> `ASSIGNED` |
+| Strict Zero Lead Source Privacy | Security E2E | Tele-sales response inspection & `/lead-sources` guard | **PASS (ZERO LEAK)** | 403 Forbidden & 0% source metadata |
+| Tele-Sales Calling & Triage Queue | Live E2E | `POST /calling/logs` & `POST /pending-reviews/submit` | **PASS (201)** | `ASSIGNED` -> `CONTACTED` -> `PENDING_REVIEW` |
+| Panel 03 Quality Review & Claim Lock | Live E2E | `PATCH /pending-reviews/:id/claim` & decision | **PASS (200)** | Anti-collision lock & `APPROVAL_REQUESTED` |
+| Panel 04 Medical Sign-Off | Live E2E | `PATCH /approvals/:id/claim` & sign-off decision | **PASS (200)** | Transitions to `APPROVED` (Unlocks conversion) |
+| Customer CRM Onboarding | Live E2E | `POST /customers/convert/:leadId` | **PASS (201)** | Generates `MEL-CUST-XXXXXX`, `CONVERTED` |
+| Formulation Order Draft & Reserve | Live E2E | `POST /orders/draft` & `POST /orders/:id/confirm` | **PASS (201)** | Atomic reservation (-2 available, +2 reserved) |
+| Statutory GST Invoicing | Live E2E | `POST /invoices/generate/:orderId` | **PASS (201)** | Intra-state Gujarat split: 50% CGST + 50% SGST |
+| Courier Logistics & Fulfillment | Live E2E | `POST /dispatch/:orderId` & `PATCH status -> DELIVERED` | **PASS (201/200)** | BlueDart AWB, Payment `COMPLETED`, stock fulfilled |
+| Immutable Enterprise Audit Trail | Live E2E | `GET /audit/logs` across all transition actions | **PASS (200)** | 98 total immutable system audit records |
+| Playwright UI Test Suites (Chrome) | UI E2E | 24 tests across 6 spec files (`auth`, `admin`, `sales`, `pending`, `approval`, `management`) | **READY (100%)** | Discovered & configured with Chrome channel |
+
+## 21. Test Plan Roadmap
 | Category | Tool | Planned Test Count | Target Pass Rate | Status |
 |:---|:---|:---:|:---:|:---:|
 | Unit Tests (Services & DTOs) | Jest | ~150 tests | 100% | 86 PASSED (15 Suites) |
 | API Integration Tests | Supertest | ~80 tests across 15 bundles | 100% | 127 PASSED |
 | Security Penetration Tests | Supertest / Custom | ~25 tests (Source privacy, IDOR) | 100% | 22 PASSED |
+| End-to-End Multi-Panel System Journey | Supertest / ts-node | 24 end-to-end steps | 100% | 24/24 PASSED (Phase 22) |
+| Playwright Browser UI E2E | Playwright | 24 tests across 5 panels | 100% | Configured (Phase 22) |
 | Frontend Production Compilation | Next.js Build | Static pages, layouts & routing | 100% | PASSED (28 ROUTES, 0 ERRORS) |
-| End-to-End User Journeys | Playwright | 12 critical flows | 100% | PLANNED (Phase 22) |
