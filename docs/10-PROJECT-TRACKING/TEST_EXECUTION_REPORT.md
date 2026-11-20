@@ -181,10 +181,35 @@
 | Unit: Management Fulfillment & Tax | Unit | `AnalyticsService.getManagementDashboard()`| **PASS** | Delivery rate, CGST/SGST/IGST totals |
 | Unit: Dynamic Role Dispatcher | Unit | `AnalyticsService.getDashboard()` | **PASS** | Correct delegation per RoleType |
 
-## 13. Test Plan Roadmap
+## 13. Test Execution Details: Bundle 15 (Notifications & Enterprise Audit Logging)
+| Test Suite | Scope | Target | Result | Latency |
+|:---|:---|:---|:---:|:---:|
+| Notification Dispatch | HTTP E2E | `POST /api/v1/notifications` | **PASS (201)** | Notification created & target user notified |
+| Notification Query with Unread Count| HTTP E2E | `GET /api/v1/notifications` | **PASS (200)** | Unread count & paginated list returned |
+| Anti-IDOR Guard: Cross-User Mark Read | HTTP E2E | Admin -> Salesperson notification read | **PASS (403)** | ForbiddenException |
+| Mark Notification Read by Owner | HTTP E2E | `PATCH /api/v1/notifications/:id/read` | **PASS (200)** | `isRead: true`, `readAt` timestamp stamped |
+| Mark All Notifications as Read | HTTP E2E | `PATCH /api/v1/notifications/read-all` | **PASS (200)** | Batch update unread notifications |
+| Anti-IDOR Guard: Cross-User Delete | HTTP E2E | Admin -> Salesperson notification delete | **PASS (403)** | ForbiddenException |
+| Delete Notification by Owner | HTTP E2E | `DELETE /api/v1/notifications/:id` | **PASS (200)** | Notification removed |
+| Enterprise Audit Log Query | HTTP E2E | `GET /api/v1/audit/logs` | **PASS (200)** | Audit trail with action/entity filters |
+| Enterprise Audit Summary Query | HTTP E2E | `GET /api/v1/audit/summary` | **PASS (200)** | Total logs & top actions aggregate |
+| RBAC Guard: Sales accessing Audit | HTTP E2E | Sales -> `/audit/logs` | **PASS (403)** | ForbiddenException |
+| RBAC Guard: Sales accessing Summary| HTTP E2E | Sales -> `/audit/summary` | **PASS (403)** | ForbiddenException |
+| Unauthenticated Access to Audit | HTTP E2E | Anonymous -> `/audit/logs` | **PASS (401)** | UnauthorizedException |
+| Unit: Notification Dispatch Logic | Unit | `NotificationsService.createNotification()` | **PASS** | Validates user & dispatches |
+| Unit: User Notification Pagination | Unit | `NotificationsService.getUserNotifications()` | **PASS** | Unread count & pagination verified |
+| Unit: Anti-IDOR Mark Read Guard | Unit | `NotificationsService.markAsRead()` | **PASS** | Validates ownership |
+| Unit: Anti-IDOR Delete Guard | Unit | `NotificationsService.deleteNotification()` | **PASS** | Validates ownership |
+| Unit: Batch Mark All As Read | Unit | `NotificationsService.markAllAsRead()` | **PASS** | Bulk update count verified |
+| Unit: Immutable Audit Record Insert | Unit | `AuditService.logAction()` | **PASS** | JSON old/new state persistence |
+| Unit: Audit Filter & Pagination | Unit | `AuditService.findAll()` | **PASS** | Multi-attribute search verified |
+| Unit: Audit Record By ID | Unit | `AuditService.findById()` | **PASS** | Detailed record & 404 test |
+| Unit: Audit Summary Aggregation | Unit | `AuditService.getSummary()` | **PASS** | Action grouping verified |
+
+## 14. Test Plan Roadmap
 | Category | Tool | Planned Test Count | Target Pass Rate | Status |
 |:---|:---|:---:|:---:|:---:|
-| Unit Tests (Services & DTOs) | Jest | ~150 tests | 100% | 74 PASSED |
-| API Integration Tests | Supertest | ~80 tests across 15 bundles | 100% | 113 PASSED |
-| Security Penetration Tests | Supertest / Custom | ~25 tests (Source privacy, IDOR) | 100% | 18 PASSED |
+| Unit Tests (Services & DTOs) | Jest | ~150 tests | 100% | 86 PASSED |
+| API Integration Tests | Supertest | ~80 tests across 15 bundles | 100% | 127 PASSED |
+| Security Penetration Tests | Supertest / Custom | ~25 tests (Source privacy, IDOR) | 100% | 22 PASSED |
 | End-to-End User Journeys | Playwright | 12 critical flows | 100% | PLANNED |

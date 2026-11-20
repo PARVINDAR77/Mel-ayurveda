@@ -46,6 +46,7 @@ model User {
   approvalRequests   ApprovalRequest[] @relation("OfficerApprovals")
   auditLogs          AuditLog[]
   ordersCreated      Order[]          @relation("OrdersCreated")
+  notifications      Notification[]
 
   @@index([role, isActive])
   @@index([employeeCode])
@@ -567,3 +568,38 @@ model AuditLog {
   @@index([userId, createdAt])
   @@map("audit_logs")
 }
+
+// ==========================================
+// 9. NOTIFICATIONS & IN-APP ALERTS
+// ==========================================
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  URGENT
+  LEAD_ASSIGNED
+  REVIEW_REQUESTED
+  APPROVAL_GRANTED
+  ORDER_CONFIRMED
+  DISPATCH_UPDATE
+}
+
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @db.Uuid
+  title     String           @db.VarChar(200)
+  message   String           @db.Text
+  type      NotificationType @default(INFO)
+  isRead    Boolean          @default(false)
+  readAt    DateTime?        @db.Timestamptz
+  link      String?          @db.VarChar(500)
+  createdAt DateTime         @default(now()) @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
