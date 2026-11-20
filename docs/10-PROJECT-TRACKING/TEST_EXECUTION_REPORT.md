@@ -142,10 +142,26 @@
 | Unit: Order Calculation & Draft | Unit | `OrdersService.createDraftOrder()` | **PASS** | 4 tests |
 | Unit: Atomic Confirmation & Stock | Unit | `OrdersService.confirmOrder()` | **PASS** | 3 tests |
 
-## 11. Test Plan Roadmap
+## 11. Test Execution Details: Bundle 13 (Operations, Invoicing, Inventory & Dispatch)
+| Test Suite | Scope | Target | Result | Latency |
+|:---|:---|:---|:---:|:---:|
+| Warehouse Inventory Restock | HTTP E2E | `POST /api/v1/inventory/restock` | **PASS (201)** | Available restocked from 100 to 150 |
+| Inventory Stock Query | HTTP E2E | `GET /api/v1/inventory` | **PASS (200)** | Real-time available & reserved verified |
+| Intra-State GST Calculation (Gujarat)| HTTP E2E | `POST /api/v1/invoices/generate` | **PASS (201)** | Split 50% CGST + 50% SGST, ₹0 IGST |
+| Inter-State GST Calculation (Rajasthan)| HTTP E2E | `POST /api/v1/invoices/generate` | **PASS (201)** | 100% IGST, ₹0 CGST, ₹0 SGST |
+| Duplicate Invoice Guard | HTTP E2E | Generate invoice for already billed order | **PASS (409)** | ConflictException |
+| Order Dispatch & Shipment Generation | HTTP E2E | `POST /api/v1/dispatch` | **PASS (201)** | `MEL-SHP-2026-00101`, AWB logged, Order SHIPPED |
+| Transit Status to DELIVERED | HTTP E2E | `PATCH /api/v1/dispatch/shipment/:id/status`| **PASS (200)** | Order marked DELIVERED & PAID |
+| Shipment Tracking Query | HTTP E2E | `GET /api/v1/dispatch/order/:orderId` | **PASS (200)** | Tracking info & timeline retrieved |
+| Unit: Intra-State Tax Calculation | Unit | `InvoicesService.generateInvoice()` | **PASS** | CGST (60) + SGST (60) |
+| Unit: Inter-State Tax Calculation | Unit | `InvoicesService.generateInvoice()` | **PASS** | IGST (120) |
+| Unit: Restock Calculations | Unit | `InventoryService.restock()` | **PASS** | New available = old available + quantity |
+| Unit: Dispatch State Check | Unit | `DispatchService.createShipment()` | **PASS** | Validates order confirmed/billed status |
+
+## 12. Test Plan Roadmap
 | Category | Tool | Planned Test Count | Target Pass Rate | Status |
 |:---|:---|:---:|:---:|:---:|
-| Unit Tests (Services & DTOs) | Jest | ~150 tests | 100% | 62 PASSED |
-| API Integration Tests | Supertest | ~80 tests across 15 bundles | 100% | 86 PASSED |
+| Unit Tests (Services & DTOs) | Jest | ~150 tests | 100% | 67 PASSED |
+| API Integration Tests | Supertest | ~80 tests across 15 bundles | 100% | 99 PASSED |
 | Security Penetration Tests | Supertest / Custom | ~25 tests (Source privacy, IDOR) | 100% | 15 PASSED |
 | End-to-End User Journeys | Playwright | 12 critical flows | 100% | PLANNED |
