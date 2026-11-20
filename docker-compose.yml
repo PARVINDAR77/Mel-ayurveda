@@ -1,0 +1,38 @@
+# ==============================================================================
+# MELAYURVEDA CRM - LOCAL DEVELOPMENT DOCKER COMPOSE CONFIGURATION
+# THIS FILE IS INTENDED FOR LOCAL DEVELOPMENT ONLY - DO NOT USE FOR PRODUCTION
+# ==============================================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: melayurveda_postgres_dev
+    restart: unless-stopped
+    # Bound to 127.0.0.1:5433 to avoid port conflicts with other local services
+    ports:
+      - "127.0.0.1:5433:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-melayurveda_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-melayurveda_dev_pass_change_in_prod}
+      POSTGRES_DB: ${POSTGRES_DB:-melayurveda_crm}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      # Persistent named volume for local development database records
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-melayurveda_user} -d ${POSTGRES_DB:-melayurveda_crm}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - melayurveda_network
+
+volumes:
+  postgres_dev_data:
+    name: melayurveda_postgres_dev_data
+
+networks:
+  melayurveda_network:
+    name: melayurveda_local_network
+    driver: bridge
