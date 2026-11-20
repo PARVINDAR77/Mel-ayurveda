@@ -226,11 +226,22 @@
 | Enterprise Audit Log Explorer UI| UI Page | `/admin/audit` | **PASS (200)** | Filterable logs, JSON state diff modal |
 | Panel 01 Compilation & Routing | Next.js Build | 10 static routes generated | **PASS (0 ERRORS)** | Static optimization complete |
 
-## 16. Test Plan Roadmap
+## 16. Frontend Test Execution Details: Phase 18 (Panel 02: Salesperson Frontend)
+| Test Suite | Scope | Target | Result | Latency |
+|:---|:---|:---|:---:|:---:|
+| Salesperson Calling Dashboard | UI Page | `/sales` | **PASS (200)** | Daily quota progress, pipeline breakdown, priority queue |
+| Strict Zero Lead Source Privacy | UI Code Review | All `/sales/*` screens | **PASS (ZERO LEAK)** | 0% source, campaign, or marketing metadata displayed |
+| My Assigned Leads Workspace | UI Page | `/sales/leads` | **PASS (200)** | Patient table, priority filters, manual lead modal |
+| Interactive Calling Workspace | UI Page | `/sales/calling` | **PASS (200)** | Dialing drawer, consultation logger, call history |
+| Follow-Up Agenda Calendar | UI Page | `/sales/follow-ups` | **PASS (200)** | Overdue alerts, one-click completion & callback |
+| Clinical Review Submission | UI Page | `/sales/pending` | **PASS (200)** | Qualified patient triage forwarding form |
+| Panel 02 Compilation & Routing | Next.js Build | 15 static routes generated | **PASS (0 ERRORS)** | Static optimization complete |
+
+## 17. Test Plan Roadmap
 | Category | Tool | Planned Test Count | Target Pass Rate | Status |
 |:---|:---|:---:|:---:|:---:|
 | Unit Tests (Services & DTOs) | Jest | ~150 tests | 100% | 86 PASSED |
 | API Integration Tests | Supertest | ~80 tests across 15 bundles | 100% | 127 PASSED |
 | Security Penetration Tests | Supertest / Custom | ~25 tests (Source privacy, IDOR) | 100% | 22 PASSED |
-| Frontend Production Compilation | Next.js Build | Static pages, layouts & routing | 100% | PASSED (10 ROUTES, 0 ERRORS) |
+| Frontend Production Compilation | Next.js Build | Static pages, layouts & routing | 100% | PASSED (15 ROUTES, 0 ERRORS) |
 | End-to-End User Journeys | Playwright | 12 critical flows | 100% | PLANNED |
