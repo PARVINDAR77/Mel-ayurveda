@@ -1,10 +1,10 @@
 # Test Execution Report
 
 ## 1. Execution Summary
-- **Current Phase**: Phase 05 (User, Role & Employee API Services - Bundles 02 & 03)
-- **Total Test Suites Executed**: 4 (Unit & Live HTTP E2E across Bundles 01, 02, 03)
-- **Tests Passed**: 25 / 25 (100% Pass Rate)
-- **Status**: ALL PHASE 04 & 05 TESTS PASSED
+- **Current Phase**: Phase 08 (Calling Workflow & Follow-up Scheduler - Bundles 07 & 08)
+- **Total Test Suites Executed**: 6 (Unit & Live HTTP E2E across Bundles 01, 02, 03, 04, 05, 06, 07, 08)
+- **Tests Passed**: 70 / 70 (100% Pass Rate: 29 Unit + 41 Live E2E)
+- **Status**: ALL PHASE 04, 05, 06, 07 & 08 TESTS PASSED
 - **Execution Date**: 2026-11-20
 
 ## 2. Test Execution Details: Bundle 01 (Authentication)
@@ -64,10 +64,26 @@
 | Unassigned Intake Queue | HTTP E2E | `GET /api/v1/lead-assignments/unassigned` | **PASS (200)** | Accurate backlog |
 | RBAC Assignment Guard | HTTP E2E | Salesperson attempting lead assignment | **PASS (403)** | Forbidden Guard |
 
-## 6. Test Plan Roadmap
+## 6. Test Execution Details: Bundles 07 & 08 (Calling & Follow-up Scheduler)
+| Test Suite | Scope | Target | Result | Latency |
+|:---|:---|:---|:---:|:---:|
+| Anti-IDOR Call Logging Guard | HTTP E2E | Salesperson logging call on unassigned lead | **PASS (403)** | Forbidden Guard |
+| Anti-IDOR Follow-up Guard | HTTP E2E | Salesperson scheduling follow-up on unassigned lead | **PASS (403)** | Forbidden Guard |
+| Anti-IDOR Call Log History | HTTP E2E | Salesperson viewing call logs of unassigned lead | **PASS (403)** | Forbidden Guard |
+| Record Call & Inline Follow-up | HTTP E2E | `POST /api/v1/calling/logs` (BUSY_CALL_LATER) | **PASS (201)** | `FOLLOW_UP_REQUIRED` + Callback created |
+| Query My Follow-ups Agenda | HTTP E2E | `GET /api/v1/follow-ups/my` with counters | **PASS (200)** | Filter & summary accurate |
+| Reschedule Follow-up | HTTP E2E | `PATCH /api/v1/follow-ups/:id/reschedule` | **PASS (200)** | New timestamp stored |
+| Auto-complete Follow-up on Call| HTTP E2E | `POST /api/v1/calling/logs` (INTERESTED) | **PASS (201)** | Lead status `INTERESTED` + Follow-up `COMPLETED` |
+| Append-Only Call Log History | HTTP E2E | `GET /api/v1/calling/logs/lead/:id` | **PASS (200)** | Full chronological history |
+| Personal Calling Analytics | HTTP E2E | `GET /api/v1/calling/analytics/my` | **PASS (200)** | Talk time, conversion rate, breakdown |
+| Standalone Follow-up Complete | HTTP E2E | `PATCH /api/v1/follow-ups/:id/complete` | **PASS (200)** | Status `COMPLETED` verified |
+| Unit: Call Log Validation | Unit | `CallingService.createCallLog()` | **PASS** | 4 tests |
+| Unit: Follow-up Scheduling | Unit | `FollowUpsService.createFollowUp()` | **PASS** | 5 tests |
+
+## 7. Test Plan Roadmap
 | Category | Tool | Planned Test Count | Target Pass Rate | Status |
 |:---|:---|:---:|:---:|:---:|
-| Unit Tests (Services & DTOs) | Jest | ~150 tests | 100% | 19 PASSED |
-| API Integration Tests | Supertest | ~80 tests across 15 bundles | 100% | 29 PASSED |
-| Security Penetration Tests | Supertest / Custom | ~25 tests (Source privacy, IDOR) | 100% | 9 PASSED |
+| Unit Tests (Services & DTOs) | Jest | ~150 tests | 100% | 29 PASSED |
+| API Integration Tests | Supertest | ~80 tests across 15 bundles | 100% | 41 PASSED |
+| Security Penetration Tests | Supertest / Custom | ~25 tests (Source privacy, IDOR) | 100% | 12 PASSED |
 | End-to-End User Journeys | Playwright | 12 critical flows | 100% | PLANNED |

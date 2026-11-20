@@ -8,6 +8,8 @@ import { RolesModule } from './modules/roles/roles.module';
 import { LeadSourcesModule } from './modules/lead-sources/lead-sources.module';
 import { LeadsModule } from './modules/leads/leads.module';
 import { LeadAssignmentsModule } from './modules/lead-assignments/lead-assignments.module';
+import { CallingModule } from './modules/calling/calling.module';
+import { FollowUpsModule } from './modules/follow-ups/follow-ups.module';
 
 @Module({
   imports: [
@@ -23,6 +25,9 @@ import { LeadAssignmentsModule } from './modules/lead-assignments/lead-assignmen
     LeadSourcesModule,
     LeadsModule,
     LeadAssignmentsModule,
+    CallingModule,
+    FollowUpsModule,
   ],
 })
 export class AppModule {}
+
