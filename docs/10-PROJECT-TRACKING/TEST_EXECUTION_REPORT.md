@@ -1,10 +1,10 @@
 # Test Execution Report
 
 ## 1. Execution Summary
-- **Current Phase**: Phase 11 (Customer Conversion & CRM Profiles - Bundle 11)
-- **Total Test Suites Executed**: 9 (Unit & Live HTTP E2E across Bundles 01 to 11)
-- **Tests Passed**: 127 / 127 (100% Pass Rate: 52 Unit + 75 Live E2E)
-- **Status**: ALL PHASE 04, 05, 06, 07, 08, 09, 10 & 11 TESTS PASSED
+- **Current Phase**: Phase 12 (Ayurvedic Products, Disease Categories & Order Drafts - Bundle 12)
+- **Total Test Suites Executed**: 11 (Unit & Live HTTP E2E across Bundles 01 to 12)
+- **Tests Passed**: 148 / 148 (100% Pass Rate: 62 Unit + 86 Live E2E)
+- **Status**: ALL PHASE 04 TO 12 TESTS PASSED
 - **Execution Date**: 2026-11-20
 
 ## 2. Test Execution Details: Bundle 01 (Authentication)
@@ -126,10 +126,26 @@
 | Unit: Customer Code Generator | Unit | `CustomersService.generateCustomerCode()` | **PASS** | 2 tests |
 | Unit: Conversion Invariant Checks | Unit | `CustomersService.convertLeadToCustomer()` | **PASS** | 4 tests |
 
-## 10. Test Plan Roadmap
+## 10. Test Execution Details: Bundle 12 (Products, Categories & Orders)
+| Test Suite | Scope | Target | Result | Latency |
+|:---|:---|:---|:---:|:---:|
+| Disease Category Retrieval | HTTP E2E | `GET /api/v1/products/categories` | **PASS (200)** | 5 categories returned |
+| Product Formulation Registration| HTTP E2E | `POST /api/v1/products` | **PASS (201)** | SKU created + Inventory initialized |
+| Duplicate SKU Defense | HTTP E2E | Register product with existing SKU | **PASS (409)** | ConflictException |
+| Sales Draft Order Creation | HTTP E2E | `POST /api/v1/orders/draft` | **PASS (201)** | `MEL-ORD-2026-00101` status DRAFT |
+| Insufficient Stock Defense | HTTP E2E | Confirm order exceeding available stock | **PASS (400)** | BadRequestException |
+| Atomic Inventory Reservation | HTTP E2E | `POST /api/v1/orders/:id/confirm` | **PASS (201)** | Available: 100->98, Reserved: 0->2 |
+| Verify Stock Deduction | HTTP E2E | `GET /api/v1/products/:id` | **PASS (200)** | Available: 98, Reserved: 2 verified |
+| Orders Listing & Operations KPIs| HTTP E2E | `GET /api/v1/orders/metrics` | **PASS (200)** | Revenue, confirmed, drafts |
+| Order Cancel & Stock Restoral | HTTP E2E | `PATCH /api/v1/orders/:id/cancel` | **PASS (200)** | Available restored to 100, Reserved to 0 |
+| Unit: Product & Inventory Logic | Unit | `ProductsService.createProduct()` | **PASS** | 3 tests |
+| Unit: Order Calculation & Draft | Unit | `OrdersService.createDraftOrder()` | **PASS** | 4 tests |
+| Unit: Atomic Confirmation & Stock | Unit | `OrdersService.confirmOrder()` | **PASS** | 3 tests |
+
+## 11. Test Plan Roadmap
 | Category | Tool | Planned Test Count | Target Pass Rate | Status |
 |:---|:---|:---:|:---:|:---:|
-| Unit Tests (Services & DTOs) | Jest | ~150 tests | 100% | 52 PASSED |
-| API Integration Tests | Supertest | ~80 tests across 15 bundles | 100% | 75 PASSED |
+| Unit Tests (Services & DTOs) | Jest | ~150 tests | 100% | 62 PASSED |
+| API Integration Tests | Supertest | ~80 tests across 15 bundles | 100% | 86 PASSED |
 | Security Penetration Tests | Supertest / Custom | ~25 tests (Source privacy, IDOR) | 100% | 15 PASSED |
 | End-to-End User Journeys | Playwright | 12 critical flows | 100% | PLANNED |

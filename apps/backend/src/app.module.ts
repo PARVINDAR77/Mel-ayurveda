@@ -13,6 +13,8 @@ import { FollowUpsModule } from './modules/follow-ups/follow-ups.module';
 import { PendingReviewsModule } from './modules/pending-reviews/pending-reviews.module';
 import { ApprovalsModule } from './modules/approvals/approvals.module';
 import { CustomersModule } from './modules/customers/customers.module';
+import { ProductsModule } from './modules/products/products.module';
+import { OrdersModule } from './modules/orders/orders.module';
 
 @Module({
   imports: [
@@ -33,6 +35,8 @@ import { CustomersModule } from './modules/customers/customers.module';
     PendingReviewsModule,
     ApprovalsModule,
     CustomersModule,
+    ProductsModule,
+    OrdersModule,
   ],
 })
 export class AppModule {}
