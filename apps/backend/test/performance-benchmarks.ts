@@ -433,7 +433,7 @@ async function runPerformanceBenchmarks() {
     const burstMetric = analyzeMetrics(
       'Concurrent Burst (50 Tele-Callers)',
       'CONCURRENCY',
-      250,
+      500,
       burstLatencies,
       burstSuccessCount,
     );
