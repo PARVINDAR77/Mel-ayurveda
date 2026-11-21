@@ -24,6 +24,16 @@ export class OrderItemDto {
   @IsInt()
   @Min(1)
   quantity: number;
+
+  @ApiPropertyOptional({ description: 'Unit price (₹)' })
+  @IsOptional()
+  @IsNumber()
+  unitPrice?: number;
+
+  @ApiPropertyOptional({ description: 'Dosage instructions or regimen' })
+  @IsOptional()
+  @IsString()
+  dosageInstructions?: string;
 }
 
 export class CreateDraftOrderDto {

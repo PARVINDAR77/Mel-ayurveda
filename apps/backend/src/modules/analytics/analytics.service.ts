@@ -96,20 +96,28 @@ export class AnalyticsService {
       this.prisma.order.count({ where: { status: OrderStatus.DRAFT } }),
       this.prisma.order.aggregate({
         _sum: { totalAmount: true },
-        where: { status: { not: OrderStatus.CANCELLED } },
-      }),
-      this.prisma.order.aggregate({
-        _sum: { totalAmount: true },
         where: {
-          createdAt: { gte: todayStart, lte: todayEnd },
-          status: { not: OrderStatus.CANCELLED },
+          status: { in: [OrderStatus.CONFIRMED, OrderStatus.PROCESSING, OrderStatus.SHIPPED, OrderStatus.DELIVERED] },
         },
       }),
       this.prisma.order.aggregate({
         _sum: { totalAmount: true },
         where: {
-          createdAt: { gte: startOfMonth },
-          status: { not: OrderStatus.CANCELLED },
+          status: { in: [OrderStatus.CONFIRMED, OrderStatus.PROCESSING, OrderStatus.SHIPPED, OrderStatus.DELIVERED] },
+          OR: [
+            { createdAt: { gte: todayStart, lte: todayEnd } },
+            { updatedAt: { gte: todayStart, lte: todayEnd } },
+          ],
+        },
+      }),
+      this.prisma.order.aggregate({
+        _sum: { totalAmount: true },
+        where: {
+          status: { in: [OrderStatus.CONFIRMED, OrderStatus.PROCESSING, OrderStatus.SHIPPED, OrderStatus.DELIVERED] },
+          OR: [
+            { createdAt: { gte: startOfMonth } },
+            { updatedAt: { gte: startOfMonth } },
+          ],
         },
       }),
       this.prisma.callLog.count(),

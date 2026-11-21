@@ -8,7 +8,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateDraftOrderDto } from './dto/create-draft-order.dto';
 import { OrderQueryDto } from './dto/order-query.dto';
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
-import { InventoryTxType, OrderStatus, PaymentMode, PaymentStatus } from '@prisma/client';
+import { InventoryTxType, OrderStatus, PaymentMode, PaymentStatus, LeadStatus } from '@prisma/client';
 
 @Injectable()
 export class OrdersService {
@@ -240,7 +240,44 @@ export class OrdersService {
         },
       });
 
-      // 3. Record Audit Log
+      // 3. Automatically transition associated Lead to CONVERTED
+      let associatedLead = null;
+      if (order.customer.convertedFromId) {
+        associatedLead = await tx.lead.findUnique({
+          where: { id: order.customer.convertedFromId },
+        });
+      } else if (order.customer.phoneNumber) {
+        associatedLead = await tx.lead.findFirst({
+          where: { phoneNumber: order.customer.phoneNumber },
+          orderBy: { createdAt: 'desc' },
+        });
+      }
+
+      if (associatedLead && associatedLead.status !== LeadStatus.CONVERTED) {
+        await tx.lead.update({
+          where: { id: associatedLead.id },
+          data: { status: LeadStatus.CONVERTED },
+        });
+
+        await tx.leadStatusHistory.create({
+          data: {
+            leadId: associatedLead.id,
+            fromStatus: associatedLead.status,
+            toStatus: LeadStatus.CONVERTED,
+            changedById: user.id,
+            reason: `Order ${order.orderNumber} confirmed by ${user.employeeCode} (${user.role})`,
+          },
+        });
+
+        if (!order.customer.convertedFromId) {
+          await tx.customer.update({
+            where: { id: order.customerId },
+            data: { convertedFromId: associatedLead.id },
+          });
+        }
+      }
+
+      // 4. Record Audit Log
       await tx.auditLog.create({
         data: {
           userId: user.id,
