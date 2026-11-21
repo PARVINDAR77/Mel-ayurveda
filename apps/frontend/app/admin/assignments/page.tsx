@@ -104,6 +104,7 @@ export default function LeadAssignmentsAdminPage() {
       setError(null);
       await apiClient.post('/lead-assignments/assign', {
         leadId: assignTargetLead.id,
+        assignedToId: targetSalespersonId,
         salespersonId: targetSalespersonId,
       });
 
@@ -128,6 +129,7 @@ export default function LeadAssignmentsAdminPage() {
       setError(null);
       const res = await apiClient.post('/lead-assignments/bulk', {
         leadIds: selectedLeadIds,
+        assignedToId: targetSalespersonId,
         salespersonId: targetSalespersonId,
       });
 
@@ -257,7 +259,12 @@ export default function LeadAssignmentsAdminPage() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setAssignTargetLead(item)}
+          onClick={() => {
+            setAssignTargetLead(item);
+            if (!targetSalespersonId && salespeople.length > 0) {
+              setTargetSalespersonId(salespeople[0].id);
+            }
+          }}
           className="border-emerald-300 bg-emerald-50/40 hover:bg-emerald-100/60 text-emerald-900 font-medium text-xs"
         >
           Assign Rep

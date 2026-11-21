@@ -14,8 +14,13 @@ export class ToggleStatusDto {
 }
 
 export class ResetPasswordDto {
-  @ApiProperty({ example: 'NewSuperPass2026!', description: 'New password for the employee account' })
+  @ApiPropertyOptional({ example: 'NewSuperPass2026!', description: 'New password for the employee account' })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  newPassword!: string;
+  newPassword?: string;
+
+  @ApiPropertyOptional({ example: 'NewSuperPass2026!', description: 'Alias for newPassword' })
+  @IsOptional()
+  @IsString()
+  password?: string;
 }

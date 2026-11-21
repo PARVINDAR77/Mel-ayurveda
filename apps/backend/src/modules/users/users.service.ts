@@ -77,7 +77,7 @@ export class UsersService {
     const employeeCode = await this.generateEmployeeCode(dto.role);
 
     // Initial password
-    const rawPassword = dto.initialPassword || 'Melayurveda@2026';
+    const rawPassword = dto.initialPassword || dto.password || 'Melayurveda@2026';
     const passwordHash = await hashPassword(rawPassword);
 
     const newUser = await this.prisma.$transaction(async (tx) => {

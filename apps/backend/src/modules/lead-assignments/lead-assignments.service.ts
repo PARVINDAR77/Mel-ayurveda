@@ -39,7 +39,11 @@ export class LeadAssignmentsService {
    * Assigns a single lead with transaction and audit trail
    */
   async assignLead(dto: AssignLeadDto, actorId: string) {
-    const assignee = await this.validateAssignee(dto.assignedToId);
+    const targetAssigneeId = dto.assignedToId || dto.salespersonId;
+    if (!targetAssigneeId) {
+      throw new BadRequestException('assignedToId or salespersonId is required');
+    }
+    const assignee = await this.validateAssignee(targetAssigneeId);
 
     const lead = await this.prisma.lead.findUnique({
       where: { id: dto.leadId },
@@ -60,7 +64,7 @@ export class LeadAssignmentsService {
         data: {
           leadId: dto.leadId,
           assignedById: actorId,
-          assignedToId: dto.assignedToId,
+          assignedToId: targetAssigneeId,
           reassignmentReason: dto.reason || 'Manual single assignment',
           isActive: true,
         },
@@ -72,7 +76,7 @@ export class LeadAssignmentsService {
       const updatedLead = await tx.lead.update({
         where: { id: dto.leadId },
         data: {
-          assignedToId: dto.assignedToId,
+          assignedToId: targetAssigneeId,
           assignedAt: new Date(),
           status: newStatus,
         },
@@ -126,7 +130,11 @@ export class LeadAssignmentsService {
       throw new BadRequestException('leadIds array cannot be empty');
     }
 
-    const assignee = await this.validateAssignee(dto.assignedToId);
+    const targetAssigneeId = dto.assignedToId || dto.salespersonId;
+    if (!targetAssigneeId) {
+      throw new BadRequestException('assignedToId or salespersonId is required');
+    }
+    const assignee = await this.validateAssignee(targetAssigneeId);
 
     const result = await this.prisma.$transaction(async (tx) => {
       let count = 0;
@@ -142,7 +150,7 @@ export class LeadAssignmentsService {
           data: {
             leadId,
             assignedById: actorId,
-            assignedToId: dto.assignedToId,
+            assignedToId: targetAssigneeId,
             reassignmentReason: dto.reason || 'Bulk manual assignment',
             isActive: true,
           },
@@ -152,7 +160,7 @@ export class LeadAssignmentsService {
         await tx.lead.update({
           where: { id: leadId },
           data: {
-            assignedToId: dto.assignedToId,
+            assignedToId: targetAssigneeId,
             assignedAt: new Date(),
             status: LeadStatus.ASSIGNED,
           },

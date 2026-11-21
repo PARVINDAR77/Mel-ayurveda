@@ -69,7 +69,32 @@ export default function EmployeesAdminPage() {
     try {
       setIsSubmitting(true);
       setError(null);
-      const res = await apiClient.post('/employees', formData);
+
+      // Clean and validate Indian phone number
+      let cleanPhone = formData.phoneNumber.replace(/[\s\-\+]/g, '');
+      if (cleanPhone.startsWith('91') && cleanPhone.length === 12) {
+        cleanPhone = cleanPhone.slice(2);
+      } else if (cleanPhone.startsWith('0') && cleanPhone.length === 11) {
+        cleanPhone = cleanPhone.slice(1);
+      }
+
+      if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+        setError('Mobile number must be a valid 10-digit Indian number starting with 6-9 (e.g. 9825123456).');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const payload = {
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        email: formData.email.trim().toLowerCase(),
+        phoneNumber: cleanPhone,
+        role: formData.role,
+        initialPassword: formData.password || undefined,
+        password: formData.password || undefined,
+      };
+
+      const res = await apiClient.post('/employees', payload);
       setSuccessMsg(`Employee ${res.data.firstName} ${res.data.lastName} created with ID: ${res.data.employeeCode}`);
       setIsAddModalOpen(false);
       setFormData({
@@ -91,7 +116,7 @@ export default function EmployeesAdminPage() {
   const handleToggleStatus = async (employee: any) => {
     try {
       const newStatus = !employee.isActive;
-      await apiClient.patch(`/employees/${employee.id}/toggle-status`, {
+      await apiClient.patch(`/employees/${employee.id}/status`, {
         isActive: newStatus,
       });
       setEmployees((prev) =>
@@ -114,7 +139,8 @@ export default function EmployeesAdminPage() {
     try {
       setIsResetting(true);
       setError(null);
-      await apiClient.patch(`/employees/${resetEmployee.id}/reset-password`, {
+      await apiClient.post(`/employees/${resetEmployee.id}/reset-password`, {
+        newPassword,
         password: newPassword,
       });
       setSuccessMsg(`Password for ${resetEmployee.employeeCode} updated successfully.`);
@@ -385,10 +411,10 @@ export default function EmployeesAdminPage() {
           />
 
           <Input
-            label="Mobile Number"
+            label="Mobile Number (10-Digit Indian Mobile)"
             value={formData.phoneNumber}
             onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-            placeholder="98XXXXXXXX"
+            placeholder="e.g. 9825123456"
             leftIcon={<Phone className="h-4 w-4" />}
             required
           />

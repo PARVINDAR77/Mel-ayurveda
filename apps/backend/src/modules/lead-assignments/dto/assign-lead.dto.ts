@@ -7,10 +7,15 @@ export class AssignLeadDto {
   @IsNotEmpty()
   leadId!: string;
 
-  @ApiProperty({ example: 'aa4493ae-0d92-4507-8030-5f72fc2fbd2b', description: 'Salesperson user ID' })
+  @ApiPropertyOptional({ example: 'aa4493ae-0d92-4507-8030-5f72fc2fbd2b', description: 'Salesperson user ID' })
+  @IsOptional()
   @IsUUID()
-  @IsNotEmpty()
-  assignedToId!: string;
+  assignedToId?: string;
+
+  @ApiPropertyOptional({ example: 'aa4493ae-0d92-4507-8030-5f72fc2fbd2b', description: 'Alias for assignedToId' })
+  @IsOptional()
+  @IsUUID()
+  salespersonId?: string;
 
   @ApiPropertyOptional({ example: 'Assigned based on Ahmedabad regional queue' })
   @IsOptional()
@@ -25,10 +30,15 @@ export class BulkAssignDto {
   @IsNotEmpty()
   leadIds!: string[];
 
-  @ApiProperty({ example: 'salesperson-uuid', description: 'Salesperson user ID' })
+  @ApiPropertyOptional({ example: 'salesperson-uuid', description: 'Salesperson user ID' })
+  @IsOptional()
   @IsUUID()
-  @IsNotEmpty()
-  assignedToId!: string;
+  assignedToId?: string;
+
+  @ApiPropertyOptional({ example: 'salesperson-uuid', description: 'Alias for assignedToId' })
+  @IsOptional()
+  @IsUUID()
+  salespersonId?: string;
 
   @ApiPropertyOptional({ example: 'Bulk allocation of weekend inbound leads' })
   @IsOptional()

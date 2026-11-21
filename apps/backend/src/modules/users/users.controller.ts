@@ -9,6 +9,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { UsersService } from './users.service';
@@ -83,6 +84,17 @@ export class UsersController {
     return this.usersService.toggleStatus(id, dto, actorId);
   }
 
+  @Patch(':id/toggle-status')
+  @Roles(RoleType.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Alias for status toggle' })
+  async toggleStatusAlias(
+    @Param('id') id: string,
+    @Body() dto: ToggleStatusDto,
+    @CurrentUser('id') actorId: string,
+  ) {
+    return this.usersService.toggleStatus(id, dto, actorId);
+  }
+
   @Post(':id/reset-password')
   @Roles(RoleType.SUPER_ADMIN)
   @HttpCode(HttpStatus.OK)
@@ -93,6 +105,26 @@ export class UsersController {
     @Body() dto: ResetPasswordDto,
     @CurrentUser('id') actorId: string,
   ) {
-    return this.usersService.resetPassword(id, dto.newPassword, actorId);
+    const pwd = dto.newPassword || dto.password;
+    if (!pwd) {
+      throw new BadRequestException('newPassword or password is required');
+    }
+    return this.usersService.resetPassword(id, pwd, actorId);
+  }
+
+  @Patch(':id/reset-password')
+  @Roles(RoleType.SUPER_ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Alias for administrative password reset' })
+  async resetPasswordPatchAlias(
+    @Param('id') id: string,
+    @Body() dto: ResetPasswordDto,
+    @CurrentUser('id') actorId: string,
+  ) {
+    const pwd = dto.newPassword || dto.password;
+    if (!pwd) {
+      throw new BadRequestException('newPassword or password is required');
+    }
+    return this.usersService.resetPassword(id, pwd, actorId);
   }
 }
