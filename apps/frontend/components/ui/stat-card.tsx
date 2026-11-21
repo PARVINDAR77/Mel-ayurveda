@@ -54,15 +54,15 @@ export function StatCard({
         ),
       )}
     >
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{title}</p>
-          <h4 className="mt-1 text-2xl font-black tracking-tight text-slate-900">{value}</h4>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate">{title}</p>
+          <h4 className="mt-1 text-2xl font-black tracking-tight text-slate-900 truncate">{value}</h4>
         </div>
         <div
           className={twMerge(
             clsx(
-              'flex h-11 w-11 items-center justify-center rounded-xl border shadow-xs',
+              'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border shadow-xs',
               iconThemeStyles[colorTheme],
             ),
           )}

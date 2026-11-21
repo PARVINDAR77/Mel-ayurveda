@@ -229,55 +229,102 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* Primary Commercial & Operational KPI Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <StatCard
-          title="Today's Sales"
-          value={`₹${(data?.overview?.todaysSales ?? 0).toLocaleString('en-IN')}`}
-          subtitle="Revenue booked today"
-          icon={TrendingUp}
-          colorTheme="emerald"
-        />
+      {/* Executive Commercial & Sales Operations Row */}
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" /> Commercial Orders & Revenue Velocity
+          </h3>
+          <Link href="/admin/orders" className="text-xs font-semibold text-emerald-800 hover:underline">
+            Manage All Orders →
+          </Link>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            title="Today's Sales"
+            value={`₹${Math.round(data?.overview?.todaysSales ?? 0).toLocaleString('en-IN')}`}
+            subtitle="Gross revenue booked today"
+            icon={TrendingUp}
+            colorTheme="emerald"
+          />
 
-        <StatCard
-          title="Monthly Sales"
-          value={`₹${(data?.overview?.monthlySales ?? 0).toLocaleString('en-IN')}`}
-          subtitle="Month-to-date gross billing"
-          icon={Package}
-          colorTheme="gold"
-        />
+          <StatCard
+            title="Monthly Sales"
+            value={`₹${Math.round(data?.overview?.monthlySales ?? 0).toLocaleString('en-IN')}`}
+            subtitle="Current month booked billing"
+            icon={Package}
+            colorTheme="gold"
+          />
 
-        <StatCard
-          title="Confirmed Orders"
-          value={data?.overview?.confirmedOrders ?? (isLoading ? '...' : 0)}
-          subtitle={`${data?.overview?.draftOrders ?? 0} draft • ${data?.overview?.totalOrders ?? 0} total`}
-          icon={Boxes}
-          colorTheme="blue"
-        />
+          <StatCard
+            title="Confirmed Orders"
+            value={data?.overview?.confirmedOrders ?? (isLoading ? '...' : 0)}
+            subtitle={`${data?.overview?.draftOrders ?? 0} draft • ${data?.overview?.totalOrders ?? 0} total registered`}
+            icon={Boxes}
+            colorTheme="blue"
+          />
 
-        <StatCard
-          title="Total Calls Logged"
-          value={data?.overview?.totalCalls ?? (isLoading ? '...' : 0)}
-          subtitle={`${data?.overview?.callsToday ?? 0} calls today by reps`}
-          icon={Phone}
-          colorTheme="forest"
-        />
+          <StatCard
+            title="Consultation Calls"
+            value={data?.overview?.totalCalls ?? (isLoading ? '...' : 0)}
+            subtitle={`${data?.overview?.callsToday ?? 0} calls completed today by reps`}
+            icon={Phone}
+            colorTheme="forest"
+          />
+        </div>
+      </div>
 
-        <StatCard
-          title="Pending Approvals"
-          value={data?.overview?.pendingApprovals ?? (isLoading ? '...' : 0)}
-          subtitle="Awaiting final medical sign-off"
-          icon={CheckCircle2}
-          colorTheme="amber"
-        />
+      {/* Patient Inquiries & Clinical Pipeline Row (All Original Leads Data Show Boxes Restored!) */}
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-blue-500" /> Customer Leads & Clinical Verification Pipeline
+          </h3>
+          <Link href="/admin/assignments" className="text-xs font-semibold text-blue-800 hover:underline">
+            Distribute Leads →
+          </Link>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            title="Total Ingested Leads"
+            value={data?.overview?.totalLeads ?? (isLoading ? '...' : 0)}
+            subtitle={`${data?.overview?.leadsThisMonth ?? 0} leads received this month`}
+            icon={Users}
+            colorTheme="forest"
+          />
 
-        <StatCard
-          title="Total Ingested Leads"
-          value={data?.overview?.totalLeads ?? (isLoading ? '...' : 0)}
-          subtitle={`${data?.overview?.convertedLeads ?? 0} converted (${data?.overview?.overallConversionRate ?? 0}%)`}
-          icon={Users}
-          colorTheme="purple"
-        />
+          <StatCard
+            title="Converted Customers"
+            value={data?.overview?.convertedLeads ?? (isLoading ? '...' : 0)}
+            subtitle={`${data?.overview?.overallConversionRate ?? 0}% overall conversion rate`}
+            icon={TrendingUp}
+            colorTheme="emerald"
+            trend={{
+              value: `${data?.overview?.overallConversionRate ?? 0}%`,
+              isPositive: true,
+              label: 'Conversion',
+            }}
+          />
+
+          <StatCard
+            title="In Product Verification"
+            value={
+              (data?.overview?.pendingReviewLeads ?? 0) +
+              (data?.overview?.approvalRequestedLeads ?? 0)
+            }
+            subtitle={`${data?.overview?.pendingReviewLeads ?? 0} Pending • ${data?.overview?.approvalRequestedLeads ?? 0} Approvals`}
+            icon={Layers}
+            colorTheme="amber"
+          />
+
+          <StatCard
+            title="Pending Approvals"
+            value={data?.overview?.pendingApprovals ?? (isLoading ? '...' : 0)}
+            subtitle="Awaiting final clearance in Panel 04"
+            icon={CheckCircle2}
+            colorTheme="gold"
+          />
+        </div>
       </div>
 
       {/* Main Grid: Source Distribution & Sales Team Performance */}
