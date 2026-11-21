@@ -53,6 +53,7 @@ export default function AdminDashboardPage() {
     priority: 'NORMAL',
     notes: '',
   });
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
   const fetchDashboard = async () => {
     try {
@@ -70,6 +71,20 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     fetchDashboard();
   }, []);
+
+  const handleConfirmOrder = async (orderId: string) => {
+    try {
+      setActionLoadingId(orderId);
+      setError(null);
+      await apiClient.post(`/orders/${orderId}/confirm`, {});
+      setSuccessMsg('Order confirmed! Warehouse inventory atomically reserved.');
+      fetchDashboard();
+    } catch (err: any) {
+      setError(getErrorMessage(err));
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
 
   const handleCreateManualLead = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,6 +186,17 @@ export default function AdminDashboardPage() {
             + Add Manual Lead
           </Button>
 
+          <Link href="/admin/orders">
+            <Button
+              variant="outline"
+              size="sm"
+              icon={<Package className="h-3.5 w-3.5 text-emerald-700" />}
+              className="border-emerald-300 bg-emerald-50/60 hover:bg-emerald-100 text-emerald-900 font-semibold"
+            >
+              Manage Orders
+            </Button>
+          </Link>
+
           <Link href="/admin/assignments">
             <Button
               variant="outline"
@@ -203,45 +229,54 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* KPI StatCards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Primary Commercial & Operational KPI Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <StatCard
-          title="Total Ingested Leads"
-          value={data?.overview?.totalLeads ?? (isLoading ? '...' : 0)}
-          subtitle={`${data?.overview?.leadsThisMonth ?? 0} leads received this month`}
-          icon={Users}
+          title="Today's Sales"
+          value={`₹${(data?.overview?.todaysSales ?? 0).toLocaleString('en-IN')}`}
+          subtitle="Revenue booked today"
+          icon={TrendingUp}
+          colorTheme="emerald"
+        />
+
+        <StatCard
+          title="Monthly Sales"
+          value={`₹${(data?.overview?.monthlySales ?? 0).toLocaleString('en-IN')}`}
+          subtitle="Month-to-date gross billing"
+          icon={Package}
+          colorTheme="gold"
+        />
+
+        <StatCard
+          title="Confirmed Orders"
+          value={data?.overview?.confirmedOrders ?? (isLoading ? '...' : 0)}
+          subtitle={`${data?.overview?.draftOrders ?? 0} draft • ${data?.overview?.totalOrders ?? 0} total`}
+          icon={Boxes}
+          colorTheme="blue"
+        />
+
+        <StatCard
+          title="Total Calls Logged"
+          value={data?.overview?.totalCalls ?? (isLoading ? '...' : 0)}
+          subtitle={`${data?.overview?.callsToday ?? 0} calls today by reps`}
+          icon={Phone}
           colorTheme="forest"
         />
 
         <StatCard
-          title="Converted Customers"
-          value={data?.overview?.convertedLeads ?? (isLoading ? '...' : 0)}
-          subtitle={`${data?.overview?.overallConversionRate ?? 0}% overall conversion rate`}
-          icon={TrendingUp}
-          colorTheme="emerald"
-          trend={{
-            value: `${data?.overview?.overallConversionRate ?? 0}%`,
-            isPositive: true,
-          }}
-        />
-
-        <StatCard
-          title="In Product Verification"
-          value={
-            (data?.overview?.pendingReviewLeads ?? 0) +
-            (data?.overview?.approvalRequestedLeads ?? 0)
-          }
-          subtitle={`${data?.overview?.pendingReviewLeads ?? 0} Pending • ${data?.overview?.approvalRequestedLeads ?? 0} Approvals`}
-          icon={Layers}
+          title="Pending Approvals"
+          value={data?.overview?.pendingApprovals ?? (isLoading ? '...' : 0)}
+          subtitle="Awaiting final medical sign-off"
+          icon={CheckCircle2}
           colorTheme="amber"
         />
 
         <StatCard
-          title="Gross Order Revenue"
-          value={`₹${(data?.overview?.grossSalesRevenue ?? 0).toLocaleString('en-IN')}`}
-          subtitle={`${data?.overview?.totalOrders ?? 0} confirmed medicine orders`}
-          icon={Package}
-          colorTheme="gold"
+          title="Total Ingested Leads"
+          value={data?.overview?.totalLeads ?? (isLoading ? '...' : 0)}
+          subtitle={`${data?.overview?.convertedLeads ?? 0} converted (${data?.overview?.overallConversionRate ?? 0}%)`}
+          icon={Users}
+          colorTheme="purple"
         />
       </div>
 
@@ -399,6 +434,105 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Live Customer Formulation Orders Stream */}
+      <Card className="rounded-2xl border-slate-200/90 shadow-sm">
+        <CardHeader className="pb-3 border-b border-slate-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <Package className="h-4 w-4 text-emerald-700" /> Recent Customer Formulation Orders
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Real-time stream of customer medicine orders, pricing viability, and fulfillment readiness
+              </CardDescription>
+            </div>
+            <Link href="/admin/orders">
+              <Button variant="outline" size="sm" icon={<ArrowRight className="h-3.5 w-3.5" />}>
+                View All Orders
+              </Button>
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-2">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider text-[10px]">
+                <tr>
+                  <th className="px-3 py-3">Order Code</th>
+                  <th className="px-3 py-3">Customer Details</th>
+                  <th className="px-3 py-3">Prescribed Formulation</th>
+                  <th className="px-3 py-3 text-right">Order Value</th>
+                  <th className="px-3 py-3">Payment</th>
+                  <th className="px-3 py-3">Status</th>
+                  <th className="px-3 py-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700">
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-slate-400">Loading orders...</td>
+                  </tr>
+                ) : !data?.recentOrders || data.recentOrders.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-slate-400">No formulation orders recorded yet.</td>
+                  </tr>
+                ) : (
+                  data.recentOrders.map((ord: any) => (
+                    <tr key={ord.id} className="hover:bg-slate-50/70 transition">
+                      <td className="px-3 py-2.5 font-mono font-bold text-slate-900">
+                        {ord.orderNumber}
+                      </td>
+                      <td className="px-3 py-2.5 font-semibold text-slate-900">
+                        <div>
+                          <span>{ord.customerName}</span>
+                          <span className="block font-mono text-[10px] text-slate-500">{ord.customerPhone}</span>
+                        </div>
+                      </td>
+                      <td className="px-3 py-2.5 text-slate-700">
+                        <span className="font-medium text-slate-800">{ord.primaryItem}</span>
+                        {ord.itemCount > 1 && (
+                          <span className="text-[10px] text-slate-400 block font-mono">+{ord.itemCount - 1} more items</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-mono font-bold text-slate-900">
+                        ₹{Number(ord.totalAmount).toLocaleString('en-IN')}
+                      </td>
+                      <td className="px-3 py-2.5 font-medium uppercase text-[10px] text-slate-600">
+                        {ord.paymentMode?.replace(/_/g, ' ') || 'COD'}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <Badge variant="leadStatus" status={ord.status}>{ord.status}</Badge>
+                      </td>
+                      <td className="px-3 py-2.5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {ord.status === 'DRAFT' && (
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => handleConfirmOrder(ord.id)}
+                              isLoading={actionLoadingId === ord.id}
+                              className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-[11px] px-2 py-1 h-7"
+                              icon={<CheckCircle2 className="h-3 w-3" />}
+                            >
+                              Confirm
+                            </Button>
+                          )}
+                          <Link href="/admin/orders">
+                            <Button variant="outline" size="sm" className="text-[11px] px-2 py-1 h-7">
+                              Details
+                            </Button>
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Recent System Activity Feed */}
       <Card className="rounded-2xl border-slate-200/90 shadow-sm">

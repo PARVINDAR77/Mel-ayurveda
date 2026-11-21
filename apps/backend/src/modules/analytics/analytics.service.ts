@@ -31,9 +31,11 @@ export class AnalyticsService {
    */
   async getAdminDashboard() {
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
 
-    // Lead metrics
+    // Lead, Order, Call, and Approval metrics
     const [
       totalLeads,
       leadsThisMonth,
@@ -45,7 +47,15 @@ export class AnalyticsService {
       leadSources,
       salespeople,
       totalOrders,
+      confirmedOrders,
+      draftOrders,
       orderAggregates,
+      todaysSalesAggregate,
+      monthlySalesAggregate,
+      totalCalls,
+      callsToday,
+      pendingApprovals,
+      recentOrders,
       inventorySummary,
       recentAuditLogs,
     ] = await Promise.all([
@@ -78,9 +88,59 @@ export class AnalyticsService {
         },
       }),
       this.prisma.order.count(),
+      this.prisma.order.count({
+        where: {
+          status: { in: [OrderStatus.CONFIRMED, OrderStatus.PROCESSING, OrderStatus.SHIPPED, OrderStatus.DELIVERED] },
+        },
+      }),
+      this.prisma.order.count({ where: { status: OrderStatus.DRAFT } }),
       this.prisma.order.aggregate({
         _sum: { totalAmount: true },
         where: { status: { not: OrderStatus.CANCELLED } },
+      }),
+      this.prisma.order.aggregate({
+        _sum: { totalAmount: true },
+        where: {
+          createdAt: { gte: todayStart, lte: todayEnd },
+          status: { not: OrderStatus.CANCELLED },
+        },
+      }),
+      this.prisma.order.aggregate({
+        _sum: { totalAmount: true },
+        where: {
+          createdAt: { gte: startOfMonth },
+          status: { not: OrderStatus.CANCELLED },
+        },
+      }),
+      this.prisma.callLog.count(),
+      this.prisma.callLog.count({
+        where: { calledAt: { gte: todayStart, lte: todayEnd } },
+      }),
+      this.prisma.approvalRequest.count({
+        where: { decision: null },
+      }),
+      this.prisma.order.findMany({
+        take: 6,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          customer: {
+            select: {
+              id: true,
+              customerCode: true,
+              fullName: true,
+              phoneNumber: true,
+              city: true,
+              state: true,
+            },
+          },
+          items: {
+            include: {
+              product: {
+                select: { id: true, name: true, sku: true },
+              },
+            },
+          },
+        },
       }),
       this.prisma.inventory.findMany({
         select: {
@@ -153,11 +213,31 @@ export class AnalyticsService {
         rejectedLeads,
         overallConversionRate,
         totalOrders,
+        confirmedOrders,
+        draftOrders,
         grossSalesRevenue: Number(orderAggregates._sum.totalAmount || 0),
+        todaysSales: Number(todaysSalesAggregate._sum.totalAmount || 0),
+        monthlySales: Number(monthlySalesAggregate._sum.totalAmount || 0),
+        totalCalls,
+        callsToday,
+        pendingApprovals,
         lowStockAlerts,
       },
       sourceDistribution,
       salesTeamPerformance,
+      recentOrders: recentOrders.map((ord) => ({
+        id: ord.id,
+        orderNumber: ord.orderNumber,
+        customerName: ord.customer?.fullName || 'Customer',
+        customerPhone: ord.customer?.phoneNumber,
+        customerLocation: [ord.customer?.city, ord.customer?.state].filter(Boolean).join(', '),
+        itemCount: ord.items.length,
+        primaryItem: ord.items[0]?.product?.name || 'Ayurvedic Medicine',
+        totalAmount: Number(ord.totalAmount),
+        paymentMode: ord.paymentMode,
+        status: ord.status,
+        createdAt: ord.createdAt,
+      })),
       recentActivityFeed: recentAuditLogs.map((log) => ({
         id: log.id,
         action: log.action,

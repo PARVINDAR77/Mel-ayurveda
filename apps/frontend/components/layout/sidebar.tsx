@@ -40,11 +40,12 @@ export function Sidebar({ onClose }: SidebarProps) {
       case 'SUPER_ADMIN':
         return [
           { href: '/admin', label: 'Master Dashboard', icon: LayoutDashboard },
+          { href: '/admin/orders', label: 'Order Management', icon: Package },
           { href: '/admin/assignments', label: 'Lead Distribution', icon: UserCheck },
           { href: '/sales/leads', label: 'Sales Leads', icon: PhoneCall },
           { href: '/pending/queue', label: 'Pending Review Queue', icon: FileCheck2 },
           { href: '/approval/queue', label: 'Final Approval Queue', icon: CheckCircle2 },
-          { href: '/management/customers', label: 'Customer CRM & Orders', icon: Package },
+          { href: '/management/customers', label: 'Customer CRM', icon: Users },
           { href: '/admin/employees', label: 'Employees & Roles', icon: Users },
           { href: '/admin/sources', label: 'Lead Sources & Ads', icon: Radio },
           { href: '/admin/analytics', label: 'Executive Analytics', icon: TrendingUp },
