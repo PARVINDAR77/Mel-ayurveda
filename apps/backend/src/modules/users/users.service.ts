@@ -6,7 +6,8 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { RoleType, User } from '@prisma/client';
+import { RoleType, User, NotificationType } from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import { EmployeeQueryDto } from './dto/employee-query.dto';
@@ -25,7 +26,10 @@ const ROLE_CODE_PREFIX_MAP: Record<RoleType, string> = {
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   /**
    * Generates the next sequential unique employee identifier for a role.
@@ -122,6 +126,19 @@ export class UsersService {
     });
 
     this.logger.log(`Created new employee ${newUser.employeeCode} (${newUser.role}) by admin ${actorId}`);
+
+    // Dispatch real-time live notification to Super Admin
+    try {
+      await this.notificationsService.dispatchToRole([RoleType.SUPER_ADMIN], {
+        title: 'New Staff Registered',
+        message: `${newUser.employeeCode} (${newUser.firstName} ${newUser.lastName}) onboarded as ${newUser.role.replace('_', ' ')}.`,
+        type: NotificationType.INFO,
+        link: '/admin/employees',
+      });
+    } catch (notifErr) {
+      this.logger.warn(`Failed to dispatch employee creation notification: ${notifErr}`);
+    }
+
     return newUser;
   }
 

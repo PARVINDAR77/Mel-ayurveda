@@ -1,45 +1,22 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, CheckCheck, Loader2 } from 'lucide-react';
-import { apiClient } from '../../lib/api-client';
+import { Bell, CheckCheck, Loader2, ArrowRight } from 'lucide-react';
+import { useNotifications, NotificationItem } from '../../context/notification-context';
 import { Badge } from '../ui/badge';
-
-interface NotificationItem {
-  id: string;
-  title: string;
-  message: string;
-  type: string;
-  isRead: boolean;
-  createdAt: string;
-  link?: string;
-}
 
 export function NotificationPopover() {
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const fetchNotifications = async () => {
-    try {
-      setIsLoading(true);
-      const res = await apiClient.get('/notifications?limit=10');
-      setNotifications(res.data.data || []);
-      setUnreadCount(res.data.meta?.unreadCount || 0);
-    } catch {
-      // Quiet fail on network hiccups
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000); // Polling every 30s
-    return () => clearInterval(interval);
-  }, []);
+  const {
+    notifications,
+    unreadCount,
+    isLoading,
+    fetchNotifications,
+    markAllAsRead,
+    navigateToNotification,
+  } = useNotifications();
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -51,26 +28,9 @@ export function NotificationPopover() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const markAsRead = async (id: string) => {
-    try {
-      await apiClient.patch(`/notifications/${id}/read`);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
-      );
-      setUnreadCount((prev) => Math.max(0, prev - 1));
-    } catch {
-      // Ignore error
-    }
-  };
-
-  const markAllAsRead = async () => {
-    try {
-      await apiClient.patch('/notifications/read-all');
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-      setUnreadCount(0);
-    } catch {
-      // Ignore error
-    }
+  const handleItemClick = (notif: NotificationItem) => {
+    setIsOpen(false);
+    navigateToNotification(notif);
   };
 
   return (
@@ -126,8 +86,8 @@ export function NotificationPopover() {
               notifications.map((notif) => (
                 <div
                   key={notif.id}
-                  onClick={() => !notif.isRead && markAsRead(notif.id)}
-                  className={`p-3.5 transition cursor-pointer hover:bg-slate-50/80 ${
+                  onClick={() => handleItemClick(notif)}
+                  className={`p-3.5 transition cursor-pointer hover:bg-slate-50/90 group ${
                     !notif.isRead ? 'bg-forest-50/20' : ''
                   }`}
                 >
@@ -135,14 +95,22 @@ export function NotificationPopover() {
                     <p className={`text-xs ${!notif.isRead ? 'font-bold text-slate-900' : 'font-medium text-slate-700'}`}>
                       {notif.title}
                     </p>
-                    <Badge variant="slate" className="text-[9px] px-1.5 py-0">
+                    <Badge variant="slate" className="text-[9px] px-1.5 py-0 shrink-0">
                       {notif.type.replace('_', ' ')}
                     </Badge>
                   </div>
                   <p className="mt-1 text-xs text-slate-600 line-clamp-2">{notif.message}</p>
-                  <span className="mt-1.5 block text-[10px] text-slate-400">
-                    {new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
+                  <div className="mt-2 flex items-center justify-between text-[10px] text-slate-400">
+                    <span>
+                      {new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    {notif.link && (
+                      <span className="flex items-center gap-1 text-emerald-700 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span>Go to section</span>
+                        <ArrowRight className="h-3 w-3" />
+                      </span>
+                    )}
+                  </div>
                 </div>
               ))
             )}

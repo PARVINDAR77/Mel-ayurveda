@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { AuthProvider } from '../context/auth-context';
+import { NotificationProvider } from '../context/notification-context';
+import { LiveNotificationToast } from '../components/layout/live-notification-toast';
 
 export const metadata: Metadata = {
   title: 'MELAYURVEDA CRM – Enterprise Lead & Operations System',
@@ -15,7 +17,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen bg-slate-50 text-slate-900 antialiased font-sans">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <NotificationProvider>
+            <LiveNotificationToast />
+            {children}
+          </NotificationProvider>
+        </AuthProvider>
       </body>
     </html>
   );

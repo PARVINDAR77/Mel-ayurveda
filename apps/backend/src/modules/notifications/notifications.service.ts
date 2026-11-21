@@ -1,11 +1,49 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, MessageEvent } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { NotificationQueryDto } from './dto/notification-query.dto';
+import { NotificationType, RoleType } from '@prisma/client';
+import { Subject, Observable, merge, interval } from 'rxjs';
+import { filter, map } from 'rxjs/operators';
 
 @Injectable()
 export class NotificationsService {
+  private notificationEvents$ = new Subject<{ userId: string; notification: any }>();
+
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Real-time Server-Sent Events stream for connected user
+   */
+  getEventStream(userId: string): Observable<MessageEvent> {
+    const userStream$ = this.notificationEvents$.asObservable().pipe(
+      filter((e) => e.userId === userId),
+      map(
+        (e) =>
+          ({
+            data: {
+              type: 'NOTIFICATION',
+              payload: e.notification,
+            },
+          }) as MessageEvent,
+      ),
+    );
+
+    // Heartbeat every 20 seconds to keep connection alive
+    const heartbeat$ = interval(20000).pipe(
+      map(
+        () =>
+          ({
+            data: {
+              type: 'HEARTBEAT',
+              timestamp: Date.now(),
+            },
+          }) as MessageEvent,
+      ),
+    );
+
+    return merge(userStream$, heartbeat$);
+  }
 
   /**
    * Dispatch a notification to a specific user
@@ -20,7 +58,7 @@ export class NotificationsService {
       throw new NotFoundException(`User with ID ${dto.userId} not found`);
     }
 
-    return this.prisma.notification.create({
+    const notification = await this.prisma.notification.create({
       data: {
         userId: dto.userId,
         title: dto.title,
@@ -29,6 +67,60 @@ export class NotificationsService {
         link: dto.link,
       },
     });
+
+    // Push live event
+    this.notificationEvents$.next({ userId: notification.userId, notification });
+
+    return notification;
+  }
+
+  /**
+   * Batch dispatch notification to multiple users
+   */
+  async dispatchToUsers(
+    userIds: string[],
+    data: { title: string; message: string; type: NotificationType; link?: string },
+  ) {
+    if (!userIds || userIds.length === 0) return [];
+    const uniqueUserIds = [...new Set(userIds.filter(Boolean))];
+
+    const createdNotifications = await this.prisma.$transaction(
+      uniqueUserIds.map((userId) =>
+        this.prisma.notification.create({
+          data: {
+            userId,
+            title: data.title,
+            message: data.message,
+            type: data.type,
+            link: data.link,
+          },
+        }),
+      ),
+    );
+
+    for (const notif of createdNotifications) {
+      this.notificationEvents$.next({ userId: notif.userId, notification: notif });
+    }
+
+    return createdNotifications;
+  }
+
+  /**
+   * Broadcast notification to all active users with specific role(s)
+   */
+  async dispatchToRole(
+    roles: RoleType[],
+    data: { title: string; message: string; type: NotificationType; link?: string },
+  ) {
+    const users = await this.prisma.user.findMany({
+      where: { role: { in: roles }, isActive: true },
+      select: { id: true },
+    });
+
+    return this.dispatchToUsers(
+      users.map((u) => u.id),
+      data,
+    );
   }
 
   /**
@@ -65,6 +157,52 @@ export class NotificationsService {
         limit,
         totalPages: Math.ceil(total / limit),
       },
+    };
+  }
+
+  /**
+   * Get unread notification counts grouped by target path for sidebar red dots
+   */
+  async getUnreadSummary(userId: string) {
+    const unreadNotifications = await this.prisma.notification.findMany({
+      where: { userId, isRead: false },
+      select: { id: true, link: true, type: true },
+    });
+
+    const byPath: Record<string, number> = {};
+    for (const notif of unreadNotifications) {
+      if (notif.link) {
+        byPath[notif.link] = (byPath[notif.link] || 0) + 1;
+      }
+    }
+
+    return {
+      totalUnread: unreadNotifications.length,
+      byPath,
+    };
+  }
+
+  /**
+   * Mark all unread notifications matching a route path as read (clears section red dot)
+   */
+  async markPathAsRead(userId: string, path: string) {
+    if (!path) return { updatedCount: 0 };
+
+    const updateResult = await this.prisma.notification.updateMany({
+      where: {
+        userId,
+        isRead: false,
+        link: { startsWith: path },
+      },
+      data: {
+        isRead: true,
+        readAt: new Date(),
+      },
+    });
+
+    return {
+      path,
+      updatedCount: updateResult.count,
     };
   }
 

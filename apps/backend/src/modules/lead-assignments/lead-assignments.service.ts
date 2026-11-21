@@ -5,14 +5,18 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { RoleType, LeadStatus } from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
+import { RoleType, LeadStatus, NotificationType } from '@prisma/client';
 import { AssignLeadDto, BulkAssignDto, ReassignLeadDto } from './dto/assign-lead.dto';
 
 @Injectable()
 export class LeadAssignmentsService {
   private readonly logger = new Logger(LeadAssignmentsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   /**
    * Helper to validate that the target assignee exists, is active, and is a salesperson or admin.
@@ -119,6 +123,20 @@ export class LeadAssignmentsService {
     });
 
     this.logger.log(`Lead ${lead.leadCode} assigned to ${assignee.employeeCode} by admin ${actorId}`);
+
+    // Dispatch real-time live notification to the assigned salesperson
+    try {
+      await this.notificationsService.createNotification({
+        userId: targetAssigneeId,
+        title: 'New Lead Assigned',
+        message: `Lead ${lead.leadCode} (${lead.customerName}) has been assigned to your calling queue.`,
+        type: NotificationType.LEAD_ASSIGNED,
+        link: '/sales/leads',
+      });
+    } catch (notifErr) {
+      this.logger.warn(`Failed to dispatch lead assignment notification: ${notifErr}`);
+    }
+
     return updated;
   }
 
@@ -187,6 +205,20 @@ export class LeadAssignmentsService {
     });
 
     this.logger.log(`Bulk assigned ${result} leads to ${assignee.employeeCode} by admin ${actorId}`);
+
+    // Dispatch real-time live notification
+    try {
+      await this.notificationsService.createNotification({
+        userId: targetAssigneeId,
+        title: `${result} Leads Assigned`,
+        message: `${result} leads have been allocated to your priority calling queue.`,
+        type: NotificationType.LEAD_ASSIGNED,
+        link: '/sales/leads',
+      });
+    } catch (notifErr) {
+      this.logger.warn(`Failed to dispatch bulk assignment notification: ${notifErr}`);
+    }
+
     return {
       success: true,
       assignedCount: result,
@@ -305,6 +337,29 @@ export class LeadAssignmentsService {
     });
 
     this.logger.log(`Round-robin distributed ${assignmentsResult.length} leads across ${salespeople.length} salespeople`);
+
+    // Group distributed leads by assigned salesperson and notify each
+    try {
+      const countsByRep = new Map<string, number>();
+      for (const a of assignmentsResult) {
+        countsByRep.set(a.assignedTo, (countsByRep.get(a.assignedTo) || 0) + 1);
+      }
+      for (const sp of salespeople) {
+        const assignedCount = countsByRep.get(sp.employeeCode);
+        if (assignedCount && assignedCount > 0) {
+          await this.notificationsService.createNotification({
+            userId: sp.id,
+            title: `${assignedCount} Leads Assigned`,
+            message: `${assignedCount} fresh leads have been allocated to your queue via round-robin distribution.`,
+            type: NotificationType.LEAD_ASSIGNED,
+            link: '/sales/leads',
+          });
+        }
+      }
+    } catch (notifErr) {
+      this.logger.warn(`Failed to dispatch round-robin notifications: ${notifErr}`);
+    }
+
     return {
       success: true,
       distributedCount: assignmentsResult.length,

@@ -8,13 +8,17 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateDraftOrderDto } from './dto/create-draft-order.dto';
 import { OrderQueryDto } from './dto/order-query.dto';
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
-import { InventoryTxType, OrderStatus, PaymentMode, PaymentStatus, LeadStatus } from '@prisma/client';
+import { InventoryTxType, OrderStatus, PaymentMode, PaymentStatus, LeadStatus, RoleType, NotificationType } from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class OrdersService {
   private readonly logger = new Logger(OrdersService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   /**
    * Generates sequential order identifier: MEL-ORD-YYYY-XXXXX
@@ -97,7 +101,7 @@ export class OrdersService {
     const totalAmount = Math.max(0, subtotal - discountAmount + taxAmount);
     const orderNumber = await this.generateOrderNumber();
 
-    return this.prisma.$transaction(async (tx) => {
+    const createdOrder = await this.prisma.$transaction(async (tx) => {
       const order = await tx.order.create({
         data: {
           orderNumber,
@@ -157,6 +161,23 @@ export class OrdersService {
 
       return order;
     });
+
+    // Dispatch real-time live notification for new draft formulation order
+    try {
+      await this.notificationsService.dispatchToRole(
+        [RoleType.MANAGEMENT, RoleType.SUPER_ADMIN],
+        {
+          title: 'New Formulation Order Drafted',
+          message: `Order ${createdOrder.orderNumber} created for ${customer.fullName || customer.customerCode}. Total: ₹${createdOrder.totalAmount.toFixed(2)}.`,
+          type: NotificationType.INFO,
+          link: '/management/orders',
+        },
+      );
+    } catch (notifErr) {
+      this.logger.warn(`Failed to dispatch order draft notification: ${notifErr}`);
+    }
+
+    return createdOrder;
   }
 
   /**
@@ -185,7 +206,7 @@ export class OrdersService {
       );
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const confirmedOrder = await this.prisma.$transaction(async (tx) => {
       // 1. Verify and atomically reserve inventory for each item
       for (const item of order.items) {
         const inventory = await tx.inventory.findUnique({
@@ -298,6 +319,41 @@ export class OrdersService {
 
       return confirmedOrder;
     });
+
+    // Dispatch real-time live notifications for confirmed order
+    try {
+      // 1. Notify Super Admin and Management
+      await this.notificationsService.dispatchToRole(
+        [RoleType.SUPER_ADMIN, RoleType.MANAGEMENT],
+        {
+          title: 'Order Confirmed & Inventory Reserved',
+          message: `Order ${order.orderNumber} confirmed for ${order.customer.fullName || order.customer.customerCode}! Total: ₹${order.totalAmount.toFixed(2)}.`,
+          type: NotificationType.ORDER_CONFIRMED,
+          link: '/admin/orders',
+        },
+      );
+
+      // 2. Notify assigned salesperson if associated lead exists
+      if (order.customer.convertedFromId) {
+        const associatedLead = await this.prisma.lead.findUnique({
+          where: { id: order.customer.convertedFromId },
+          select: { assignedToId: true, leadCode: true },
+        });
+        if (associatedLead?.assignedToId) {
+          await this.notificationsService.createNotification({
+            userId: associatedLead.assignedToId,
+            title: 'Commercial Conversion Confirmed!',
+            message: `Congratulations! Order ${order.orderNumber} for your lead was confirmed (₹${order.totalAmount.toFixed(2)})!`,
+            type: NotificationType.SUCCESS,
+            link: '/sales',
+          });
+        }
+      }
+    } catch (notifErr) {
+      this.logger.warn(`Failed to dispatch order confirmation notifications: ${notifErr}`);
+    }
+
+    return confirmedOrder;
   }
 
   /**

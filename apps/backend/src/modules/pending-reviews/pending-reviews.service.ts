@@ -11,7 +11,8 @@ import { SubmitPendingReviewDto } from './dto/submit-pending-review.dto';
 import { DecidePendingReviewDto } from './dto/decide-pending-review.dto';
 import { PendingQueueQueryDto, PendingQueueFilter } from './dto/pending-queue-query.dto';
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
-import { LeadStatus, PendingDecision, RoleType } from '@prisma/client';
+import { LeadStatus, PendingDecision, RoleType, NotificationType } from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class PendingReviewsService {
@@ -25,7 +26,10 @@ export class PendingReviewsService {
     [PendingDecision.SEND_BACK]: LeadStatus.CONTACTED,
   };
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   /**
    * Submit an active lead into the Pending Review queue for clinical & commercial audit.
@@ -72,7 +76,7 @@ export class PendingReviewsService {
       );
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       // 1. Create PendingReview record
       const review = await tx.pendingReview.create({
         data: {
@@ -125,6 +129,23 @@ export class PendingReviewsService {
         leadStatus: LeadStatus.PENDING_REVIEW,
       };
     });
+
+    // Dispatch real-time live notification to Clinical Reviewers & Super Admin
+    try {
+      await this.notificationsService.dispatchToRole(
+        [RoleType.PENDING_REVIEWER, RoleType.SUPER_ADMIN],
+        {
+          title: 'Clinical Review Requested',
+          message: `Lead ${lead.leadCode} (${lead.customerName}) submitted for triage: ${dto.reason}`,
+          type: NotificationType.REVIEW_REQUESTED,
+          link: '/pending/queue',
+        },
+      );
+    } catch (notifErr) {
+      this.logger.warn(`Failed to dispatch review notification: ${notifErr}`);
+    }
+
+    return result;
   }
 
   /**
@@ -367,7 +388,7 @@ export class PendingReviewsService {
 
     const nextLeadStatus = this.decisionStatusMap[dto.decision];
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       // 1. Update PendingReview record with resolution and notes
       const decidedReview = await tx.pendingReview.update({
         where: { id: reviewId },
@@ -448,6 +469,48 @@ export class PendingReviewsService {
         approvalRequest,
       };
     });
+
+    // Dispatch real-time live notifications based on review decision
+    try {
+      if (dto.decision === PendingDecision.APPROVE) {
+        // 1. Notify Final Approval Officers and Super Admin
+        await this.notificationsService.dispatchToRole(
+          [RoleType.APPROVAL_OFFICER, RoleType.SUPER_ADMIN],
+          {
+            title: 'Lead Approved for Sign-Off',
+            message: `Lead ${review.lead.leadCode} (${review.lead.customerName}) verified in triage and forwarded to final clearance.`,
+            type: NotificationType.APPROVAL_GRANTED,
+            link: '/approval/queue',
+          },
+        );
+
+        // 2. Notify assigned salesperson
+        if (review.lead.assignedToId) {
+          await this.notificationsService.createNotification({
+            userId: review.lead.assignedToId,
+            title: 'Clinical Review Approved',
+            message: `Lead ${review.lead.leadCode} passed clinical triage and forwarded to final medical clearance.`,
+            type: NotificationType.SUCCESS,
+            link: '/sales/leads',
+          });
+        }
+      } else {
+        // Disqualified, returned, or follow-up required
+        if (review.lead.assignedToId) {
+          await this.notificationsService.createNotification({
+            userId: review.lead.assignedToId,
+            title: `Review Decision: ${dto.decision.replace('_', ' ')}`,
+            message: `Lead ${review.lead.leadCode} returned with reviewer notes: ${dto.reviewerNotes}`,
+            type: NotificationType.WARNING,
+            link: '/sales/leads',
+          });
+        }
+      }
+    } catch (notifErr) {
+      this.logger.warn(`Failed to dispatch review decision notifications: ${notifErr}`);
+    }
+
+    return result;
   }
 
   /**

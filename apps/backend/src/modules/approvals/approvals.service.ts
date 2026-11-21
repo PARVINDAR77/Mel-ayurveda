@@ -11,13 +11,17 @@ import { DecideApprovalDto, SendBackTarget } from './dto/decide-approval.dto';
 import { ApprovalQueueQueryDto, ApprovalQueueFilter } from './dto/approval-queue-query.dto';
 import { SubmitApprovalDto } from './dto/submit-approval.dto';
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
-import { ApprovalDecision, LeadStatus, RoleType, PendingDecision } from '@prisma/client';
+import { ApprovalDecision, LeadStatus, RoleType, PendingDecision, NotificationType } from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ApprovalsService {
   private readonly logger = new Logger(ApprovalsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   /**
    * Submit an approved customer deal directly to Panel 04 Approval Officer queue.
@@ -45,7 +49,7 @@ export class ApprovalsService {
       return { success: true, message: 'Already submitted for approval', approvalRequest: existingReq };
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const approvalRequest = await tx.approvalRequest.create({
         data: {
           leadId: lead.id,
@@ -105,6 +109,23 @@ export class ApprovalsService {
         leadStatus: LeadStatus.APPROVAL_REQUESTED,
       };
     });
+
+    // Dispatch real-time live notification to Approval Officers & Super Admin
+    try {
+      await this.notificationsService.dispatchToRole(
+        [RoleType.APPROVAL_OFFICER, RoleType.SUPER_ADMIN],
+        {
+          title: 'Final Approval Required',
+          message: `Lead ${lead.leadCode} (${lead.customerName}) submitted for final medical sign-off.`,
+          type: NotificationType.APPROVAL_GRANTED,
+          link: '/approval/queue',
+        },
+      );
+    } catch (notifErr) {
+      this.logger.warn(`Failed to dispatch approval submission notification: ${notifErr}`);
+    }
+
+    return result;
   }
 
   /**
@@ -301,7 +322,7 @@ export class ApprovalsService {
           : LeadStatus.PENDING_REVIEW;
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       // 1. Update ApprovalRequest
       const decidedRequest = await tx.approvalRequest.update({
         where: { id },
@@ -381,6 +402,65 @@ export class ApprovalsService {
         approvalRequest: decidedRequest,
       };
     });
+
+    // Dispatch real-time live notifications based on approval outcome
+    try {
+      if (dto.decision === ApprovalDecision.APPROVE) {
+        // 1. Notify Management and Super Admin that lead is cleared for customer conversion & orders
+        await this.notificationsService.dispatchToRole(
+          [RoleType.MANAGEMENT, RoleType.SUPER_ADMIN],
+          {
+            title: 'Lead Approved for Customer Fulfillment',
+            message: `Lead ${request.lead.leadCode} (${request.lead.customerName}) received final sign-off and is cleared for order formulation.`,
+            type: NotificationType.APPROVAL_GRANTED,
+            link: '/management/customers',
+          },
+        );
+
+        // 2. Notify assigned salesperson
+        if (request.lead.assignedToId) {
+          await this.notificationsService.createNotification({
+            userId: request.lead.assignedToId,
+            title: 'Deal Approved! Final Sign-Off Granted',
+            message: `Congratulations! Lead ${request.lead.leadCode} (${request.lead.customerName}) has received final clearance.`,
+            type: NotificationType.SUCCESS,
+            link: '/sales/leads',
+          });
+        }
+      } else if (dto.decision === ApprovalDecision.REJECT) {
+        if (request.lead.assignedToId) {
+          await this.notificationsService.createNotification({
+            userId: request.lead.assignedToId,
+            title: 'Lead Disqualified by Approval Authority',
+            message: `Lead ${request.lead.leadCode} was disqualified: ${dto.officerNotes}`,
+            type: NotificationType.WARNING,
+            link: '/sales/leads',
+          });
+        }
+      } else {
+        // SEND_BACK
+        if (dto.sendBackTarget === SendBackTarget.SALESPERSON && request.lead.assignedToId) {
+          await this.notificationsService.createNotification({
+            userId: request.lead.assignedToId,
+            title: 'Lead Sent Back from Approvals',
+            message: `Lead ${request.lead.leadCode} returned to your calling queue: ${dto.officerNotes}`,
+            type: NotificationType.WARNING,
+            link: '/sales/leads',
+          });
+        } else {
+          await this.notificationsService.dispatchToRole([RoleType.PENDING_REVIEWER], {
+            title: 'Lead Returned to Review Queue',
+            message: `Lead ${request.lead.leadCode} returned by approval officer for clinical review.`,
+            type: NotificationType.REVIEW_REQUESTED,
+            link: '/pending/queue',
+          });
+        }
+      }
+    } catch (notifErr) {
+      this.logger.warn(`Failed to dispatch approval decision notifications: ${notifErr}`);
+    }
+
+    return result;
   }
 
   /**

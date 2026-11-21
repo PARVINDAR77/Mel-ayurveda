@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '../../context/auth-context';
+import { useNotifications } from '../../context/notification-context';
 import {
   LayoutDashboard,
   Users,
@@ -32,6 +33,7 @@ interface SidebarProps {
 export function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname();
   const { user } = useAuth();
+  const { unreadCountByPath, hasUnreadForPath, markPathAsRead } = useNotifications();
 
   const getNavItems = () => {
     if (!user) return [];
@@ -145,12 +147,19 @@ export function Sidebar({ onClose }: SidebarProps) {
         {navItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== '/admin' && pathname?.startsWith(`${item.href}/`));
           const Icon = item.icon;
+          const hasUnread = hasUnreadForPath(item.href);
+          const unreadCount = unreadCountByPath[item.href] || 0;
 
           return (
             <Link
               key={item.href}
               href={item.href}
-              onClick={onClose}
+              onClick={() => {
+                if (hasUnread) {
+                  markPathAsRead(item.href);
+                }
+                if (onClose) onClose();
+              }}
               className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all ${
                 isActive
                   ? 'bg-emerald-800/90 text-white shadow-md shadow-emerald-950/50 border border-emerald-600/40 ring-1 ring-emerald-500/30'
@@ -159,8 +168,24 @@ export function Sidebar({ onClose }: SidebarProps) {
             >
               <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-amber-400' : 'text-slate-400'}`} />
               <span className="truncate">{item.label}</span>
-              {isActive && (
-                <span className="ml-auto h-1.5 w-1.5 rounded-full bg-amber-400" />
+
+              {/* Blinking Red Radar Dot & Count for Unread Section Alerts */}
+              {hasUnread ? (
+                <div className="ml-auto flex items-center gap-1.5 shrink-0" title="New unread alert in this section">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-80" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 shadow-sm shadow-red-500/90" />
+                  </span>
+                  {unreadCount > 0 && (
+                    <span className="rounded-full bg-red-600 px-1.5 py-0.2 text-[9px] font-bold text-white shadow-xs">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                isActive && (
+                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-amber-400" />
+                )
               )}
             </Link>
           );

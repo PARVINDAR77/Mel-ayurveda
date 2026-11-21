@@ -10,8 +10,11 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Sse,
+  MessageEvent,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Observable } from 'rxjs';
 import { NotificationsService } from './notifications.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { NotificationQueryDto } from './dto/notification-query.dto';
@@ -24,6 +27,26 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 @Controller('notifications')
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
+
+  @Sse('stream')
+  @ApiOperation({ summary: 'Real-time Server-Sent Events stream of user notifications' })
+  streamNotifications(@CurrentUser() user: any): Observable<MessageEvent> {
+    return this.notificationsService.getEventStream(user.id);
+  }
+
+  @Get('unread-summary')
+  @ApiOperation({ summary: 'Get unread counts grouped by route/section path for badges' })
+  @ApiResponse({ status: 200, description: 'Unread summary by path' })
+  async getUnreadSummary(@CurrentUser() user: any) {
+    return this.notificationsService.getUnreadSummary(user.id);
+  }
+
+  @Patch('mark-path-read')
+  @ApiOperation({ summary: 'Mark all unread notifications matching a route path as read' })
+  @ApiResponse({ status: 200, description: 'Notifications for path marked as read' })
+  async markPathAsRead(@CurrentUser() user: any, @Body('path') path: string) {
+    return this.notificationsService.markPathAsRead(user.id, path);
+  }
 
   @Get()
   @ApiOperation({ summary: 'Get current user notifications with unread count and pagination' })
