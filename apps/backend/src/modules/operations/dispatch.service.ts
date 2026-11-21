@@ -18,6 +18,51 @@ export class DispatchService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
+   * Retrieves all confirmed formulation orders awaiting courier dispatch
+   */
+  async getReadyOrders() {
+    return this.prisma.order.findMany({
+      where: {
+        status: OrderStatus.CONFIRMED,
+        shipment: null,
+      },
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        customer: {
+          select: {
+            id: true,
+            customerCode: true,
+            fullName: true,
+            phoneNumber: true,
+            address: true,
+            city: true,
+            state: true,
+            pincode: true,
+          },
+        },
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+              },
+            },
+          },
+        },
+        invoice: {
+          select: {
+            id: true,
+            invoiceNumber: true,
+            grandTotal: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
    * List all shipments with order, customer, and invoice details
    */
   async findAll(page = 1, limit = 20, status?: ShipmentStatus) {

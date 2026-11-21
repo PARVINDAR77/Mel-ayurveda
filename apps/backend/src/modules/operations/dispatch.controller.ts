@@ -28,6 +28,14 @@ export class DispatchController {
     return this.dispatchService.findAll(Number(page) || 1, Number(limit) || 20, status);
   }
 
+  @Get('ready-orders')
+  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT)
+  @ApiOperation({ summary: 'List all confirmed formulation orders awaiting courier dispatch' })
+  @ApiResponse({ status: 200, description: 'List of confirmed unmanifested orders' })
+  async getReadyOrders() {
+    return this.dispatchService.getReadyOrders();
+  }
+
   @Post(':orderId')
   @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT)
   @ApiOperation({ summary: 'Assign courier partner and AWB tracking number to dispatch order' })

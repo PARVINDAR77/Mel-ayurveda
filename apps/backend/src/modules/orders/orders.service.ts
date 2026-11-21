@@ -324,12 +324,23 @@ export class OrdersService {
     try {
       // 1. Notify Super Admin and Management
       await this.notificationsService.dispatchToRole(
-        [RoleType.SUPER_ADMIN, RoleType.MANAGEMENT],
+        [RoleType.SUPER_ADMIN],
         {
           title: 'Order Confirmed & Inventory Reserved',
           message: `Order ${order.orderNumber} confirmed for ${order.customer.fullName || order.customer.customerCode}! Total: ₹${order.totalAmount.toFixed(2)}.`,
           type: NotificationType.ORDER_CONFIRMED,
           link: '/admin/orders',
+        },
+      );
+
+      // 2. Notify Management / Warehouse for Courier Dispatch
+      await this.notificationsService.dispatchToRole(
+        [RoleType.MANAGEMENT],
+        {
+          title: 'Order Confirmed: Ready for Courier Dispatch',
+          message: `Order ${order.orderNumber} for ${order.customer.fullName || order.customer.customerCode} is confirmed and waiting for courier dispatch.`,
+          type: NotificationType.ORDER_CONFIRMED,
+          link: '/management/dispatch',
         },
       );
 
