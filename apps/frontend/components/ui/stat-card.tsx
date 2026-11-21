@@ -27,54 +27,65 @@ export function StatCard({
   className,
 }: StatCardProps) {
   const iconThemeStyles = {
-    forest: 'bg-forest-50 text-forest-800 border-forest-200',
-    gold: 'bg-amber-50 text-amber-700 border-amber-200',
-    blue: 'bg-blue-50 text-blue-700 border-blue-200',
-    purple: 'bg-purple-50 text-purple-700 border-purple-200',
-    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    amber: 'bg-orange-50 text-orange-700 border-orange-200',
+    forest: 'bg-emerald-50 text-emerald-800 border-emerald-200/80',
+    gold: 'bg-amber-50 text-amber-700 border-amber-200/80',
+    blue: 'bg-blue-50 text-blue-700 border-blue-200/80',
+    purple: 'bg-purple-50 text-purple-700 border-purple-200/80',
+    emerald: 'bg-teal-50 text-teal-700 border-teal-200/80',
+    amber: 'bg-orange-50 text-orange-700 border-orange-200/80',
+  };
+
+  const accentTopBorders = {
+    forest: 'border-t-emerald-600',
+    gold: 'border-t-amber-500',
+    blue: 'border-t-blue-500',
+    purple: 'border-t-purple-500',
+    emerald: 'border-t-teal-500',
+    amber: 'border-t-orange-500',
   };
 
   return (
     <div
       className={twMerge(
         clsx(
-          'relative overflow-hidden rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm transition hover:shadow-md/50',
+          'relative overflow-hidden rounded-2xl border border-slate-200/80 border-t-3 bg-white p-5 shadow-sm transition hover:shadow-md hover:border-slate-300',
+          accentTopBorders[colorTheme],
           className,
         ),
       )}
     >
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{title}</p>
-          <h4 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">{value}</h4>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{title}</p>
+          <h4 className="mt-1 text-2xl font-black tracking-tight text-slate-900">{value}</h4>
         </div>
         <div
           className={twMerge(
             clsx(
-              'flex h-12 w-12 items-center justify-center rounded-xl border',
+              'flex h-11 w-11 items-center justify-center rounded-xl border shadow-xs',
               iconThemeStyles[colorTheme],
             ),
           )}
         >
-          <Icon className="h-6 w-6 stroke-[1.75]" />
+          <Icon className="h-5 w-5 stroke-[2]" />
         </div>
       </div>
 
       {(subtitle || trend) && (
-        <div className="mt-3 flex items-center gap-2 pt-2 border-t border-slate-100 text-xs">
+        <div className="mt-3.5 flex flex-wrap items-center gap-2 pt-2.5 border-t border-slate-100 text-xs">
           {trend && (
             <span
               className={clsx(
-                'inline-flex items-center font-semibold rounded px-1.5 py-0.5',
-                trend.isPositive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700',
+                'inline-flex items-center gap-1 font-bold rounded-md px-1.5 py-0.5 text-[11px]',
+                trend.isPositive ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200',
               )}
             >
-              {trend.isPositive ? '↑' : '↓'} {trend.value}
+              <span>{trend.isPositive ? '↑' : '↓'}</span>
+              <span>{trend.value}</span>
+              {trend.label && <span className="font-normal text-slate-600">({trend.label})</span>}
             </span>
           )}
-          {subtitle && <span className="text-slate-500">{subtitle}</span>}
-          {trend?.label && <span className="text-slate-400">{trend.label}</span>}
+          {subtitle && <span className="text-slate-500 text-[11px] font-medium">{subtitle}</span>}
         </div>
       )}
     </div>

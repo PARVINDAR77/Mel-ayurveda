@@ -10,6 +10,8 @@ interface BadgeProps {
     | 'warning'
     | 'danger'
     | 'info'
+    | 'blue'
+    | 'purple'
     | 'gold'
     | 'slate'
     | 'leadStatus'
@@ -28,8 +30,10 @@ export function Badge({ children, variant = 'default', status, className }: Badg
     colorClasses = 'bg-amber-50 text-amber-800 border-amber-200';
   } else if (variant === 'danger') {
     colorClasses = 'bg-red-50 text-red-800 border-red-200';
-  } else if (variant === 'info') {
+  } else if (variant === 'info' || variant === 'blue') {
     colorClasses = 'bg-blue-50 text-blue-800 border-blue-200';
+  } else if (variant === 'purple') {
+    colorClasses = 'bg-purple-50 text-purple-800 border-purple-200';
   } else if (variant === 'gold') {
     colorClasses = 'bg-amber-100 text-amber-900 border-amber-300';
   } else if (variant === 'slate') {

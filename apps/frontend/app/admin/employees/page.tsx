@@ -17,10 +17,15 @@ import {
   Mail,
   AlertCircle,
   CheckCircle2,
+  Users,
+  ShieldCheck,
+  Building2,
+  Lock,
 } from 'lucide-react';
 
 export default function EmployeesAdminPage() {
   const [employees, setEmployees] = useState<any[]>([]);
+  const [selectedRoleFilter, setSelectedRoleFilter] = useState<string>('ALL');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -65,7 +70,7 @@ export default function EmployeesAdminPage() {
       setIsSubmitting(true);
       setError(null);
       const res = await apiClient.post('/employees', formData);
-      setSuccessMsg(`Employee created successfully with ID: ${res.data.employeeCode}`);
+      setSuccessMsg(`Employee ${res.data.firstName} ${res.data.lastName} created with ID: ${res.data.employeeCode}`);
       setIsAddModalOpen(false);
       setFormData({
         firstName: '',
@@ -95,7 +100,7 @@ export default function EmployeesAdminPage() {
         ),
       );
       setSuccessMsg(
-        `Employee ${employee.employeeCode} marked as ${newStatus ? 'ACTIVE' : 'DEACTIVATED'}`,
+        `Staff member ${employee.employeeCode} (${employee.firstName} ${employee.lastName}) marked as ${newStatus ? 'ACTIVE' : 'DEACTIVATED'}`,
       );
     } catch (err: any) {
       setError(getErrorMessage(err));
@@ -122,39 +127,49 @@ export default function EmployeesAdminPage() {
     }
   };
 
+  const filteredEmployees = React.useMemo(() => {
+    if (selectedRoleFilter === 'ALL') return employees;
+    return employees.filter((e) => e.role === selectedRoleFilter);
+  }, [employees, selectedRoleFilter]);
+
   const columns: Column<any>[] = [
     {
       key: 'employeeCode',
       header: 'Employee ID',
       render: (item) => (
-        <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+        <span className="font-mono font-bold text-xs text-slate-900 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
           {item.employeeCode}
         </span>
       ),
     },
     {
       key: 'name',
-      header: 'Full Name',
+      header: 'Full Name & Email',
       render: (item) => (
-        <div>
-          <span className="font-semibold text-slate-900">
-            {item.firstName} {item.lastName}
-          </span>
-          <div className="flex items-center gap-1 text-[11px] text-slate-500 mt-0.5">
-            <Mail className="h-3 w-3 text-slate-400" />
-            <span>{item.email}</span>
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800 font-bold text-xs border border-emerald-200">
+            {item.firstName[0]}{item.lastName[0]}
+          </div>
+          <div>
+            <span className="font-bold text-slate-900 text-xs block leading-snug">
+              {item.firstName} {item.lastName}
+            </span>
+            <div className="flex items-center gap-1 text-[11px] text-slate-500 font-mono">
+              <Mail className="h-3 w-3 text-slate-400" />
+              <span>{item.email}</span>
+            </div>
           </div>
         </div>
       ),
     },
     {
       key: 'role',
-      header: 'CRM Role',
+      header: 'Assigned Panel & Role',
       render: (item) => <Badge variant="role">{item.role}</Badge>,
     },
     {
       key: 'phoneNumber',
-      header: 'Contact',
+      header: 'Direct Phone',
       render: (item) => (
         <div className="flex items-center gap-1.5 text-xs text-slate-600 font-mono">
           <Phone className="h-3 w-3 text-slate-400" />
@@ -164,36 +179,45 @@ export default function EmployeesAdminPage() {
     },
     {
       key: 'status',
-      header: 'Account Status',
+      header: 'Session Status',
       render: (item) => (
-        <Badge variant={item.isActive ? 'success' : 'danger'}>
+        <span
+          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+            item.isActive
+              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+              : 'bg-red-50 text-red-700 border border-red-200'
+          }`}
+        >
+          <span className={`h-1.5 w-1.5 rounded-full ${item.isActive ? 'bg-emerald-500' : 'bg-red-500'}`} />
           {item.isActive ? 'Active' : 'Deactivated'}
-        </Badge>
+        </span>
       ),
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: 'Credentials & Access',
       className: 'text-right',
       render: (item) => (
         <div className="flex items-center justify-end gap-1.5">
           <button
             onClick={() => setResetEmployee(item)}
-            className="rounded p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition"
+            className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition shadow-2xs"
             title="Reset Password"
           >
-            <KeyRound className="h-4 w-4" />
+            <KeyRound className="h-3.5 w-3.5 text-amber-600" />
+            <span className="hidden sm:inline">Reset</span>
           </button>
           <button
             onClick={() => handleToggleStatus(item)}
-            className={`rounded p-1 transition ${
+            className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-xs transition shadow-2xs ${
               item.isActive
-                ? 'text-slate-500 hover:bg-red-50 hover:text-red-700'
-                : 'text-emerald-600 hover:bg-emerald-50 hover:text-emerald-800'
+                ? 'border-red-200 bg-red-50/50 text-red-700 hover:bg-red-100/60'
+                : 'border-emerald-200 bg-emerald-50/50 text-emerald-700 hover:bg-emerald-100/60'
             }`}
             title={item.isActive ? 'Deactivate Account' : 'Activate Account'}
           >
-            <Power className="h-4 w-4" />
+            <Power className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{item.isActive ? 'Suspend' : 'Activate'}</span>
           </button>
         </div>
       ),
@@ -203,17 +227,22 @@ export default function EmployeesAdminPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/90 pb-5">
         <div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-            Employees & User Administration
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200/80 uppercase tracking-widest">
+              Panel 01: Employee Administration
+            </span>
+          </div>
+          <h2 className="mt-1.5 text-2xl font-black text-slate-900 tracking-tight">
+            Employee Administration & RBAC Credentials
           </h2>
-          <p className="text-xs text-slate-500">
-            Manage corporate staff, auto-sequential ID generation, role permissions, and credentials.
+          <p className="text-xs text-slate-500 mt-0.5">
+            Manage corporate staff, auto-sequential ID generation, role permissions, and system access.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -228,47 +257,104 @@ export default function EmployeesAdminPage() {
             size="sm"
             onClick={() => setIsAddModalOpen(true)}
             icon={<UserPlus className="h-3.5 w-3.5" />}
+            className="bg-emerald-800 hover:bg-emerald-900 text-white font-semibold"
           >
-            Add New Employee
+            + Add New Employee
           </Button>
         </div>
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+        <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-xs text-red-700">
           <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
           <span>{error}</span>
         </div>
       )}
 
       {successMsg && (
-        <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
+        <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs text-emerald-800">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-            <span>{successMsg}</span>
+            <span className="font-medium">{successMsg}</span>
           </div>
-          <button onClick={() => setSuccessMsg(null)} className="font-bold text-emerald-700">
+          <button onClick={() => setSuccessMsg(null)} className="font-bold text-emerald-700 hover:text-emerald-900">
             ✕
           </button>
         </div>
       )}
 
+      {/* Role Filter Tabs */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-slate-200/80">
+        {[
+          { key: 'ALL', label: 'All Roles', count: employees.length },
+          {
+            key: 'SALESPERSON',
+            label: 'Sales Consultants (Panel 02)',
+            count: employees.filter((e) => e.role === 'SALESPERSON').length,
+          },
+          {
+            key: 'PENDING_REVIEWER',
+            label: 'Pending Reviewers (Panel 03)',
+            count: employees.filter((e) => e.role === 'PENDING_REVIEWER').length,
+          },
+          {
+            key: 'APPROVAL_OFFICER',
+            label: 'Approval Officers (Panel 04)',
+            count: employees.filter((e) => e.role === 'APPROVAL_OFFICER').length,
+          },
+          {
+            key: 'MANAGEMENT',
+            label: 'Management (Panel 05)',
+            count: employees.filter((e) => e.role === 'MANAGEMENT').length,
+          },
+          {
+            key: 'SUPER_ADMIN',
+            label: 'Super Admins (Panel 01)',
+            count: employees.filter((e) => e.role === 'SUPER_ADMIN').length,
+          },
+        ].map((tab) => {
+          const isActive = selectedRoleFilter === tab.key;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setSelectedRoleFilter(tab.key)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition shrink-0 cursor-pointer ${
+                isActive
+                  ? 'bg-emerald-800 text-white shadow-xs'
+                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              <span>{tab.label}</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                  isActive ? 'bg-emerald-950 text-emerald-200' : 'bg-slate-100 text-slate-500'
+                }`}
+              >
+                {tab.count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Employees Table */}
-      <DataTable
-        columns={columns}
-        data={employees}
-        searchKey="email"
-        searchPlaceholder="Search by email or name..."
-        isLoading={isLoading}
-        emptyMessage="No employees registered in CRM"
-      />
+      <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm">
+        <DataTable
+          columns={columns}
+          data={filteredEmployees}
+          searchKey="email"
+          searchPlaceholder="Search employees by email, name or ID..."
+          isLoading={isLoading}
+          emptyMessage="No employees found matching filter criteria."
+        />
+      </div>
 
       {/* Add Employee Modal */}
       <Modal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        title="Add New Melayurveda Employee"
-        description="Creates an enterprise staff account with auto-generated sequential ID (MEL-XXX)."
+        title="Provision New Corporate Staff Member"
+        description="Creates an authorized user account with role-based access control and auto-generated sequential ID."
       >
         <form onSubmit={handleCreateEmployee} className="space-y-3.5">
           <div className="grid grid-cols-2 gap-3">
@@ -289,50 +375,52 @@ export default function EmployeesAdminPage() {
           </div>
 
           <Input
-            label="Corporate Email"
+            label="Corporate Email Address"
             type="email"
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            placeholder="ramesh.patel@melayurveda.com"
+            placeholder="name@melayurveda.com"
+            leftIcon={<Mail className="h-4 w-4" />}
             required
           />
 
           <Input
             label="Mobile Number"
-            type="tel"
             value={formData.phoneNumber}
             onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-            placeholder="9876543210"
+            placeholder="98XXXXXXXX"
+            leftIcon={<Phone className="h-4 w-4" />}
             required
           />
 
           <div className="space-y-1">
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
-              Assigned Role
+              Assigned Organizational Role
             </label>
             <select
               value={formData.role}
               onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-              className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-forest-700"
+              className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-700"
             >
-              <option value="SALESPERSON">Salesperson (MEL-SAL-XXX)</option>
-              <option value="PENDING_REVIEWER">Pending Reviewer (MEL-PND-XXX)</option>
-              <option value="APPROVAL_OFFICER">Approval Officer (MEL-APR-XXX)</option>
-              <option value="MANAGEMENT">Management & Operations (MEL-MGT-XXX)</option>
-              <option value="SUPER_ADMIN">Super Admin (MEL-ADM-XXX)</option>
+              <option value="SALESPERSON">Panel 02: Salesperson (Tele-Consultant • 0% Source Exposure)</option>
+              <option value="PENDING_REVIEWER">Panel 03: Pending Reviewer (Formulation & Dosage Verification)</option>
+              <option value="APPROVAL_OFFICER">Panel 04: Approval Officer (Commercial & Medical Clearance)</option>
+              <option value="MANAGEMENT">Panel 05: Management (GST Invoicing, Inventory & Dispatch)</option>
+              <option value="SUPER_ADMIN">Panel 01: Super Admin (Executive Organization Control)</option>
             </select>
           </div>
 
           <Input
-            label="Temporary Password"
+            label="Initial Account Password"
             type="password"
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            placeholder="Minimum 8 characters"
+            placeholder="Minimum 8 characters with upper, lower, symbol"
+            leftIcon={<Lock className="h-4 w-4" />}
             required
           />
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
             <Button
               type="button"
               variant="outline"
@@ -346,8 +434,9 @@ export default function EmployeesAdminPage() {
               variant="primary"
               size="sm"
               isLoading={isSubmitting}
+              className="bg-emerald-800 hover:bg-emerald-900 text-white font-semibold"
             >
-              Create Staff Account
+              Provision Account
             </Button>
           </div>
         </form>
@@ -358,7 +447,7 @@ export default function EmployeesAdminPage() {
         isOpen={!!resetEmployee}
         onClose={() => setResetEmployee(null)}
         title={`Reset Password for ${resetEmployee?.employeeCode}`}
-        description={`Set a new secure password for ${resetEmployee?.firstName} ${resetEmployee?.lastName}.`}
+        description={`Set a new secure credential for ${resetEmployee?.firstName} ${resetEmployee?.lastName} (${resetEmployee?.email}).`}
       >
         <form onSubmit={handleResetPassword} className="space-y-4">
           <Input
@@ -366,7 +455,8 @@ export default function EmployeesAdminPage() {
             type="password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            placeholder="Minimum 8 characters"
+            placeholder="Enter new strong password"
+            leftIcon={<KeyRound className="h-4 w-4" />}
             required
           />
 
@@ -384,6 +474,7 @@ export default function EmployeesAdminPage() {
               variant="primary"
               size="sm"
               isLoading={isResetting}
+              className="bg-emerald-800 hover:bg-emerald-900 text-white font-semibold"
             >
               Update Password
             </Button>

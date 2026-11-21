@@ -372,11 +372,10 @@ function LoginContent() {
                       key={p.code}
                       type="button"
                       onClick={() => handleSelectPersona(p)}
-                      className={`relative flex items-center gap-2.5 text-left rounded-xl border p-2 transition-all cursor-pointer ${
-                        isSelected
+                      className={`relative flex items-center gap-2.5 text-left rounded-xl border p-2 transition-all cursor-pointer ${isSelected
                           ? 'border-emerald-600 bg-emerald-50/90 ring-1.5 ring-emerald-500 shadow-xs'
                           : 'border-slate-200/90 bg-slate-50/70 hover:bg-slate-100 hover:border-slate-300'
-                      } ${isFullWidth ? 'sm:col-span-2' : ''}`}
+                        } ${isFullWidth ? 'sm:col-span-2' : ''}`}
                     >
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white border border-slate-200/90 shadow-2xs">
                         {p.icon}
