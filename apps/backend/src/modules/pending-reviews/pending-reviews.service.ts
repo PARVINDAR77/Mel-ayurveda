@@ -225,7 +225,7 @@ export class PendingReviewsService {
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: 'asc' }, // FIFO - oldest pending review first
+        orderBy: { createdAt: 'desc' }, // Newest pending reviews show on top
         include: {
           lead: {
             select: {

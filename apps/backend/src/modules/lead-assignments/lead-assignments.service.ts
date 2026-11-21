@@ -408,7 +408,7 @@ export class LeadAssignmentsService {
         status: LeadStatus.NEW,
         assignedToId: null,
       },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: 'desc' },
       select: {
         id: true,
         leadCode: true,

@@ -251,10 +251,10 @@ export default function PendingReviewQueuePage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
           <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-            Centralized FIFO Product Verification Queue
+            Centralized Product Verification Queue
           </h2>
           <p className="text-xs text-slate-500">
-            Review submitted product & order dossiers, lock claims to prevent reviewer collisions, and execute 4-way verification decisions.
+            Review submitted product & order dossiers (newest incoming leads appear on top), lock claims to prevent reviewer collisions, and execute 4-way verification decisions.
           </p>
         </div>
 
