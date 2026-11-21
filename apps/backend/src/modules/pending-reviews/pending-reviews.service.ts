@@ -446,6 +446,10 @@ export class PendingReviewsService {
    * Retrieves the comprehensive clinical audit dossier for a pending review
    */
   async getReviewDossier(reviewId: string) {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(reviewId)) {
+      throw new NotFoundException(`Invalid review ID format: ${reviewId}`);
+    }
+
     const review = await this.prisma.pendingReview.findUnique({
       where: { id: reviewId },
       include: {

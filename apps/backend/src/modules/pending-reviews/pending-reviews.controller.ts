@@ -12,7 +12,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { PendingReviewsService } from './pending-reviews.service';
 import { SubmitPendingReviewDto } from './dto/submit-pending-review.dto';
 import { DecidePendingReviewDto } from './dto/decide-pending-review.dto';
-import { PendingQueueQueryDto } from './dto/pending-queue-query.dto';
+import { PendingQueueQueryDto, PendingQueueFilter } from './dto/pending-queue-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -43,6 +43,17 @@ export class PendingReviewsController {
   @ApiResponse({ status: 200, description: 'Queue items returned' })
   async getQueue(@Query() query: PendingQueueQueryDto) {
     return this.pendingReviewsService.getQueue(query);
+  }
+
+  @Get('history')
+  @Roles(RoleType.PENDING_REVIEWER, RoleType.SUPER_ADMIN, RoleType.MANAGEMENT)
+  @ApiOperation({ summary: 'Retrieve resolved pending review history' })
+  @ApiResponse({ status: 200, description: 'Review decision history returned' })
+  async getHistory(@Query() query: PendingQueueQueryDto) {
+    return this.pendingReviewsService.getQueue({
+      ...query,
+      filter: PendingQueueFilter.DECIDED,
+    });
   }
 
   @Get('metrics')

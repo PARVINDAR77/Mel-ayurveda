@@ -366,6 +366,10 @@ export class ApprovalsService {
    * Retrieves full verification dossier for the approval authority
    */
   async getApprovalDossier(id: string) {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      throw new NotFoundException(`Invalid approval ID format: ${id}`);
+    }
+
     const request = await this.prisma.approvalRequest.findUnique({
       where: { id },
       include: {

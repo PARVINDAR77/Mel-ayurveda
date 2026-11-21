@@ -11,7 +11,7 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { ApprovalsService } from './approvals.service';
 import { DecideApprovalDto } from './dto/decide-approval.dto';
-import { ApprovalQueueQueryDto } from './dto/approval-queue-query.dto';
+import { ApprovalQueueQueryDto, ApprovalQueueFilter } from './dto/approval-queue-query.dto';
 import { SubmitApprovalDto } from './dto/submit-approval.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -43,6 +43,17 @@ export class ApprovalsController {
   @ApiResponse({ status: 200, description: 'Approval requests returned' })
   async getQueue(@Query() query: ApprovalQueueQueryDto) {
     return this.approvalsService.getQueue(query);
+  }
+
+  @Get('history')
+  @Roles(RoleType.APPROVAL_OFFICER, RoleType.SUPER_ADMIN, RoleType.MANAGEMENT)
+  @ApiOperation({ summary: 'Retrieve resolved approval clearance history' })
+  @ApiResponse({ status: 200, description: 'Approval decision history returned' })
+  async getHistory(@Query() query: ApprovalQueueQueryDto) {
+    return this.approvalsService.getQueue({
+      ...query,
+      filter: ApprovalQueueFilter.DECIDED,
+    });
   }
 
   @Get('metrics')
