@@ -12,6 +12,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { ApprovalsService } from './approvals.service';
 import { DecideApprovalDto } from './dto/decide-approval.dto';
 import { ApprovalQueueQueryDto } from './dto/approval-queue-query.dto';
+import { SubmitApprovalDto } from './dto/submit-approval.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -24,6 +25,17 @@ import { RoleType } from '@prisma/client';
 @Controller('approvals')
 export class ApprovalsController {
   constructor(private readonly approvalsService: ApprovalsService) {}
+
+  @Post('submit')
+  @Roles(RoleType.SALESPERSON, RoleType.SUPER_ADMIN, RoleType.PENDING_REVIEWER, RoleType.MANAGEMENT)
+  @ApiOperation({ summary: 'Submit an approved customer deal directly to Panel 04 Approval Officer queue' })
+  @ApiResponse({ status: 201, description: 'Submitted to approval queue' })
+  async submitApproval(
+    @Body() dto: SubmitApprovalDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.approvalsService.submitApproval(dto, user);
+  }
 
   @Get('queue')
   @Roles(RoleType.APPROVAL_OFFICER, RoleType.SUPER_ADMIN, RoleType.MANAGEMENT)

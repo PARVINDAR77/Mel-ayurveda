@@ -8,7 +8,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateCallLogDto } from './dto/create-call-log.dto';
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
-import { CallOutcome, LeadStatus, RoleType, FollowUpStatus } from '@prisma/client';
+import { CallOutcome, LeadStatus, RoleType, FollowUpStatus, PendingDecision } from '@prisma/client';
 
 @Injectable()
 export class CallingService {
@@ -36,6 +36,9 @@ export class CallingService {
    * 3. Automatic lead status transition & lastContactedAt timestamp update.
    * 4. Automatic completion of previous pending follow-ups for this lead.
    * 5. Optional follow-up scheduling in the same atomic transaction.
+   * 6. Automatic routing:
+   *    - If submitForApproval: routes to Panel 04 Approval Officer queue (APPROVAL_REQUESTED).
+   *    - If pending / follow-up / not picked: routes to Panel 03 Pending Review queue (PENDING_REVIEW).
    */
   async createCallLog(dto: CreateCallLogDto, user: AuthenticatedUser) {
     const lead = await this.prisma.lead.findUnique({
@@ -56,7 +59,9 @@ export class CallingService {
       );
     }
 
-    const nextStatus = this.outcomeStatusMap[dto.callOutcome];
+    let nextStatus = dto.submitForApproval
+      ? LeadStatus.APPROVAL_REQUESTED
+      : this.outcomeStatusMap[dto.callOutcome];
 
     // Validate scheduled follow-up time if provided
     let scheduledDate: Date | null = null;
@@ -114,7 +119,9 @@ export class CallingService {
             fromStatus: lead.status,
             toStatus: nextStatus,
             changedById: user.id,
-            reason: `Call outcome: ${dto.callOutcome}${dto.notes ? ` - ${dto.notes.slice(0, 100)}` : ''}`,
+            reason: dto.submitForApproval
+              ? 'Deal confirmed on call - submitted directly to final approval queue'
+              : `Call outcome: ${dto.callOutcome}${dto.notes ? ` - ${dto.notes.slice(0, 100)}` : ''}`,
           },
         });
       }
@@ -143,6 +150,57 @@ export class CallingService {
             status: FollowUpStatus.SCHEDULED,
           },
         });
+      }
+
+      // 6. WORKFLOW ROUTING LOGIC:
+      if (dto.submitForApproval) {
+        // Create ApprovalRequest if not exists
+        const existingReq = await tx.approvalRequest.findFirst({
+          where: { leadId: lead.id, decision: null },
+        });
+        if (!existingReq) {
+          await tx.approvalRequest.create({
+            data: {
+              leadId: lead.id,
+            },
+          });
+        }
+
+        // Close any pending review
+        const activePending = await tx.pendingReview.findFirst({
+          where: { leadId: lead.id, decision: null },
+        });
+        if (activePending) {
+          await tx.pendingReview.update({
+            where: { id: activePending.id },
+            data: {
+              decision: PendingDecision.APPROVE,
+              reviewerNotes: dto.notes || 'Approved directly from sales consultation call',
+              decidedAt: new Date(),
+              claimedById: user.id,
+            },
+          });
+        }
+      } else if (
+        dto.callOutcome === CallOutcome.PENDING_REVIEW ||
+        dto.callOutcome === CallOutcome.FOLLOW_UP_REQUIRED ||
+        dto.callOutcome === CallOutcome.BUSY_CALL_LATER ||
+        dto.callOutcome === CallOutcome.NO_ANSWER
+      ) {
+        // Automatically create PendingReview record so it appears in Panel 03 Pending Review queue
+        const existingPending = await tx.pendingReview.findFirst({
+          where: { leadId: lead.id, decision: null },
+        });
+        if (!existingPending) {
+          await tx.pendingReview.create({
+            data: {
+              leadId: lead.id,
+              submittedById: user.id,
+              reason: `Call outcome: ${dto.callOutcome}`,
+              salesNotes: dto.notes || 'Pending follow-up / triage review',
+            },
+          });
+        }
       }
 
       this.logger.log(

@@ -71,6 +71,28 @@ export default function PendingReviewQueuePage() {
     }
   };
 
+  const handleQuickApprove = async (review: any) => {
+    try {
+      setIsClaiming(review.id);
+      setError(null);
+      if (!review.claimedById) {
+        await apiClient.patch(`/pending-reviews/${review.id}/claim`, {});
+      }
+      await apiClient.post(`/pending-reviews/${review.id}/decide`, {
+        decision: 'APPROVE',
+        reviewerNotes: 'Approved from pending queue and forwarded to Panel 04 Final Approvals',
+      });
+      setSuccessMsg(
+        `Lead ${review.lead?.leadCode || review.leadId} approved and forwarded to Panel 04 Approval Officer queue!`,
+      );
+      fetchQueue();
+    } catch (err: any) {
+      setError(getErrorMessage(err));
+    } finally {
+      setIsClaiming(null);
+    }
+  };
+
   const handleDecision = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!decideReview) return;
@@ -175,21 +197,24 @@ export default function PendingReviewQueuePage() {
         return (
           <div className="flex items-center justify-end gap-1.5">
             <Button
-              variant="outline"
+              variant="primary"
               size="sm"
-              onClick={() => setDossierReview(item)}
-              icon={<Eye className="h-3 w-3" />}
+              onClick={() => handleQuickApprove(item)}
+              isLoading={isClaiming === item.id}
+              className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-[11px] px-2 py-1 h-7"
+              icon={<CheckCircle2 className="h-3 w-3" />}
             >
-              Dossier
+              Approve
             </Button>
 
             {!item.claimedById ? (
               <Button
-                variant="primary"
+                variant="outline"
                 size="sm"
                 onClick={() => handleClaim(item.id)}
                 isLoading={isClaiming === item.id}
                 icon={<Lock className="h-3 w-3" />}
+                className="text-[11px] px-2 py-1 h-7"
               >
                 Claim
               </Button>
@@ -199,10 +224,21 @@ export default function PendingReviewQueuePage() {
                 size="sm"
                 onClick={() => setDecideReview(item)}
                 icon={<FileCheck2 className="h-3 w-3" />}
+                className="text-[11px] px-2 py-1 h-7"
               >
                 Decide
               </Button>
             )}
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDossierReview(item)}
+              icon={<Eye className="h-3 w-3" />}
+              className="text-[11px] px-2 py-1 h-7"
+            >
+              Dossier
+            </Button>
           </div>
         );
       },

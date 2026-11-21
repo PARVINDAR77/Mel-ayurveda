@@ -131,6 +131,43 @@ export class PendingReviewsService {
    * Retrieves the centralized pending review queue with filtering and pagination
    */
   async getQueue(query: PendingQueueQueryDto) {
+    // Auto-sync any leads in PENDING_REVIEW or FOLLOW_UP_REQUIRED that do not yet have an active PendingReview entry
+    try {
+      const pendingLeadsWithoutReview = await this.prisma.lead.findMany({
+        where: {
+          status: { in: [LeadStatus.PENDING_REVIEW, LeadStatus.FOLLOW_UP_REQUIRED] },
+          pendingReviews: {
+            none: { decision: null },
+          },
+        },
+        select: {
+          id: true,
+          assignedToId: true,
+          createdById: true,
+          notes: true,
+          status: true,
+        },
+      });
+
+      for (const pl of pendingLeadsWithoutReview) {
+        const submitterId = pl.assignedToId || pl.createdById;
+        if (submitterId) {
+          await this.prisma.pendingReview.create({
+            data: {
+              leadId: pl.id,
+              submittedById: submitterId,
+              reason: pl.status === LeadStatus.FOLLOW_UP_REQUIRED
+                ? 'Follow-up consultation required'
+                : 'Customer consultation triage review',
+              salesNotes: pl.notes || 'Pending consultation review',
+            },
+          });
+        }
+      }
+    } catch (e) {
+      this.logger.warn(`Auto-sync pending leads error: ${e}`);
+    }
+
     const page = Math.max(1, Number(query.page) || 1);
     const limit = Math.max(1, Math.min(100, Number(query.limit) || 20));
     const skip = (page - 1) * limit;

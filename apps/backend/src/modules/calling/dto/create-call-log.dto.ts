@@ -7,6 +7,7 @@ import {
   IsString,
   IsUUID,
   Min,
+  IsBoolean,
 } from 'class-validator';
 import { CallOutcome } from '@prisma/client';
 
@@ -24,6 +25,14 @@ export class CreateCallLogDto {
   @IsEnum(CallOutcome)
   @IsNotEmpty()
   callOutcome: CallOutcome;
+
+  @ApiPropertyOptional({
+    description: 'Whether this call outcome confirms a deal to submit directly to final approval queue',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  submitForApproval?: boolean;
 
   @ApiPropertyOptional({
     description: 'Call duration in seconds',

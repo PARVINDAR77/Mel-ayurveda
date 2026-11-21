@@ -3,19 +3,109 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { DecideApprovalDto, SendBackTarget } from './dto/decide-approval.dto';
 import { ApprovalQueueQueryDto, ApprovalQueueFilter } from './dto/approval-queue-query.dto';
+import { SubmitApprovalDto } from './dto/submit-approval.dto';
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
-import { ApprovalDecision, LeadStatus, RoleType } from '@prisma/client';
+import { ApprovalDecision, LeadStatus, RoleType, PendingDecision } from '@prisma/client';
 
 @Injectable()
 export class ApprovalsService {
   private readonly logger = new Logger(ApprovalsService.name);
 
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Submit an approved customer deal directly to Panel 04 Approval Officer queue.
+   */
+  async submitApproval(dto: SubmitApprovalDto, user: AuthenticatedUser) {
+    const lead = await this.prisma.lead.findUnique({
+      where: { id: dto.leadId },
+    });
+    if (!lead) {
+      throw new NotFoundException(`Lead with ID ${dto.leadId} not found`);
+    }
+
+    if (user.role === RoleType.SALESPERSON && lead.assignedToId !== user.id) {
+      throw new ForbiddenException('Access denied: You can only submit your own assigned leads for approval');
+    }
+
+    if (lead.status === LeadStatus.APPROVED || lead.status === LeadStatus.CONVERTED) {
+      throw new BadRequestException(`Lead is already ${lead.status}`);
+    }
+
+    const existingReq = await this.prisma.approvalRequest.findFirst({
+      where: { leadId: lead.id, decision: null },
+    });
+    if (existingReq) {
+      return { success: true, message: 'Already submitted for approval', approvalRequest: existingReq };
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const approvalRequest = await tx.approvalRequest.create({
+        data: {
+          leadId: lead.id,
+        },
+      });
+
+      await tx.lead.update({
+        where: { id: lead.id },
+        data: { status: LeadStatus.APPROVAL_REQUESTED },
+      });
+
+      // Close any active pending review
+      const activePending = await tx.pendingReview.findFirst({
+        where: { leadId: lead.id, decision: null },
+      });
+      if (activePending) {
+        await tx.pendingReview.update({
+          where: { id: activePending.id },
+          data: {
+            decision: PendingDecision.APPROVE,
+            reviewerNotes: dto.notes || 'Approved directly and forwarded to approvals',
+            decidedAt: new Date(),
+            claimedById: user.id,
+          },
+        });
+      }
+
+      await tx.leadStatusHistory.create({
+        data: {
+          leadId: lead.id,
+          fromStatus: lead.status,
+          toStatus: LeadStatus.APPROVAL_REQUESTED,
+          changedById: user.id,
+          reason: dto.notes || 'Submitted for final approval by sales consultant',
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          userId: user.id,
+          action: 'APPROVAL_REQUEST_SUBMITTED',
+          entityType: 'ApprovalRequest',
+          entityId: approvalRequest.id,
+          newState: {
+            leadCode: lead.leadCode,
+            submittedBy: user.employeeCode,
+            notes: dto.notes,
+          },
+        },
+      });
+
+      this.logger.log(`Lead ${lead.leadCode} submitted for approval by ${user.employeeCode}`);
+
+      return {
+        success: true,
+        approvalRequest,
+        leadStatus: LeadStatus.APPROVAL_REQUESTED,
+      };
+    });
+  }
 
   /**
    * Retrieves the centralized Approval Queue for medical advisors & commercial heads.

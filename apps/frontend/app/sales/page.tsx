@@ -10,6 +10,7 @@ import { Button } from '../../components/ui/button';
 import {
   PhoneCall,
   CalendarClock,
+  Clock,
   Send,
   Users,
   CheckCircle2,
@@ -25,7 +26,9 @@ export default function SalesDashboardPage() {
   const [data, setData] = useState<any>(null);
   const [leads, setLeads] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const DAILY_CALL_QUOTA = 30;
 
@@ -35,7 +38,7 @@ export default function SalesDashboardPage() {
       setError(null);
       const [analyticsRes, leadsRes] = await Promise.all([
         apiClient.get('/analytics/dashboard/sales'),
-        apiClient.get('/leads?limit=5'),
+        apiClient.get('/leads?limit=10'),
       ]);
 
       setData(analyticsRes.data);
@@ -50,6 +53,41 @@ export default function SalesDashboardPage() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const handleApproveLead = async (lead: any) => {
+    try {
+      setActionLoadingId(lead.id);
+      setError(null);
+      await apiClient.post('/approvals/submit', {
+        leadId: lead.id,
+        notes: 'Deal approved from sales priority queue',
+      });
+      setSuccessMsg(`Lead ${lead.leadCode} successfully approved and forwarded to Panel 04 Approval Officer queue!`);
+      fetchData();
+    } catch (err: any) {
+      setError(getErrorMessage(err));
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handlePendingLead = async (lead: any) => {
+    try {
+      setActionLoadingId(lead.id);
+      setError(null);
+      await apiClient.post('/pending-reviews/submit', {
+        leadId: lead.id,
+        reason: 'Customer requires follow-up consultation / dosage review',
+        salesNotes: 'Routed to pending queue from sales priority table',
+      });
+      setSuccessMsg(`Lead ${lead.leadCode} successfully forwarded to Panel 03 Pending Review queue!`);
+      fetchData();
+    } catch (err: any) {
+      setError(getErrorMessage(err));
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
 
   const callsToday = data?.todayActivity?.callsLoggedToday ?? 0;
   const quotaPercent = Math.min(100, Math.round((callsToday / DAILY_CALL_QUOTA) * 100));
@@ -99,6 +137,18 @@ export default function SalesDashboardPage() {
         <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">
           <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
           <span>{error}</span>
+        </div>
+      )}
+
+      {successMsg && (
+        <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+            <span className="font-semibold">{successMsg}</span>
+          </div>
+          <button onClick={() => setSuccessMsg(null)} className="font-bold text-emerald-700 hover:text-emerald-900">
+            ✕
+          </button>
         </div>
       )}
 
@@ -284,11 +334,37 @@ export default function SalesDashboardPage() {
                           <Badge variant="leadStatus">{lead.status}</Badge>
                         </td>
                         <td className="px-3 py-2.5 text-right">
-                          <Link href={`/sales/calling?leadId=${lead.id}`}>
-                            <Button variant="outline" size="sm" icon={<PhoneCall className="h-3 w-3" />}>
-                              Call
-                            </Button>
-                          </Link>
+                          <div className="flex items-center justify-end gap-1.5">
+                            {lead.status !== 'APPROVAL_REQUESTED' && lead.status !== 'APPROVED' && lead.status !== 'CONVERTED' && (
+                              <>
+                                <Button
+                                  variant="primary"
+                                  size="sm"
+                                  onClick={() => handleApproveLead(lead)}
+                                  isLoading={actionLoadingId === lead.id}
+                                  className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-[11px] px-2 py-1 h-7"
+                                  icon={<CheckCircle2 className="h-3 w-3" />}
+                                >
+                                  Approve
+                                </Button>
+                                <Button
+                                  variant="gold"
+                                  size="sm"
+                                  onClick={() => handlePendingLead(lead)}
+                                  isLoading={actionLoadingId === lead.id}
+                                  className="bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-medium text-[11px] px-2 py-1 h-7"
+                                  icon={<Clock className="h-3 w-3" />}
+                                >
+                                  Pending
+                                </Button>
+                              </>
+                            )}
+                            <Link href={`/sales/calling?leadId=${lead.id}`}>
+                              <Button variant="outline" size="sm" icon={<PhoneCall className="h-3 w-3" />} className="text-[11px] px-2.5 py-1 h-7">
+                                Call
+                              </Button>
+                            </Link>
+                          </div>
                         </td>
                       </tr>
                     ))

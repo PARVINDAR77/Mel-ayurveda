@@ -17,11 +17,13 @@ import {
   AlertCircle,
   CheckCircle2,
   FileCheck,
+  Clock,
 } from 'lucide-react';
 
 export default function MyAssignedLeadsPage() {
   const [leads, setLeads] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -56,6 +58,41 @@ export default function MyAssignedLeadsPage() {
   useEffect(() => {
     fetchLeads();
   }, []);
+
+  const handleApproveLead = async (lead: any) => {
+    try {
+      setActionLoadingId(lead.id);
+      setError(null);
+      await apiClient.post('/approvals/submit', {
+        leadId: lead.id,
+        notes: 'Deal approved from assigned leads list',
+      });
+      setSuccessMsg(`Lead ${lead.leadCode} successfully approved and forwarded to Panel 04 Approval Officer queue!`);
+      fetchLeads();
+    } catch (err: any) {
+      setError(getErrorMessage(err));
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handlePendingLead = async (lead: any) => {
+    try {
+      setActionLoadingId(lead.id);
+      setError(null);
+      await apiClient.post('/pending-reviews/submit', {
+        leadId: lead.id,
+        reason: 'Customer requires follow-up consultation / dosage review',
+        salesNotes: 'Routed to pending queue from assigned leads table',
+      });
+      setSuccessMsg(`Lead ${lead.leadCode} successfully forwarded to Panel 03 Pending Review queue!`);
+      fetchLeads();
+    } catch (err: any) {
+      setError(getErrorMessage(err));
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
 
   const handleCreateManualLead = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,18 +177,35 @@ export default function MyAssignedLeadsPage() {
       className: 'text-right',
       render: (item) => (
         <div className="flex items-center justify-end gap-1.5">
+          {item.status !== 'APPROVAL_REQUESTED' && item.status !== 'APPROVED' && item.status !== 'CONVERTED' && (
+            <>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => handleApproveLead(item)}
+                isLoading={actionLoadingId === item.id}
+                className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-[11px] px-2 py-1 h-7"
+                icon={<CheckCircle2 className="h-3 w-3" />}
+              >
+                Approve
+              </Button>
+              <Button
+                variant="gold"
+                size="sm"
+                onClick={() => handlePendingLead(item)}
+                isLoading={actionLoadingId === item.id}
+                className="bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-medium text-[11px] px-2 py-1 h-7"
+                icon={<Clock className="h-3 w-3" />}
+              >
+                Pending
+              </Button>
+            </>
+          )}
           <Link href={`/sales/calling?leadId=${item.id}`}>
-            <Button variant="primary" size="sm" icon={<PhoneCall className="h-3 w-3" />}>
+            <Button variant="outline" size="sm" icon={<PhoneCall className="h-3 w-3" />} className="text-[11px] px-2.5 py-1 h-7">
               Call
             </Button>
           </Link>
-          {item.status !== 'PENDING_REVIEW' && item.status !== 'APPROVED' && item.status !== 'CONVERTED' && (
-            <Link href={`/sales/pending?leadId=${item.id}`}>
-              <Button variant="outline" size="sm" icon={<FileCheck className="h-3 w-3" />}>
-                Submit
-              </Button>
-            </Link>
-          )}
         </div>
       ),
     },
