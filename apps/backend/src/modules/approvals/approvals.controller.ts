@@ -38,7 +38,7 @@ export class ApprovalsController {
   }
 
   @Get('queue')
-  @Roles(RoleType.APPROVAL_OFFICER, RoleType.SUPER_ADMIN, RoleType.MANAGEMENT)
+  @Roles(RoleType.APPROVAL_OFFICER, RoleType.SUPER_ADMIN, RoleType.MANAGEMENT, RoleType.PENDING_REVIEWER, RoleType.SALESPERSON)
   @ApiOperation({ summary: 'Retrieve centralized commercial & medical approval queue' })
   @ApiResponse({ status: 200, description: 'Approval requests returned' })
   async getQueue(@Query() query: ApprovalQueueQueryDto) {
@@ -46,7 +46,7 @@ export class ApprovalsController {
   }
 
   @Get('history')
-  @Roles(RoleType.APPROVAL_OFFICER, RoleType.SUPER_ADMIN, RoleType.MANAGEMENT)
+  @Roles(RoleType.APPROVAL_OFFICER, RoleType.SUPER_ADMIN, RoleType.MANAGEMENT, RoleType.PENDING_REVIEWER, RoleType.SALESPERSON)
   @ApiOperation({ summary: 'Retrieve resolved approval clearance history' })
   @ApiResponse({ status: 200, description: 'Approval decision history returned' })
   async getHistory(@Query() query: ApprovalQueueQueryDto) {
@@ -57,7 +57,7 @@ export class ApprovalsController {
   }
 
   @Get('metrics')
-  @Roles(RoleType.APPROVAL_OFFICER, RoleType.SUPER_ADMIN, RoleType.MANAGEMENT)
+  @Roles(RoleType.APPROVAL_OFFICER, RoleType.SUPER_ADMIN, RoleType.MANAGEMENT, RoleType.PENDING_REVIEWER, RoleType.SALESPERSON)
   @ApiOperation({ summary: 'Retrieve approval panel KPI metrics (Total, New, Under-Review, Approved Today)' })
   @ApiResponse({ status: 200, description: 'Metrics returned' })
   async getMetrics() {
@@ -65,7 +65,7 @@ export class ApprovalsController {
   }
 
   @Get('lead/:leadId')
-  @Roles(RoleType.APPROVAL_OFFICER, RoleType.SUPER_ADMIN, RoleType.MANAGEMENT)
+  @Roles(RoleType.APPROVAL_OFFICER, RoleType.SUPER_ADMIN, RoleType.MANAGEMENT, RoleType.PENDING_REVIEWER, RoleType.SALESPERSON)
   @ApiOperation({ summary: 'Retrieve approval request history for a specific lead' })
   @ApiResponse({ status: 200, description: 'Lead approval history returned' })
   async getApprovalsForLead(@Param('leadId') leadId: string) {
@@ -73,7 +73,7 @@ export class ApprovalsController {
   }
 
   @Get(':id')
-  @Roles(RoleType.APPROVAL_OFFICER, RoleType.SUPER_ADMIN, RoleType.MANAGEMENT)
+  @Roles(RoleType.APPROVAL_OFFICER, RoleType.SUPER_ADMIN, RoleType.MANAGEMENT, RoleType.PENDING_REVIEWER, RoleType.SALESPERSON)
   @ApiOperation({ summary: 'Retrieve full verification dossier for medical/commercial inspection' })
   @ApiResponse({ status: 200, description: 'Approval dossier returned' })
   async getApprovalDossier(@Param('id') id: string) {

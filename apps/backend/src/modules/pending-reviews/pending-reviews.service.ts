@@ -393,11 +393,19 @@ export class PendingReviewsService {
       // 3. If APPROVE: Forward to Panel 04 Approval Queue by generating ApprovalRequest
       let approvalRequest = null;
       if (dto.decision === PendingDecision.APPROVE) {
-        approvalRequest = await tx.approvalRequest.create({
-          data: {
-            leadId: review.leadId,
-          },
+        const existingReq = await tx.approvalRequest.findFirst({
+          where: { leadId: review.leadId, decision: null },
         });
+
+        if (!existingReq) {
+          approvalRequest = await tx.approvalRequest.create({
+            data: {
+              leadId: review.leadId,
+            },
+          });
+        } else {
+          approvalRequest = existingReq;
+        }
       }
 
       // 4. Log status history

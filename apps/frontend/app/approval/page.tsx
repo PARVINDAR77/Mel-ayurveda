@@ -25,6 +25,8 @@ export default function ApprovalDashboardPage() {
   const [queue, setQueue] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
   const fetchDashboard = async () => {
     try {
@@ -41,6 +43,24 @@ export default function ApprovalDashboardPage() {
       setError(getErrorMessage(err));
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleQuickApprove = async (req: any) => {
+    try {
+      setActionLoadingId(req.id);
+      setError(null);
+      await apiClient.post(`/approvals/${req.id}/decide`, {
+        decision: 'APPROVE',
+        decisionReason: 'CLINICAL_VERIFIED_PRICING_CLEARED',
+        officerNotes: 'Medically cross-verified and commercially approved for order fulfillment',
+      });
+      setSuccessMsg(`Lead ${req.lead?.leadCode || req.leadId?.slice(0, 8)} approved and cleared successfully!`);
+      fetchDashboard();
+    } catch (err: any) {
+      setError(getErrorMessage(err));
+    } finally {
+      setActionLoadingId(null);
     }
   };
 
@@ -93,6 +113,18 @@ export default function ApprovalDashboardPage() {
         <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">
           <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
           <span>{error}</span>
+        </div>
+      )}
+
+      {successMsg && (
+        <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+            <span className="font-semibold">{successMsg}</span>
+          </div>
+          <button onClick={() => setSuccessMsg(null)} className="font-bold text-emerald-700 hover:text-emerald-900">
+            ✕
+          </button>
         </div>
       )}
 
@@ -251,11 +283,23 @@ export default function ApprovalDashboardPage() {
                           {new Date(req.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </td>
                         <td className="px-3 py-2.5 text-right">
-                          <Link href="/approval/queue">
-                            <Button variant="outline" size="sm">
-                              Verify & Sign
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => handleQuickApprove(req)}
+                              isLoading={actionLoadingId === req.id}
+                              className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs px-2 py-1 h-7"
+                              icon={<CheckCircle2 className="h-3 w-3" />}
+                            >
+                              Approve
                             </Button>
-                          </Link>
+                            <Link href="/approval/queue">
+                              <Button variant="outline" size="sm" className="text-xs px-2 py-1 h-7">
+                                Verify & Sign
+                              </Button>
+                            </Link>
+                          </div>
                         </td>
                       </tr>
                     ))

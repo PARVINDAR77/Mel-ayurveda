@@ -43,11 +43,28 @@ export function Badge({ children, variant = 'default', status, className }: Badg
   // Automatic styling based on LeadStatus or OrderStatus or Priority
   const upperStatus = (status || (typeof children === 'string' ? children : '')).toUpperCase();
 
+  let displayText: React.ReactNode = children;
+  if (typeof children === 'string') {
+    if (upperStatus === 'APPROVAL_REQUESTED') {
+      displayText = 'APPROVED (IN APPROVAL)';
+    } else if (upperStatus === 'APPROVED') {
+      displayText = 'APPROVED & CLEARED';
+    } else if (upperStatus === 'PENDING_REVIEW') {
+      displayText = 'PENDING REVIEW';
+    } else if (upperStatus === 'FOLLOW_UP_REQUIRED') {
+      displayText = 'FOLLOW-UP REQUIRED';
+    } else if (upperStatus === 'UNDER_REVIEW') {
+      displayText = 'UNDER REVIEW';
+    }
+  }
+
   if (['APPROVED', 'CONVERTED', 'DELIVERED', 'COMPLETED', 'ACTIVE', 'PAID'].includes(upperStatus)) {
-    colorClasses = 'bg-emerald-50 text-emerald-800 border-emerald-200';
+    colorClasses = 'bg-emerald-100 text-emerald-900 border-emerald-400 font-bold';
+  } else if (['APPROVAL_REQUESTED'].includes(upperStatus)) {
+    colorClasses = 'bg-emerald-50 text-emerald-800 border-emerald-300 font-semibold';
   } else if (['NEW', 'ASSIGNED', 'CONTACTED'].includes(upperStatus)) {
     colorClasses = 'bg-blue-50 text-blue-800 border-blue-200';
-  } else if (['PENDING_REVIEW', 'UNDER_REVIEW', 'APPROVAL_REQUESTED', 'FOLLOW_UP_REQUIRED', 'PROCESSING', 'SCHEDULED'].includes(upperStatus)) {
+  } else if (['PENDING_REVIEW', 'UNDER_REVIEW', 'FOLLOW_UP_REQUIRED', 'PROCESSING', 'SCHEDULED'].includes(upperStatus)) {
     colorClasses = 'bg-amber-50 text-amber-800 border-amber-200';
   } else if (['REJECTED', 'CANCELLED', 'INVALID_NUMBER', 'FAILED', 'OVERDUE', 'URGENT'].includes(upperStatus)) {
     colorClasses = 'bg-red-50 text-red-800 border-red-200';
@@ -77,7 +94,7 @@ export function Badge({ children, variant = 'default', status, className }: Badg
         ),
       )}
     >
-      {children}
+      {displayText}
     </span>
   );
 }

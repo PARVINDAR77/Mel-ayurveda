@@ -147,7 +147,7 @@ export class ApprovalsService {
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: 'asc' }, // FIFO: oldest forwarded to approval first
+        orderBy: { createdAt: 'desc' }, // Newest forwarded to approval first
         include: {
           lead: {
             select: {
@@ -192,13 +192,22 @@ export class ApprovalsService {
       }),
     ]);
 
+    // Deduplicate by leadId so each customer lead appears exactly once in the queue
+    const seenLeadIds = new Set<string>();
+    const deduplicated = requests.filter((r) => {
+      if (!r.leadId) return true;
+      if (seenLeadIds.has(r.leadId)) return false;
+      seenLeadIds.add(r.leadId);
+      return true;
+    });
+
     return {
-      data: requests,
+      data: deduplicated,
       meta: {
         page,
         limit,
-        total,
-        totalPages: Math.ceil(total / limit),
+        total: deduplicated.length,
+        totalPages: Math.ceil(deduplicated.length / limit),
       },
     };
   }
@@ -311,6 +320,18 @@ export class ApprovalsService {
           officer: {
             select: { id: true, employeeCode: true, firstName: true, lastName: true },
           },
+        },
+      });
+
+      // Synchronize and close any duplicate open approval requests for this lead
+      await tx.approvalRequest.updateMany({
+        where: { leadId: request.leadId, decision: null, id: { not: id } },
+        data: {
+          decision: dto.decision,
+          decisionReason: 'Synchronized with primary approval clearance',
+          officerNotes: dto.officerNotes.trim(),
+          decidedAt: new Date(),
+          officerId: request.officerId || user.id,
         },
       });
 

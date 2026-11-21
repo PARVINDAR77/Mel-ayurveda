@@ -113,6 +113,24 @@ export default function ApprovalQueuePage() {
     setSendBackTarget('PENDING_PANEL');
   };
 
+  const handleQuickApprove = async (item: any) => {
+    try {
+      setIsDeciding(true);
+      setError(null);
+      await apiClient.post(`/approvals/${item.id}/decide`, {
+        decision: 'APPROVE',
+        decisionReason: 'CLINICAL_VERIFIED_PRICING_CLEARED',
+        officerNotes: 'Medically cross-verified and commercially approved for order fulfillment',
+      });
+      setSuccessMsg(`Lead ${item.lead?.leadCode || item.leadId?.slice(0, 8)} approved and cleared successfully!`);
+      fetchQueue();
+    } catch (err: any) {
+      setError(getErrorMessage(err));
+    } finally {
+      setIsDeciding(false);
+    }
+  };
+
   const handleDecisionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!decideItem) return;
@@ -190,6 +208,11 @@ export default function ApprovalQueuePage() {
       ),
     },
     {
+      key: 'status',
+      header: 'Status',
+      render: (item) => <Badge variant="leadStatus">{item.lead?.status || 'APPROVAL_REQUESTED'}</Badge>,
+    },
+    {
       key: 'priority',
       header: 'Priority',
       render: (item) => <Badge variant="priority">{item.lead?.priority || 'NORMAL'}</Badge>,
@@ -243,9 +266,20 @@ export default function ApprovalQueuePage() {
               Dossier
             </Button>
 
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => handleQuickApprove(item)}
+              isLoading={isDeciding}
+              className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium"
+              icon={<CheckCircle2 className="h-3 w-3" />}
+            >
+              Approve & Clear
+            </Button>
+
             {!item.officerId ? (
               <Button
-                variant="primary"
+                variant="secondary"
                 size="sm"
                 onClick={() => handleClaim(item.id)}
                 isLoading={isClaiming === item.id}

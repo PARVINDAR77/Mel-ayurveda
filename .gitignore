@@ -14,6 +14,7 @@ dist/
 build/
 .next/
 out/
+*.tsbuildinfo
 
 # Database & Local Volume Data
 postgres_data/

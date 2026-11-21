@@ -225,7 +225,10 @@ export class AnalyticsService {
         },
       }),
       this.prisma.lead.count({
-        where: { assignedToId: salespersonId, status: LeadStatus.APPROVED },
+        where: {
+          assignedToId: salespersonId,
+          status: { in: [LeadStatus.APPROVAL_REQUESTED, LeadStatus.APPROVED] },
+        },
       }),
       this.prisma.lead.count({
         where: { assignedToId: salespersonId, status: LeadStatus.CONVERTED },
