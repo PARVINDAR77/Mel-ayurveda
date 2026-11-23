@@ -98,38 +98,41 @@ export function Sidebar({ onClose }: SidebarProps) {
   const navItems = getNavItems();
   const initials = user ? `${user.firstName[0]}${user.lastName[0]}` : 'SA';
 
+  const getRoleDisplayName = (role: string) => {
+    switch (role) {
+      case 'SUPER_ADMIN':
+        return 'Master Administrator';
+      case 'SALESPERSON':
+        return 'Ayurvedic Consultant';
+      case 'PENDING_REVIEWER':
+        return 'Clinical Triage Reviewer';
+      case 'APPROVAL_OFFICER':
+        return 'Final Sign-off Officer';
+      case 'MANAGEMENT':
+        return 'Operations Executive';
+      default:
+        return role.replace('_', ' ');
+    }
+  };
+
   return (
     <aside className="flex h-full w-64 flex-col border-r border-slate-800 bg-[#071912] text-slate-100 shadow-xl select-none">
-      {/* Melayurveda Brand Header */}
-      <div className="flex h-20 items-center gap-3 border-b border-slate-800/80 px-4 bg-[#05140e]">
-        <div className="relative h-11 w-11 shrink-0 rounded-xl bg-white p-1 shadow-md ring-1 ring-amber-400/40 flex items-center justify-center overflow-hidden">
+      {/* Melayurveda Official Brand Header Card */}
+      <div className="border-b border-slate-800/80 p-3 bg-[#05140e]">
+        <div className="bg-white rounded-xl p-2 shadow-sm border border-amber-400/30 flex items-center justify-center overflow-hidden hover:shadow-md transition">
           <img
             src="/images/melayurveda-logo.png"
-            alt="Mel Ayurveda"
-            className="h-full w-full object-contain"
+            alt="Mel Ayurveda - Nature Se Nirog, Ayurveda Se Swasth"
+            className="w-full h-auto max-h-12 object-contain"
           />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <span className="block font-bold tracking-tight text-white text-sm leading-tight">
-              Mel Ayurveda
-            </span>
-            <span className="text-[8px] font-bold uppercase tracking-wider text-amber-400 bg-amber-950/60 px-1 py-0.2 rounded border border-amber-600/40">
-              HQ
-            </span>
-          </div>
-          <span className="block text-[9px] font-medium text-amber-300/90 italic truncate mt-0.5">
-            Nature Se Nirog, Swasth
-          </span>
-          <div className="h-[1px] w-full bg-gradient-to-r from-amber-500/60 via-amber-300/30 to-transparent mt-1" />
         </div>
       </div>
 
       {/* User Persona Profile Card */}
       {user && (
-        <div className="border-b border-slate-800/80 bg-white/[0.02] p-4">
+        <div className="border-b border-slate-800/80 bg-white/[0.02] p-3.5">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-700 to-slate-900 border border-emerald-500/30 text-amber-300 font-bold text-xs shadow-inner">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#0f3822] to-emerald-950 border border-amber-400/50 text-amber-300 font-bold text-xs shadow-md">
               {initials}
             </div>
             <div className="flex-1 min-w-0">
@@ -145,16 +148,16 @@ export function Sidebar({ onClose }: SidebarProps) {
               <div className="font-bold text-xs text-white truncate leading-snug">
                 {user.firstName} {user.lastName}
               </div>
-              <div className="text-[10px] text-slate-400 truncate capitalize">
-                {user.role.toLowerCase().replace('_', ' ')}
+              <div className="text-[10px] text-slate-400 truncate">
+                {getRoleDisplayName(user.role)}
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Nav List */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+      {/* Nav List (Scrollbar Completely Hidden) */}
+      <nav className="flex-1 overflow-y-auto px-3 py-2.5 space-y-1 no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         {navItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== '/admin' && pathname?.startsWith(`${item.href}/`));
           const Icon = item.icon;
@@ -171,7 +174,7 @@ export function Sidebar({ onClose }: SidebarProps) {
                 }
                 if (onClose) onClose();
               }}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all ${
+              className={`flex items-center gap-3 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
                 isActive
                   ? 'bg-gradient-to-r from-[#0f3822] to-emerald-900 text-white shadow-md shadow-emerald-950/70 border border-emerald-500/40 ring-1 ring-amber-400/30'
                   : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
@@ -195,7 +198,7 @@ export function Sidebar({ onClose }: SidebarProps) {
                 </div>
               ) : (
                 isActive && (
-                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-amber-400" />
+                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-amber-400 shadow-xs shadow-amber-400/80" />
                 )
               )}
             </Link>
@@ -204,12 +207,12 @@ export function Sidebar({ onClose }: SidebarProps) {
       </nav>
 
       {/* Footer Info */}
-      <div className="border-t border-slate-800/80 p-4 text-[10px] text-slate-500 bg-[#05140e]">
-        <div className="flex items-center gap-1.5 text-slate-400 font-semibold mb-0.5">
-          <ShieldCheck className="h-3 w-3 text-emerald-400" />
-          <span>MELAYURVEDA INDIA PVT. LTD.</span>
+      <div className="border-t border-slate-800/80 p-3 text-[10px] text-slate-400 bg-[#05140e] flex-shrink-0">
+        <div className="flex items-center gap-1.5 text-slate-300 font-semibold mb-0.5">
+          <ShieldCheck className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+          <span className="truncate">MELAYURVEDA INDIA PVT. LTD.</span>
         </div>
-        <p className="text-slate-500 leading-tight">Ayurvedic Formulations & Tele-Sales Operations</p>
+        <p className="text-slate-500 text-[9px] leading-tight pl-5">Ayurvedic Formulations & Tele-Sales</p>
       </div>
     </aside>
   );
