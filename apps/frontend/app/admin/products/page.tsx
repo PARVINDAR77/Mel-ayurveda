@@ -1041,33 +1041,33 @@ export default function SuperAdminProductsPage() {
         onClose={() => setIsCreateModalOpen(false)}
         maxWidth="2xl"
       >
-        <div className="p-6">
-          {/* Modal Header */}
-          <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+        <div className="flex flex-col h-[85vh] max-h-[780px] bg-white overflow-hidden">
+          {/* Modal Header (Fixed at top) */}
+          <div className="flex-shrink-0 px-6 py-4 flex items-center justify-between border-b border-slate-200 bg-white">
             <div>
               <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 uppercase tracking-wider">
                 <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
                 <span>Ayurvedic Formulation Wizard</span>
               </div>
-              <h2 className="text-xl font-bold text-slate-900 mt-0.5">
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900 mt-0.5">
                 Register New Ayurvedic Product
               </h2>
             </div>
             <button
               onClick={() => setIsCreateModalOpen(false)}
-              className="text-slate-400 hover:text-slate-600 rounded-lg p-1 hover:bg-slate-100"
+              className="text-slate-400 hover:text-slate-600 rounded-lg p-1.5 hover:bg-slate-100 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* Stepper Indicator */}
-          <div className="py-4 border-b border-slate-100">
+          {/* Stepper Indicator (Fixed below header) */}
+          <div className="flex-shrink-0 px-6 py-3 border-b border-slate-100 bg-slate-50/70">
             <div className="grid grid-cols-3 gap-2">
               {/* Step 1 */}
               <div
                 onClick={() => setCurrentStep(1)}
-                className={`cursor-pointer p-2.5 rounded-lg border transition-all ${
+                className={`cursor-pointer p-2 rounded-lg border transition-all ${
                   currentStep === 1
                     ? 'border-emerald-600 bg-emerald-50/80 shadow-xs'
                     : 'border-slate-200 bg-white hover:bg-slate-50'
@@ -1083,11 +1083,11 @@ export default function SuperAdminProductsPage() {
                   >
                     1
                   </span>
-                  <div>
-                    <span className="text-xs font-bold text-slate-900 block leading-tight">
+                  <div className="min-w-0">
+                    <span className="text-xs font-bold text-slate-900 block truncate leading-tight">
                       Disease & Health
                     </span>
-                    <span className="text-[10px] text-slate-500">Therapeutic Category</span>
+                    <span className="text-[10px] text-slate-500 truncate block">Therapeutic Category</span>
                   </div>
                 </div>
               </div>
@@ -1101,7 +1101,7 @@ export default function SuperAdminProductsPage() {
                   }
                   setCurrentStep(2);
                 }}
-                className={`cursor-pointer p-2.5 rounded-lg border transition-all ${
+                className={`cursor-pointer p-2 rounded-lg border transition-all ${
                   currentStep === 2
                     ? 'border-emerald-600 bg-emerald-50/80 shadow-xs'
                     : 'border-slate-200 bg-white hover:bg-slate-50'
@@ -1117,11 +1117,11 @@ export default function SuperAdminProductsPage() {
                   >
                     2
                   </span>
-                  <div>
-                    <span className="text-xs font-bold text-slate-900 block leading-tight">
+                  <div className="min-w-0">
+                    <span className="text-xs font-bold text-slate-900 block truncate leading-tight">
                       Formulation Details
                     </span>
-                    <span className="text-[10px] text-slate-500">Specs, SKU & Price</span>
+                    <span className="text-[10px] text-slate-500 truncate block">Specs, SKU & Price</span>
                   </div>
                 </div>
               </div>
@@ -1135,7 +1135,7 @@ export default function SuperAdminProductsPage() {
                   }
                   setCurrentStep(3);
                 }}
-                className={`cursor-pointer p-2.5 rounded-lg border transition-all ${
+                className={`cursor-pointer p-2 rounded-lg border transition-all ${
                   currentStep === 3
                     ? 'border-emerald-600 bg-emerald-50/80 shadow-xs'
                     : 'border-slate-200 bg-white hover:bg-slate-50'
@@ -1151,19 +1151,19 @@ export default function SuperAdminProductsPage() {
                   >
                     3
                   </span>
-                  <div>
-                    <span className="text-xs font-bold text-slate-900 block leading-tight">
+                  <div className="min-w-0">
+                    <span className="text-xs font-bold text-slate-900 block truncate leading-tight">
                       Image (Optional)
                     </span>
-                    <span className="text-[10px] text-slate-500">Upload, URL or Skip</span>
+                    <span className="text-[10px] text-slate-500 truncate block">Upload, URL or Skip</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Wizard Content by Step */}
-          <div className="py-4 space-y-4">
+          {/* Scrollable Wizard Body */}
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
             {/* =================================================== */}
             {/* STEP 1: DISEASE FIRST                               */}
             {/* =================================================== */}
@@ -1623,18 +1623,18 @@ export default function SuperAdminProductsPage() {
 
                 {/* Upload Mode UI */}
                 {imageMode === 'UPLOAD' && (
-                  <div className="p-4 border-2 border-dashed border-slate-300 rounded-xl text-center bg-slate-50 hover:bg-slate-100/60 transition-colors">
-                    <UploadCloud className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                  <div className="p-3.5 border-2 border-dashed border-slate-300 rounded-xl text-center bg-slate-50 hover:bg-slate-100/60 transition-colors">
+                    <UploadCloud className="w-6 h-6 text-slate-400 mx-auto mb-1.5" />
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       onClick={() => fileInputRef.current?.click()}
-                      className="text-xs"
+                      className="text-xs h-8"
                     >
                       Browse Device Photos
                     </Button>
-                    <span className="text-[11px] text-slate-500 block mt-1.5">
+                    <span className="text-[11px] text-slate-500 block mt-1">
                       Accepts PNG, JPG or WEBP. Automatically optimized.
                     </span>
                   </div>
@@ -1662,14 +1662,14 @@ export default function SuperAdminProductsPage() {
                 )}
 
                 {/* Live Preview Card */}
-                <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/60">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-2.5">
+                <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/60">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-2">
                     Live Formulation Card Preview:
                   </span>
 
-                  <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-xs flex items-start gap-3.5">
+                  <div className="bg-white rounded-xl border border-slate-200 p-3 shadow-xs flex items-start gap-3">
                     {/* Preview Thumbnail */}
-                    <div className="w-16 h-16 rounded-xl flex-shrink-0 bg-emerald-50 border border-emerald-100 flex items-center justify-center overflow-hidden">
+                    <div className="w-14 h-14 rounded-lg flex-shrink-0 bg-emerald-50 border border-emerald-100 flex items-center justify-center overflow-hidden">
                       {step3ImageUrl ? (
                         <img
                           src={step3ImageUrl}
@@ -1679,7 +1679,7 @@ export default function SuperAdminProductsPage() {
                         />
                       ) : (
                         <div className="flex flex-col items-center justify-center text-emerald-800">
-                          <Leaf className="w-6 h-6 text-emerald-700" />
+                          <Leaf className="w-5 h-5 text-emerald-700" />
                           <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-800 mt-0.5">
                             {step2DosageForm?.split(' ')[0] || 'Ayur'}
                           </span>
@@ -1697,11 +1697,11 @@ export default function SuperAdminProductsPage() {
                         </span>
                       </div>
 
-                      <h4 className="font-bold text-slate-900 text-sm mt-1 line-clamp-1">
+                      <h4 className="font-bold text-slate-900 text-xs sm:text-sm mt-1 line-clamp-1">
                         {step2Name || 'Formulation Name Pending'}
                       </h4>
 
-                      <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5">
+                      <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-0.5">
                         <span>{activeSelectedCategory?.name || 'Disease Category'}</span>
                         {step1TargetDisease && (
                           <>
@@ -1713,20 +1713,20 @@ export default function SuperAdminProductsPage() {
                         )}
                       </div>
 
-                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
+                      <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-slate-100">
                         <div className="flex items-baseline gap-1.5">
-                          <span className="font-black text-emerald-900 text-sm">
+                          <span className="font-black text-emerald-900 text-xs sm:text-sm">
                             ₹{step2SellingPrice ? parseFloat(step2SellingPrice).toLocaleString() : '0'}
                           </span>
                           {step2Mrp && parseFloat(step2Mrp) > parseFloat(step2SellingPrice || '0') && (
-                            <span className="text-[11px] text-slate-400 line-through">
+                            <span className="text-[10px] text-slate-400 line-through">
                               ₹{parseFloat(step2Mrp).toLocaleString()}
                             </span>
                           )}
                         </div>
 
                         <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
-                          {step2InitialStock || 0} Units Initial Stock
+                          {step2InitialStock || 0} Units Stock
                         </span>
                       </div>
                     </div>
@@ -1736,8 +1736,8 @@ export default function SuperAdminProductsPage() {
             )}
           </div>
 
-          {/* Modal Footer Controls */}
-          <div className="flex items-center justify-between pt-4 border-t border-slate-200">
+          {/* Modal Footer Controls (Pinned / Fixed at bottom) */}
+          <div className="flex-shrink-0 px-6 py-3.5 border-t border-slate-200 bg-slate-50/95 backdrop-blur-xs flex items-center justify-between">
             <div>
               {currentStep > 1 && (
                 <Button
@@ -1745,7 +1745,7 @@ export default function SuperAdminProductsPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentStep((prev) => (prev - 1) as any)}
-                  className="text-slate-700"
+                  className="text-slate-700 font-semibold"
                 >
                   <ArrowLeft className="w-4 h-4 mr-1.5" />
                   Back
@@ -1753,13 +1753,13 @@ export default function SuperAdminProductsPage() {
               )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => setIsCreateModalOpen(false)}
-                className="text-slate-600"
+                className="text-slate-600 font-semibold"
               >
                 Cancel
               </Button>
@@ -1784,7 +1784,7 @@ export default function SuperAdminProductsPage() {
                       setCurrentStep(3);
                     }
                   }}
-                  className="bg-emerald-800 hover:bg-emerald-900 text-white font-semibold"
+                  className="bg-emerald-800 hover:bg-emerald-900 text-white font-semibold px-4 shadow-sm"
                 >
                   Next Step
                   <ArrowRight className="w-4 h-4 ml-1.5" />
@@ -1796,7 +1796,7 @@ export default function SuperAdminProductsPage() {
                   size="sm"
                   onClick={handleCreateProductSubmit}
                   isLoading={isSubmittingProduct}
-                  className="bg-emerald-800 hover:bg-emerald-900 text-white font-semibold shadow-sm"
+                  className="bg-emerald-800 hover:bg-emerald-900 text-white font-semibold px-4 shadow-sm"
                 >
                   <Check className="w-4 h-4 mr-1.5" />
                   Save & Register Formulation
@@ -1815,8 +1815,9 @@ export default function SuperAdminProductsPage() {
         onClose={() => setIsCatModalOpen(false)}
         maxWidth="md"
       >
-        <form onSubmit={handleCreateCategorySubmit} className="p-6 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+        <form onSubmit={handleCreateCategorySubmit} className="flex flex-col max-h-[85vh] bg-white overflow-hidden">
+          {/* Header */}
+          <div className="flex-shrink-0 px-6 py-4 flex items-center justify-between border-b border-slate-200 bg-white">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center">
                 <FolderPlus className="w-4 h-4" />
@@ -1829,40 +1830,44 @@ export default function SuperAdminProductsPage() {
             <button
               type="button"
               onClick={() => setIsCatModalOpen(false)}
-              className="text-slate-400 hover:text-slate-600 rounded-lg p-1 hover:bg-slate-100"
+              className="text-slate-400 hover:text-slate-600 rounded-lg p-1.5 hover:bg-slate-100 transition"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          <div>
-            <label className="text-xs font-bold text-slate-700 block mb-1">
-              Therapeutic Disease Name <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={newCatName}
-              onChange={(e) => setNewCatName(e.target.value)}
-              placeholder="e.g. Twak Roga (Psoriasis & Skin Disorders)"
-              className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500 font-semibold"
-            />
+          {/* Form Content */}
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1">
+                Therapeutic Disease Name <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={newCatName}
+                onChange={(e) => setNewCatName(e.target.value)}
+                placeholder="e.g. Twak Roga (Psoriasis & Skin Disorders)"
+                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500 font-semibold"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1">
+                Description / Classical Reference <span className="text-slate-400 font-normal">(Optional)</span>
+              </label>
+              <textarea
+                rows={3}
+                value={newCatDesc}
+                onChange={(e) => setNewCatDesc(e.target.value)}
+                placeholder="e.g. Herbal oils, lepas, and kwaths for chronic eczema, fungal dermatitis, and psoriasis."
+                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
           </div>
 
-          <div>
-            <label className="text-xs font-bold text-slate-700 block mb-1">
-              Description / Classical Reference <span className="text-slate-400 font-normal">(Optional)</span>
-            </label>
-            <textarea
-              rows={3}
-              value={newCatDesc}
-              onChange={(e) => setNewCatDesc(e.target.value)}
-              placeholder="e.g. Herbal oils, lepas, and kwaths for chronic eczema, fungal dermatitis, and psoriasis."
-              className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500"
-            />
-          </div>
-
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+          {/* Fixed Footer */}
+          <div className="flex-shrink-0 px-6 py-3.5 border-t border-slate-200 bg-slate-50/95 flex items-center justify-end gap-2.5">
             <Button
               type="button"
               variant="outline"
@@ -1893,8 +1898,9 @@ export default function SuperAdminProductsPage() {
         maxWidth="lg"
       >
         {editingProduct && (
-          <form onSubmit={handleUpdateProductSubmit} className="p-6 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+          <form onSubmit={handleUpdateProductSubmit} className="flex flex-col h-[85vh] max-h-[750px] bg-white overflow-hidden">
+            {/* Header */}
+            <div className="flex-shrink-0 px-6 py-4 flex items-center justify-between border-b border-slate-200 bg-white">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center">
                   <Pencil className="w-4 h-4" />
@@ -1909,131 +1915,135 @@ export default function SuperAdminProductsPage() {
               <button
                 type="button"
                 onClick={() => setEditingProduct(null)}
-                className="text-slate-400 hover:text-slate-600 rounded-lg p-1 hover:bg-slate-100"
+                className="text-slate-400 hover:text-slate-600 rounded-lg p-1.5 hover:bg-slate-100 transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="sm:col-span-2">
-                <label className="text-xs font-bold text-slate-700 block mb-1">Formulation Name</label>
-                <input
-                  type="text"
-                  required
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="w-full text-xs font-semibold border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-700/20"
-                />
-              </div>
+            {/* Scrollable Form Content */}
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Formulation Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="w-full text-xs font-semibold border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-700/20"
+                  />
+                </div>
 
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Target Disease Condition</label>
-                <input
-                  type="text"
-                  value={editTargetDisease}
-                  onChange={(e) => setEditTargetDisease(e.target.value)}
-                  placeholder="e.g. Osteoarthritis, Sciatica"
-                  className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-700/20"
-                />
-              </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Target Disease Condition</label>
+                  <input
+                    type="text"
+                    value={editTargetDisease}
+                    onChange={(e) => setEditTargetDisease(e.target.value)}
+                    placeholder="e.g. Osteoarthritis, Sciatica"
+                    className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-700/20"
+                  />
+                </div>
 
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Dosage Form</label>
-                <select
-                  value={editDosageForm}
-                  onChange={(e) => setEditDosageForm(e.target.value)}
-                  className="w-full text-xs font-medium border border-slate-300 rounded-lg p-2.5 bg-white"
-                >
-                  {DOSAGE_FORMS.map((form) => (
-                    <option key={form} value={form}>
-                      {form}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Dosage Form</label>
+                  <select
+                    value={editDosageForm}
+                    onChange={(e) => setEditDosageForm(e.target.value)}
+                    className="w-full text-xs font-medium border border-slate-300 rounded-lg p-2.5 bg-white"
+                  >
+                    {DOSAGE_FORMS.map((form) => (
+                      <option key={form} value={form}>
+                        {form}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div className="sm:col-span-2">
-                <label className="text-xs font-bold text-slate-700 block mb-1">Classical Herbs & Ingredients</label>
-                <input
-                  type="text"
-                  value={editIngredients}
-                  onChange={(e) => setEditIngredients(e.target.value)}
-                  placeholder="Shallaki, Nirgundi, Ashwagandha..."
-                  className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-700/20"
-                />
-              </div>
+                <div className="sm:col-span-2">
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Classical Herbs & Ingredients</label>
+                  <input
+                    type="text"
+                    value={editIngredients}
+                    onChange={(e) => setEditIngredients(e.target.value)}
+                    placeholder="Shallaki, Nirgundi, Ashwagandha..."
+                    className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-700/20"
+                  />
+                </div>
 
-              <div className="sm:col-span-2">
-                <label className="text-xs font-bold text-slate-700 block mb-1">Dosage Instructions</label>
-                <input
-                  type="text"
-                  value={editDosageInstructions}
-                  onChange={(e) => setEditDosageInstructions(e.target.value)}
-                  placeholder="1 tablet twice daily..."
-                  className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-700/20"
-                />
-              </div>
+                <div className="sm:col-span-2">
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Dosage Instructions</label>
+                  <input
+                    type="text"
+                    value={editDosageInstructions}
+                    onChange={(e) => setEditDosageInstructions(e.target.value)}
+                    placeholder="1 tablet twice daily..."
+                    className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-700/20"
+                  />
+                </div>
 
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">MRP Price (₹)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={editMrp}
-                  onChange={(e) => setEditMrp(e.target.value)}
-                  className="w-full text-xs font-bold border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-700/20"
-                />
-              </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">MRP Price (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editMrp}
+                    onChange={(e) => setEditMrp(e.target.value)}
+                    className="w-full text-xs font-bold border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-700/20"
+                  />
+                </div>
 
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Selling Price (₹)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={editSellingPrice}
-                  onChange={(e) => setEditSellingPrice(e.target.value)}
-                  className="w-full text-xs font-bold text-emerald-900 border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-700/20"
-                />
-              </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Selling Price (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={editSellingPrice}
+                    onChange={(e) => setEditSellingPrice(e.target.value)}
+                    className="w-full text-xs font-bold text-emerald-900 border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-700/20"
+                  />
+                </div>
 
-              <div className="sm:col-span-2">
-                <label className="text-xs font-bold text-slate-700 block mb-1">Product Image URL / Data (Optional)</label>
-                <input
-                  type="text"
-                  value={editImageUrl}
-                  onChange={(e) => setEditImageUrl(e.target.value)}
-                  placeholder="https://... or skip for herbal avatar"
-                  className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-700/20"
-                />
-              </div>
+                <div className="sm:col-span-2">
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Product Image URL / Data (Optional)</label>
+                  <input
+                    type="text"
+                    value={editImageUrl}
+                    onChange={(e) => setEditImageUrl(e.target.value)}
+                    placeholder="https://... or skip for herbal avatar"
+                    className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-700/20"
+                  />
+                </div>
 
-              <div className="sm:col-span-2">
-                <label className="text-xs font-bold text-slate-700 block mb-1">Therapeutic Description</label>
-                <textarea
-                  rows={2}
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-700/20"
-                />
-              </div>
+                <div className="sm:col-span-2">
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Therapeutic Description</label>
+                  <textarea
+                    rows={2}
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-700/20"
+                  />
+                </div>
 
-              <div className="sm:col-span-2 flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
-                  id="editIsActive"
-                  checked={editIsActive}
-                  onChange={(e) => setEditIsActive(e.target.checked)}
-                  className="w-4 h-4 text-emerald-700 rounded border-slate-300 focus:ring-emerald-700"
-                />
-                <label htmlFor="editIsActive" className="text-xs font-bold text-slate-700 cursor-pointer">
-                  Product is Active & Available for Tele-Sales Prescriptions
-                </label>
+                <div className="sm:col-span-2 flex items-center gap-2 pt-1">
+                  <input
+                    type="checkbox"
+                    id="editIsActive"
+                    checked={editIsActive}
+                    onChange={(e) => setEditIsActive(e.target.checked)}
+                    className="w-4 h-4 text-emerald-700 rounded border-slate-300 focus:ring-emerald-700"
+                  />
+                  <label htmlFor="editIsActive" className="text-xs font-bold text-slate-700 cursor-pointer">
+                    Product is Active & Available for Tele-Sales Prescriptions
+                  </label>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+            {/* Fixed Footer */}
+            <div className="flex-shrink-0 px-6 py-3.5 border-t border-slate-200 bg-slate-50/95 flex items-center justify-end gap-2.5">
               <Button
                 type="button"
                 variant="outline"
