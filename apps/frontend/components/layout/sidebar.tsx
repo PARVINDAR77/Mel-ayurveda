@@ -119,11 +119,11 @@ export function Sidebar({ onClose }: SidebarProps) {
     <aside className="flex h-full w-64 flex-col border-r border-slate-800 bg-[#071912] text-slate-100 shadow-xl select-none">
       {/* Melayurveda Official Brand Header Card */}
       <div className="border-b border-slate-800/80 p-3 bg-[#05140e]">
-        <div className="bg-white rounded-xl p-2 shadow-sm border border-amber-400/30 flex items-center justify-center overflow-hidden hover:shadow-md transition">
+        <div className="bg-white rounded-xl px-3 py-2.5 shadow-sm border border-amber-400/30 flex items-center justify-center overflow-hidden hover:shadow-md transition">
           <img
             src="/images/melayurveda-logo.png"
             alt="Mel Ayurveda - Nature Se Nirog, Ayurveda Se Swasth"
-            className="w-full h-auto max-h-12 object-contain"
+            className="w-full h-auto max-h-14 object-contain"
           />
         </div>
       </div>

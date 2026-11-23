@@ -43,10 +43,10 @@ export function Header({ title, onMenuToggle }: HeaderProps) {
           </button>
         )}
         <div className="flex items-center gap-3">
-          <div className="hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-2xs border border-amber-300/80 overflow-hidden">
+          <div className="hidden sm:flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-xs border border-amber-300/80 overflow-hidden">
             <img
-              src="/images/melayurveda-logo.png"
-              alt="Mel Ayurveda Logo"
+              src="/images/melayurveda-emblem.png"
+              alt="Mel Ayurveda Emblem"
               className="h-full w-full object-contain"
             />
           </div>
