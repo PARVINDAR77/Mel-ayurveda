@@ -43,6 +43,7 @@ export function Sidebar({ onClose }: SidebarProps) {
         return [
           { href: '/admin', label: 'Master Dashboard', icon: LayoutDashboard },
           { href: '/admin/orders', label: 'Order Management', icon: Package },
+          { href: '/admin/products', label: 'Products & Formulations', icon: Leaf },
           { href: '/admin/assignments', label: 'Lead Distribution', icon: UserCheck },
           { href: '/sales/leads', label: 'Sales Leads', icon: PhoneCall },
           { href: '/pending/queue', label: 'Pending Review Queue', icon: FileCheck2 },

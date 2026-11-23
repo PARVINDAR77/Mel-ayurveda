@@ -381,17 +381,22 @@ model ProductCategory {
 }
 
 model Product {
-  id          String           @id @default(uuid()) @db.Uuid
-  sku         String           @unique @db.VarChar(50)
-  name        String           @db.VarChar(200)
-  categoryId  String           @db.Uuid
-  description String?          @db.Text
-  mrpPrice    Decimal          @db.Decimal(10, 2)
-  sellingPrice Decimal         @db.Decimal(10, 2)
-  gstRate     Decimal          @default(12.0) @db.Decimal(5, 2)
-  isActive    Boolean          @default(true)
-  createdAt   DateTime         @default(now()) @db.Timestamptz
-  updatedAt   DateTime         @updatedAt @db.Timestamptz
+  id                 String           @id @default(uuid()) @db.Uuid
+  sku                String           @unique @db.VarChar(50)
+  name               String           @db.VarChar(200)
+  categoryId         String           @db.Uuid
+  description        String?          @db.Text
+  targetDisease      String?          @db.VarChar(255)
+  dosageInstructions String?          @db.Text
+  ingredients        String?          @db.Text
+  dosageForm         String?          @db.VarChar(50)
+  imageUrl           String?          @db.Text
+  mrpPrice           Decimal          @db.Decimal(10, 2)
+  sellingPrice       Decimal          @db.Decimal(10, 2)
+  gstRate            Decimal          @default(12.0) @db.Decimal(5, 2)
+  isActive           Boolean          @default(true)
+  createdAt          DateTime         @default(now()) @db.Timestamptz
+  updatedAt          DateTime         @updatedAt @db.Timestamptz
 
   category    ProductCategory  @relation(fields: [categoryId], references: [id])
   orderItems  OrderItem[]

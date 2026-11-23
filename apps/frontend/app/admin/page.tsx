@@ -33,6 +33,7 @@ import {
   FileCheck2,
   Send,
   Boxes,
+  Leaf,
 } from 'lucide-react';
 
 export default function AdminDashboardPage() {
@@ -185,6 +186,17 @@ export default function AdminDashboardPage() {
           >
             + Add Manual Lead
           </Button>
+
+          <Link href="/admin/products">
+            <Button
+              variant="outline"
+              size="sm"
+              icon={<Leaf className="h-3.5 w-3.5 text-emerald-700" />}
+              className="border-emerald-300 bg-emerald-50/60 hover:bg-emerald-100 text-emerald-900 font-semibold"
+            >
+              Formulations & Products
+            </Button>
+          </Link>
 
           <Link href="/admin/orders">
             <Button

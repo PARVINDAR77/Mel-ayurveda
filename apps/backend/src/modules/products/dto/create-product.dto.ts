@@ -35,10 +35,56 @@ export class CreateProductDto {
   @IsString()
   description?: string;
 
-  @ApiProperty({ description: 'Maximum Retail Price (₹)', example: 1299 })
+  @ApiPropertyOptional({
+    description: 'Specific target disease condition or indication',
+    example: 'Cervical Spondylosis, Osteoarthritis',
+  })
+  @IsOptional()
+  @IsString()
+  targetDisease?: string;
+
+  @ApiPropertyOptional({
+    description: 'Dosage regimen instructions',
+    example: '1 tablet twice daily after meals with lukewarm water',
+  })
+  @IsOptional()
+  @IsString()
+  dosageInstructions?: string;
+
+  @ApiPropertyOptional({
+    description: 'Classical herbal ingredients & composition',
+    example: 'Shallaki, Nirgundi, Ashwagandha, Shuddha Guggulu',
+  })
+  @IsOptional()
+  @IsString()
+  ingredients?: string;
+
+  @ApiPropertyOptional({
+    description: 'Dosage formulation form (Tablets, Taila / Oil, Kwath / Syrup, Churna, Vati, Capsules)',
+    example: 'Tablets',
+  })
+  @IsOptional()
+  @IsString()
+  dosageForm?: string;
+
+  @ApiPropertyOptional({
+    description: 'Product image URL or Base64 data (optional)',
+  })
+  @IsOptional()
+  @IsString()
+  imageUrl?: string;
+
+  @ApiPropertyOptional({ description: 'Maximum Retail Price (₹)', example: 1299 })
+  @IsOptional()
   @IsNumber()
   @Min(0)
-  mrpPrice: number;
+  mrpPrice?: number;
+
+  @ApiPropertyOptional({ description: 'Alternative Maximum Retail Price (₹)', example: 1299 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  mrp?: number;
 
   @ApiProperty({ description: 'Discounted selling price (₹)', example: 999 })
   @IsNumber()

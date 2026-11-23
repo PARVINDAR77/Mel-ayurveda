@@ -48,6 +48,27 @@ export class ProductsService {
   }
 
   /**
+   * Generates next sequential SKU
+   */
+  async generateNextSku(): Promise<string> {
+    const products = await this.prisma.product.findMany({
+      select: { sku: true },
+    });
+    let maxNumber = 0;
+    for (const p of products) {
+      const match = p.sku.match(/MEL-(?:AYUR-)?(\d+)/i) || p.sku.match(/(\d+)/);
+      if (match && match[1]) {
+        const num = parseInt(match[1], 10);
+        if (!isNaN(num) && num > maxNumber) {
+          maxNumber = num;
+        }
+      }
+    }
+    const nextNum = (maxNumber + 1).toString().padStart(3, '0');
+    return `MEL-AYUR-${nextNum}`;
+  }
+
+  /**
    * Registers a new Ayurvedic formulation and initializes warehouse inventory ledger
    */
   async createProduct(dto: CreateProductDto, user: AuthenticatedUser) {
@@ -59,25 +80,33 @@ export class ProductsService {
       throw new NotFoundException(`Category with ID ${dto.categoryId} not found`);
     }
 
+    const skuToUse = dto.sku ? dto.sku.trim().toUpperCase() : await this.generateNextSku();
+
     const existingSku = await this.prisma.product.findUnique({
-      where: { sku: dto.sku.trim().toUpperCase() },
+      where: { sku: skuToUse },
     });
 
     if (existingSku) {
-      throw new ConflictException(`Product with SKU "${dto.sku}" already exists`);
+      throw new ConflictException(`Product with SKU "${skuToUse}" already exists`);
     }
 
     const initialStock = dto.initialStock !== undefined ? dto.initialStock : 100;
+    const finalMrp = dto.mrpPrice !== undefined ? dto.mrpPrice : (dto.mrp !== undefined ? dto.mrp : dto.sellingPrice);
 
     return this.prisma.$transaction(async (tx) => {
       // 1. Create Product
       const product = await tx.product.create({
         data: {
-          sku: dto.sku.trim().toUpperCase(),
+          sku: skuToUse,
           name: dto.name.trim(),
           categoryId: category.id,
           description: dto.description?.trim(),
-          mrpPrice: dto.mrpPrice,
+          targetDisease: dto.targetDisease?.trim(),
+          dosageInstructions: dto.dosageInstructions?.trim(),
+          ingredients: dto.ingredients?.trim(),
+          dosageForm: dto.dosageForm?.trim(),
+          imageUrl: dto.imageUrl?.trim(),
+          mrpPrice: finalMrp,
           sellingPrice: dto.sellingPrice,
           gstRate: dto.gstRate !== undefined ? dto.gstRate : 12.0,
         },
@@ -155,6 +184,9 @@ export class ProductsService {
         { name: { contains: s, mode: 'insensitive' } },
         { sku: { contains: s, mode: 'insensitive' } },
         { description: { contains: s, mode: 'insensitive' } },
+        { targetDisease: { contains: s, mode: 'insensitive' } },
+        { ingredients: { contains: s, mode: 'insensitive' } },
+        { dosageForm: { contains: s, mode: 'insensitive' } },
       ];
     }
 
@@ -230,6 +262,16 @@ export class ProductsService {
         name: dto.name?.trim() || product.name,
         description:
           dto.description !== undefined ? dto.description?.trim() : product.description,
+        targetDisease:
+          dto.targetDisease !== undefined ? dto.targetDisease?.trim() : product.targetDisease,
+        dosageInstructions:
+          dto.dosageInstructions !== undefined ? dto.dosageInstructions?.trim() : product.dosageInstructions,
+        ingredients:
+          dto.ingredients !== undefined ? dto.ingredients?.trim() : product.ingredients,
+        dosageForm:
+          dto.dosageForm !== undefined ? dto.dosageForm?.trim() : product.dosageForm,
+        imageUrl:
+          dto.imageUrl !== undefined ? dto.imageUrl?.trim() : product.imageUrl,
         mrpPrice: dto.mrpPrice !== undefined ? dto.mrpPrice : product.mrpPrice,
         sellingPrice:
           dto.sellingPrice !== undefined ? dto.sellingPrice : product.sellingPrice,

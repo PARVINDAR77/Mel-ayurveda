@@ -12,6 +12,31 @@ export class UpdateProductDto {
   @IsString()
   description?: string;
 
+  @ApiPropertyOptional({ description: 'Specific target disease condition or indication' })
+  @IsOptional()
+  @IsString()
+  targetDisease?: string;
+
+  @ApiPropertyOptional({ description: 'Dosage regimen instructions' })
+  @IsOptional()
+  @IsString()
+  dosageInstructions?: string;
+
+  @ApiPropertyOptional({ description: 'Classical herbal ingredients & composition' })
+  @IsOptional()
+  @IsString()
+  ingredients?: string;
+
+  @ApiPropertyOptional({ description: 'Dosage formulation form' })
+  @IsOptional()
+  @IsString()
+  dosageForm?: string;
+
+  @ApiPropertyOptional({ description: 'Product image URL or Base64 data' })
+  @IsOptional()
+  @IsString()
+  imageUrl?: string;
+
   @ApiPropertyOptional({ description: 'MRP Price (₹)' })
   @IsOptional()
   @IsNumber()

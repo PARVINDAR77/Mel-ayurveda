@@ -65,6 +65,15 @@ export class ProductsController {
     return this.productsService.findAll(query);
   }
 
+  @Get('generate-sku')
+  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT)
+  @ApiOperation({ summary: 'Generate next available sequential product SKU code' })
+  @ApiResponse({ status: 200, description: 'Generated SKU code' })
+  async generateSku() {
+    const sku = await this.productsService.generateNextSku();
+    return { sku };
+  }
+
   @Get(':id')
   @Roles(
     RoleType.SUPER_ADMIN,
