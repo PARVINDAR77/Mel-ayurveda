@@ -149,20 +149,22 @@ export default function AdminDashboardPage() {
       {/* Top Banner / Actions Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/90 pb-5">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200/80 uppercase tracking-widest">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-800">
+            <span className="font-mono text-xs font-bold text-amber-900 bg-amber-50 px-2.5 py-0.5 rounded-md border border-amber-300 uppercase tracking-wider">
               MEL-ADM-001
             </span>
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-200">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-300">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
               Executive Mission Control
             </span>
+            <span className="text-slate-300 hidden md:inline">•</span>
+            <span className="text-slate-500 hidden md:inline italic font-serif">Nature Se Nirog, Swasth</span>
           </div>
-          <h2 className="mt-1.5 text-2xl font-black text-slate-900 tracking-tight">
+          <h2 className="mt-1.5 text-2xl sm:text-3xl font-extrabold text-[#0f3822] tracking-tight">
             Master Executive Overview
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Real-time multi-source lead operations, tele-sales team metrics, and commercial revenue.
+          <p className="text-xs text-slate-600 mt-0.5">
+            Real-time commercial revenue, Ayurvedic formulation orders, and multi-channel tele-sales performance.
           </p>
         </div>
 
@@ -173,8 +175,9 @@ export default function AdminDashboardPage() {
             onClick={fetchDashboard}
             isLoading={isLoading}
             icon={<RefreshCw className="h-3.5 w-3.5" />}
+            className="border-slate-300 text-slate-700 hover:bg-slate-50"
           >
-            Sync Data
+            Sync Live Data
           </Button>
 
           <Button
@@ -182,7 +185,7 @@ export default function AdminDashboardPage() {
             size="sm"
             onClick={() => setIsAddLeadModalOpen(true)}
             icon={<Plus className="h-3.5 w-3.5" />}
-            className="bg-emerald-800 hover:bg-emerald-900 text-white"
+            className="bg-[#0f3822] hover:bg-[#134e2f] text-white shadow-sm font-semibold"
           >
             + Add Manual Lead
           </Button>
@@ -191,8 +194,8 @@ export default function AdminDashboardPage() {
             <Button
               variant="outline"
               size="sm"
-              icon={<Leaf className="h-3.5 w-3.5 text-emerald-700" />}
-              className="border-emerald-300 bg-emerald-50/60 hover:bg-emerald-100 text-emerald-900 font-semibold"
+              icon={<Leaf className="h-3.5 w-3.5 text-amber-600" />}
+              className="border-amber-300 bg-amber-50/70 hover:bg-amber-100 text-amber-950 font-semibold"
             >
               Formulations & Products
             </Button>
@@ -213,8 +216,8 @@ export default function AdminDashboardPage() {
             <Button
               variant="outline"
               size="sm"
-              icon={<UserCheck className="h-3.5 w-3.5 text-amber-600" />}
-              className="border-amber-300 bg-amber-50/50 hover:bg-amber-100/60 text-amber-900"
+              icon={<UserCheck className="h-3.5 w-3.5 text-blue-600" />}
+              className="border-blue-200 bg-blue-50/60 hover:bg-blue-100 text-blue-900 font-semibold"
             >
               Distribute Leads
             </Button>

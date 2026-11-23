@@ -101,17 +101,27 @@ export function Sidebar({ onClose }: SidebarProps) {
   return (
     <aside className="flex h-full w-64 flex-col border-r border-slate-800 bg-[#071912] text-slate-100 shadow-xl select-none">
       {/* Melayurveda Brand Header */}
-      <div className="flex h-16 items-center gap-3 border-b border-slate-800/80 px-5 bg-[#05140e]">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-forest-800 text-amber-300 shadow-md shadow-emerald-950/80 ring-1 ring-emerald-400/30">
-          <Leaf className="h-5 w-5" />
+      <div className="flex h-20 items-center gap-3 border-b border-slate-800/80 px-4 bg-[#05140e]">
+        <div className="relative h-11 w-11 shrink-0 rounded-xl bg-white p-1 shadow-md ring-1 ring-amber-400/40 flex items-center justify-center overflow-hidden">
+          <img
+            src="/images/melayurveda-logo.png"
+            alt="Mel Ayurveda"
+            className="h-full w-full object-contain"
+          />
         </div>
-        <div>
-          <span className="block font-black tracking-widest text-white text-base leading-tight">
-            MELAYURVEDA
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <span className="block font-bold tracking-tight text-white text-sm leading-tight">
+              Mel Ayurveda
+            </span>
+            <span className="text-[8px] font-bold uppercase tracking-wider text-amber-400 bg-amber-950/60 px-1 py-0.2 rounded border border-amber-600/40">
+              HQ
+            </span>
+          </div>
+          <span className="block text-[9px] font-medium text-amber-300/90 italic truncate mt-0.5">
+            Nature Se Nirog, Swasth
           </span>
-          <span className="block text-[9px] font-bold uppercase tracking-widest text-amber-400">
-            Ayurvedic Medicine CRM
-          </span>
+          <div className="h-[1px] w-full bg-gradient-to-r from-amber-500/60 via-amber-300/30 to-transparent mt-1" />
         </div>
       </div>
 
@@ -163,7 +173,7 @@ export function Sidebar({ onClose }: SidebarProps) {
               }}
               className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all ${
                 isActive
-                  ? 'bg-emerald-800/90 text-white shadow-md shadow-emerald-950/50 border border-emerald-600/40 ring-1 ring-emerald-500/30'
+                  ? 'bg-gradient-to-r from-[#0f3822] to-emerald-900 text-white shadow-md shadow-emerald-950/70 border border-emerald-500/40 ring-1 ring-amber-400/30'
                   : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
               }`}
             >

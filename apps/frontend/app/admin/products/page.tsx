@@ -507,7 +507,7 @@ export default function SuperAdminProductsPage() {
             <span className="text-slate-400">/</span>
             <span className="text-slate-500 font-medium">Super Admin Control</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight mt-1 flex items-center gap-3">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0f3822] tracking-tight mt-1 flex items-center gap-3">
             Products & Disease Formulations
             <Badge variant="success" className="text-xs font-semibold px-2 py-0.5">
               Live Catalog
@@ -544,7 +544,7 @@ export default function SuperAdminProductsPage() {
             variant="primary"
             size="sm"
             onClick={handleOpenCreateModal}
-            className="bg-emerald-800 hover:bg-emerald-900 text-white font-semibold shadow-sm"
+            className="bg-[#0f3822] hover:bg-[#134e2f] text-white font-semibold shadow-sm"
           >
             <PlusCircle className="w-4 h-4 mr-1.5" />
             + Create Formulation

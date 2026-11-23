@@ -27,28 +27,28 @@ export function StatCard({
   className,
 }: StatCardProps) {
   const iconThemeStyles = {
-    forest: 'bg-emerald-50 text-emerald-800 border-emerald-200/80',
-    gold: 'bg-amber-50 text-amber-700 border-amber-200/80',
+    forest: 'bg-emerald-50 text-[#0f3822] border-emerald-200/80',
+    gold: 'bg-amber-50 text-amber-800 border-amber-300/80',
     blue: 'bg-blue-50 text-blue-700 border-blue-200/80',
     purple: 'bg-purple-50 text-purple-700 border-purple-200/80',
-    emerald: 'bg-teal-50 text-teal-700 border-teal-200/80',
-    amber: 'bg-orange-50 text-orange-700 border-orange-200/80',
+    emerald: 'bg-teal-50 text-teal-800 border-teal-200/80',
+    amber: 'bg-orange-50 text-orange-800 border-orange-200/80',
   };
 
   const accentTopBorders = {
-    forest: 'border-t-emerald-600',
-    gold: 'border-t-amber-500',
-    blue: 'border-t-blue-500',
-    purple: 'border-t-purple-500',
-    emerald: 'border-t-teal-500',
-    amber: 'border-t-orange-500',
+    forest: 'border-t-[#0f3822] border-t-3',
+    gold: 'border-t-amber-500 border-t-3',
+    blue: 'border-t-blue-500 border-t-3',
+    purple: 'border-t-purple-500 border-t-3',
+    emerald: 'border-t-emerald-600 border-t-3',
+    amber: 'border-t-orange-500 border-t-3',
   };
 
   return (
     <div
       className={twMerge(
         clsx(
-          'relative overflow-hidden rounded-2xl border border-slate-200/80 border-t-3 bg-white p-5 shadow-sm transition hover:shadow-md hover:border-slate-300',
+          'relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5',
           accentTopBorders[colorTheme],
           className,
         ),

@@ -42,11 +42,27 @@ export function Header({ title, onMenuToggle }: HeaderProps) {
             <Menu className="h-5 w-5" />
           </button>
         )}
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
-              {title || 'Melayurveda Enterprise Operations'}
-            </h1>
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-2xs border border-amber-300/80 overflow-hidden">
+            <img
+              src="/images/melayurveda-logo.png"
+              alt="Mel Ayurveda Logo"
+              className="h-full w-full object-contain"
+            />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-sm sm:text-base font-bold text-[#0f3822] tracking-tight">
+                {title || 'Mel Ayurveda Enterprise Operations'}
+              </h1>
+              <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-300/80">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                Ayurveda HQ
+              </span>
+            </div>
+            <p className="hidden lg:block text-[10px] italic text-slate-500 font-serif leading-none mt-0.5">
+              Nature Se Nirog, Ayurveda Se Swasth
+            </p>
           </div>
         </div>
       </div>
@@ -90,7 +106,7 @@ export function Header({ title, onMenuToggle }: HeaderProps) {
               </span>
             </div>
 
-            <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
+            <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#0f3822] text-amber-300 border border-emerald-800 shadow-2xs">
               {user.role.replace('_', ' ')}
             </span>
 
