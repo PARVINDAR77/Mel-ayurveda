@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CustomersService } from './customers.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { LeadStatus, RoleType } from '@prisma/client';
 import {
   BadRequestException,
@@ -55,10 +56,16 @@ describe('CustomersService Unit Tests', () => {
       $transaction: jest.fn((callback) => callback(prisma)),
     };
 
+    const mockNotifications = {
+      createNotification: jest.fn().mockResolvedValue({}),
+      dispatchToRole: jest.fn().mockResolvedValue([]),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CustomersService,
         { provide: PrismaService, useValue: prisma },
+        { provide: NotificationsService, useValue: mockNotifications },
       ],
     }).compile();
 

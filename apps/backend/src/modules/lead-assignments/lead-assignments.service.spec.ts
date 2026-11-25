@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { LeadAssignmentsService } from './lead-assignments.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { RoleType, LeadStatus } from '@prisma/client';
 
@@ -9,9 +10,15 @@ describe('LeadAssignmentsService (Bundle 06 Verification)', () => {
   let prisma: PrismaService;
 
   beforeEach(async () => {
+    const mockNotifications = {
+      createNotification: jest.fn().mockResolvedValue({}),
+      dispatchToRole: jest.fn().mockResolvedValue([]),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LeadAssignmentsService,
+        { provide: NotificationsService, useValue: mockNotifications },
         {
           provide: PrismaService,
           useValue: {

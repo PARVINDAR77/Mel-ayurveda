@@ -22,4 +22,24 @@ export class HealthService {
       },
     };
   }
+
+  getLiveness() {
+    return {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+    };
+  }
+
+  async getReadiness() {
+    const dbHealth = await this.prisma.checkDatabaseHealth();
+    return {
+      status: dbHealth.connected ? 'ready' : 'unhealthy',
+      timestamp: new Date().toISOString(),
+      database: {
+        connected: dbHealth.connected,
+        latencyMs: dbHealth.latencyMs,
+      },
+    };
+  }
 }

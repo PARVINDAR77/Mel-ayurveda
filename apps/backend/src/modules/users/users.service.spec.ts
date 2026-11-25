@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { RoleType } from '@prisma/client';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 
@@ -9,9 +10,15 @@ describe('UsersService (Bundle 02 Verification)', () => {
   let prisma: PrismaService;
 
   beforeEach(async () => {
+    const mockNotifications = {
+      createNotification: jest.fn().mockResolvedValue({}),
+      dispatchToRole: jest.fn().mockResolvedValue([]),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
+        { provide: NotificationsService, useValue: mockNotifications },
         {
           provide: PrismaService,
           useValue: {

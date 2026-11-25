@@ -21,6 +21,7 @@ describe('AnalyticsService (Bundle 14 Unit Tests)', () => {
     order: {
       count: jest.fn(),
       aggregate: jest.fn(),
+      findMany: jest.fn().mockResolvedValue([]),
     },
     orderItem: {
       groupBy: jest.fn(),

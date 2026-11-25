@@ -61,7 +61,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   const refreshUser = useCallback(async () => {
-    const token = getAccessToken();
+    let token = getAccessToken();
+    if (!token) {
+      try {
+        const refreshRes = await apiClient.post('/auth/refresh');
+        token = refreshRes.data?.accessToken;
+        if (token) setAccessToken(token);
+      } catch {
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+    }
+
     if (!token) {
       setUser(null);
       setIsLoading(false);

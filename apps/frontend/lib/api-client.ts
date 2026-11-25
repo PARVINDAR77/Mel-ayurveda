@@ -11,25 +11,14 @@ export const apiClient = axios.create({
   timeout: 15000,
 });
 
-// In-memory or localStorage token management
+// Strictly in-memory access token storage (OWASP compliant: zero tokens in localStorage)
 let accessToken: string | null = null;
 
 export function setAccessToken(token: string | null) {
   accessToken = token;
-  if (typeof window !== 'undefined') {
-    if (token) {
-      localStorage.setItem('mel_access_token', token);
-    } else {
-      localStorage.removeItem('mel_access_token');
-    }
-  }
 }
 
 export function getAccessToken(): string | null {
-  if (accessToken) return accessToken;
-  if (typeof window !== 'undefined') {
-    accessToken = localStorage.getItem('mel_access_token');
-  }
   return accessToken;
 }
 
