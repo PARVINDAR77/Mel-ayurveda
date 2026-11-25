@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { RecycleBinService } from '../recycle-bin/recycle-bin.service';
 import { RoleType } from '@prisma/client';
 import { ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 
@@ -19,6 +20,10 @@ describe('UsersService (Bundle 02 Verification)', () => {
       providers: [
         UsersService,
         { provide: NotificationsService, useValue: mockNotifications },
+        {
+          provide: RecycleBinService,
+          useValue: { archiveRecord: jest.fn().mockResolvedValue({}) },
+        },
         {
           provide: PrismaService,
           useValue: {

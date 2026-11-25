@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProductsService } from './products.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { RecycleBinService } from '../recycle-bin/recycle-bin.service';
 import { RoleType } from '@prisma/client';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 
@@ -53,6 +54,10 @@ describe('ProductsService Unit Tests', () => {
       providers: [
         ProductsService,
         { provide: PrismaService, useValue: prisma },
+        {
+          provide: RecycleBinService,
+          useValue: { archiveRecord: jest.fn().mockResolvedValue({}) },
+        },
       ],
     }).compile();
 

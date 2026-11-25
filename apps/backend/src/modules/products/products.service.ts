@@ -9,13 +9,17 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductQueryDto } from './dto/product-query.dto';
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
+import { RecycleBinService } from '../recycle-bin/recycle-bin.service';
 import { InventoryTxType } from '@prisma/client';
 
 @Injectable()
 export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly recycleBinService: RecycleBinService,
+  ) {}
 
   /**
    * Retrieves all disease categories
@@ -422,6 +426,7 @@ export class ProductsService {
       where: { id },
       include: {
         inventory: true,
+        category: true,
         _count: {
           select: { orderItems: true },
         },
@@ -476,12 +481,37 @@ export class ProductsService {
         });
       }
 
-      // 3. Delete the product
+      // 3. Archive product snapshot to 30-Day Recovery Vault
+      await this.recycleBinService.archiveRecord({
+        entityType: 'PRODUCT',
+        entityId: id,
+        itemIdentifier: product.sku,
+        displayName: product.name,
+        category: product.category?.name || 'Ayurvedic Formulations',
+        dataSnapshot: {
+          id: product.id,
+          sku: product.sku,
+          name: product.name,
+          dosageForm: product.dosageForm,
+          dosageInstructions: product.dosageInstructions,
+          targetDisease: product.targetDisease,
+          ingredients: product.ingredients,
+          mrpPrice: Number(product.mrpPrice),
+          sellingPrice: Number(product.sellingPrice),
+          gstRate: Number(product.gstRate),
+          categoryId: product.categoryId,
+        },
+        deleteReason: 'Super Admin manual deletion',
+        actorId: user.id,
+        actorCode: user.employeeCode,
+      });
+
+      // 4. Delete the product from active catalog
       await tx.product.delete({
         where: { id },
       });
 
-      // 4. Audit Log
+      // 5. Audit Log
       await tx.auditLog.create({
         data: {
           userId: user.id,

@@ -8,6 +8,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { RoleType, User, NotificationType, LeadStatus } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
+import { RecycleBinService } from '../recycle-bin/recycle-bin.service';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import { EmployeeQueryDto } from './dto/employee-query.dto';
@@ -30,6 +31,7 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
+    private readonly recycleBinService: RecycleBinService,
   ) {}
 
   /**
@@ -503,7 +505,37 @@ export class UsersService {
       await tx.refreshToken.deleteMany({ where: { userId: id } });
       await tx.notification.deleteMany({ where: { userId: id } });
 
-      // 12. Record deletion in AuditLog
+      // 12. Archive complete snapshot to 30-Day Recovery Vault
+      const adminUser = await tx.user.findUnique({
+        where: { id: actorId },
+        select: { employeeCode: true },
+      });
+
+      await this.recycleBinService.archiveRecord({
+        entityType: 'EMPLOYEE',
+        entityId: id,
+        itemIdentifier: user.employeeCode,
+        displayName: `${user.firstName} ${user.lastName} (${user.role})`,
+        category: 'Staff Credentials',
+        dataSnapshot: {
+          id: user.id,
+          employeeCode: user.employeeCode,
+          email: user.email,
+          passwordHash: user.passwordHash,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          phoneNumber: user.phoneNumber,
+          role: user.role,
+          isActive: user.isActive,
+          isAcceptingLeads: user.isAcceptingLeads,
+          createdAt: user.createdAt,
+        },
+        deleteReason: 'Super Admin manual deletion',
+        actorId,
+        actorCode: adminUser?.employeeCode || 'MEL-ADM-001',
+      });
+
+      // 13. Record deletion in AuditLog
       await tx.auditLog.create({
         data: {
           userId: actorId,
@@ -520,7 +552,7 @@ export class UsersService {
         },
       });
 
-      // 13. Permanently delete the user record
+      // 14. Permanently delete the user record from active table
       await tx.user.delete({ where: { id } });
     });
 

@@ -22,6 +22,7 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { CustomerFollowupsModule } from './modules/customer-followups/customer-followups.module';
+import { RecycleBinModule } from './modules/recycle-bin/recycle-bin.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { CustomerFollowupsModule } from './modules/customer-followups/customer-f
     NotificationsModule,
     AuditModule,
     CustomerFollowupsModule,
+    RecycleBinModule,
   ],
   providers: [
     {

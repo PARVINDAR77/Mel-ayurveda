@@ -27,6 +27,7 @@ import {
   UserPlus,
   ShoppingBag,
   HeartHandshake,
+  ArchiveRestore,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { CreateLeadModal } from '../sales/create-lead-modal';
@@ -65,6 +66,7 @@ export function Sidebar({ onClose }: SidebarProps) {
           { href: '/admin/sources', label: 'Lead Sources & Ads', icon: Radio },
           { href: '/admin/analytics', label: 'Executive Analytics', icon: TrendingUp },
           { href: '/admin/audit', label: 'Enterprise Audit Logs', icon: History },
+          { href: '/admin/recycle-bin', label: 'Recycle Bin & Vault', icon: ArchiveRestore },
         ];
 
       case 'SALESPERSON':
