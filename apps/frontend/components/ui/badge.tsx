@@ -82,6 +82,8 @@ export function Badge({ children, variant = 'default', status, className }: Badg
     colorClasses = 'bg-indigo-50 text-indigo-800 border-indigo-200 font-semibold';
   } else if (['MANAGEMENT'].includes(upperStatus)) {
     colorClasses = 'bg-teal-50 text-teal-800 border-teal-200 font-semibold';
+  } else if (['FOLLOWUP_EXECUTIVE'].includes(upperStatus)) {
+    colorClasses = 'bg-emerald-100 text-emerald-950 border-emerald-400 font-bold';
   }
 
   return (

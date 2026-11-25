@@ -13,6 +13,11 @@ export class OrderQueryDto {
   @IsUUID()
   customerId?: string;
 
+  @ApiPropertyOptional({ description: 'Filter by salesperson creator UUID' })
+  @IsOptional()
+  @IsUUID()
+  createdById?: string;
+
   @ApiPropertyOptional({ description: 'Search by order number or customer name' })
   @IsOptional()
   @IsString()

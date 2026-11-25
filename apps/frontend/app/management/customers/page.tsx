@@ -23,7 +23,11 @@ import {
   Package,
   FileCheck,
   ClipboardList,
+  RotateCcw,
+  HeartHandshake,
 } from 'lucide-react';
+import { RouteToSalesModal } from '../../../components/management/route-to-sales-modal';
+import { BatchAssignModal } from '../../../components/admin/batch-assign-modal';
 
 export default function CustomerCRMPage() {
   const [customers, setCustomers] = useState<any[]>([]);
@@ -32,6 +36,10 @@ export default function CustomerCRMPage() {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+
+  // Follow-Up Care assignment modal state
+  const [isFollowupModalOpen, setIsFollowupModalOpen] = useState(false);
+  const [selectedCustomersForFollowup, setSelectedCustomersForFollowup] = useState<any[]>([]);
 
   // Customer Drawer state
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
@@ -61,6 +69,17 @@ export default function CustomerCRMPage() {
   const [directPincode, setDirectPincode] = useState('');
   const [directNotes, setDirectNotes] = useState('');
   const [isCreatingDirect, setIsCreatingDirect] = useState(false);
+
+  // Route to Sales Modal state
+  const [isRouteModalOpen, setIsRouteModalOpen] = useState(false);
+  const [selectedCustomerForRoute, setSelectedCustomerForRoute] = useState<any | null>(null);
+
+  const handleRouteSuccess = (resData: any) => {
+    setSuccessMsg(
+      resData?.message || 'Customer successfully routed back to Sales Desk with management directive!',
+    );
+    fetchCustomers();
+  };
 
   const fetchCustomers = async () => {
     try {
@@ -264,14 +283,42 @@ export default function CustomerCRMPage() {
       header: 'Actions',
       className: 'text-right',
       render: (item) => (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => openCustomerDetail(item.id)}
-          icon={<Eye className="h-3 w-3" />}
-        >
-          Profile
-        </Button>
+        <div className="flex items-center justify-end gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => openCustomerDetail(item.id)}
+            icon={<Eye className="h-3 w-3" />}
+          >
+            Profile
+          </Button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedCustomersForFollowup([item]);
+              setIsFollowupModalOpen(true);
+            }}
+            className="px-2.5 py-1 text-xs font-bold rounded-lg border border-emerald-500 bg-emerald-50 hover:bg-emerald-100 text-emerald-950 shadow-xs flex items-center gap-1 transition-all active:scale-95"
+            title="Assign this client to a dedicated Follow-Up Executive for post-sales wellness care"
+          >
+            <HeartHandshake className="w-3.5 h-3.5 text-emerald-700" />
+            <span>+ Follow-Up</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedCustomerForRoute(item);
+              setIsRouteModalOpen(true);
+            }}
+            className="px-2.5 py-1 text-xs font-bold rounded-lg border-2 border-amber-400 bg-amber-50 hover:bg-amber-100 text-amber-950 shadow-xs flex items-center gap-1 transition-all active:scale-95"
+            title="Cancel order & re-assign customer to sales desk with custom directive"
+          >
+            <RotateCcw className="w-3 h-3 text-amber-800" />
+            <span>Route to Sales</span>
+          </button>
+        </div>
       ),
     },
   ];
@@ -519,8 +566,35 @@ export default function CustomerCRMPage() {
               )}
             </div>
 
-            {/* Close Button inside Drawer */}
-            <div className="pt-4 border-t border-slate-200 flex justify-end">
+            {/* Close Button & Actions inside Drawer */}
+            <div className="pt-4 border-t border-slate-200 flex justify-between items-center gap-2">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-emerald-950 border-2 border-emerald-500 bg-emerald-50 hover:bg-emerald-100 font-bold"
+                  onClick={() => {
+                    setSelectedCustomersForFollowup([customerDetail]);
+                    setIsFollowupModalOpen(true);
+                  }}
+                >
+                  <HeartHandshake className="w-3.5 h-3.5 mr-1.5 text-emerald-700" />
+                  Assign to Follow-Up
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-amber-800 border-2 border-amber-400 bg-amber-50 hover:bg-amber-100 font-bold"
+                  onClick={() => {
+                    setSelectedCustomerForRoute(customerDetail);
+                    setIsRouteModalOpen(true);
+                  }}
+                >
+                  <RotateCcw className="w-3.5 h-3.5 mr-1.5 text-amber-700" />
+                  Route to Sales Desk
+                </Button>
+              </div>
               <Button
                 variant="outline"
                 size="sm"
@@ -746,6 +820,31 @@ export default function CustomerCRMPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Route to Sales Modal */}
+      <RouteToSalesModal
+        isOpen={isRouteModalOpen}
+        onClose={() => {
+          setIsRouteModalOpen(false);
+          setSelectedCustomerForRoute(null);
+        }}
+        customer={selectedCustomerForRoute}
+        onSuccess={handleRouteSuccess}
+      />
+
+      {/* Batch Assign to Follow-Up Executive Modal */}
+      <BatchAssignModal
+        isOpen={isFollowupModalOpen}
+        onClose={() => {
+          setIsFollowupModalOpen(false);
+          setSelectedCustomersForFollowup([]);
+        }}
+        selectedCustomers={selectedCustomersForFollowup}
+        onSuccess={(resData) => {
+          setSuccessMsg(resData?.message || 'Customer successfully assigned to Follow-Up Executive!');
+          fetchCustomers();
+        }}
+      />
     </div>
   );
 }

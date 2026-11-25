@@ -19,6 +19,28 @@ body {
   background: linear-gradient(135deg, #0b2e1a 0%, #134e2f 100%);
 }
 
+/* Universal High-Contrast Form Controls: Ensures 100% visible dark text across all inputs and browsers */
+input, textarea, select {
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #94a3b8 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
+}
+
+/* Prevent browser autofill from washing out input numbers */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill {
+  -webkit-text-fill-color: #0f172a !important;
+  -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
 .text-gold-gradient {
   background: linear-gradient(135deg, #e5a823 0%, #d4af37 50%, #996515 100%);
   -webkit-background-clip: text;

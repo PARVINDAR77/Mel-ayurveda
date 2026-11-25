@@ -49,8 +49,21 @@ export default function WarehouseInventoryPage() {
         apiClient.get('/products?limit=100'),
       ]);
 
-      setInventoryList(invRes.data?.data || invRes.data || []);
-      setTransactions(txRes.data?.data || txRes.data || []);
+      const rawInv = invRes.data?.data || invRes.data || [];
+      const mappedInv = rawInv.map((item: any) => ({
+        ...item,
+        productName: item.product?.name || '',
+        skuCode: item.product?.sku || '',
+      }));
+      setInventoryList(mappedInv);
+
+      const rawTx = txRes.data?.data || txRes.data || [];
+      const mappedTx = rawTx.map((item: any) => ({
+        ...item,
+        productName: item.product?.name || '',
+        skuCode: item.product?.sku || '',
+      }));
+      setTransactions(mappedTx);
       const prods = prodRes.data?.data || prodRes.data || [];
       setProducts(prods);
       if (prods.length > 0 && !selectedProductId) {
@@ -104,8 +117,9 @@ export default function WarehouseInventoryPage() {
     {
       key: 'sku',
       header: 'SKU Code',
+      className: 'whitespace-nowrap min-w-[150px]',
       render: (item) => (
-        <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+        <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200 whitespace-nowrap inline-block">
           {item.product?.sku}
         </span>
       ),
@@ -115,7 +129,12 @@ export default function WarehouseInventoryPage() {
       header: 'Ayurvedic Formulation',
       render: (item) => (
         <div>
-          <span className="font-semibold text-slate-900">{item.product?.name}</span>
+          {item.product?.targetDisease && (
+            <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300 mb-1">
+              {item.product.targetDisease}
+            </span>
+          )}
+          <span className="font-semibold text-slate-900 block">{item.product?.name}</span>
           <span className="block text-[11px] text-slate-400 font-mono">
             HSN: 3004.90 • GST: {item.product?.gstRate || 12}%
           </span>
@@ -202,8 +221,9 @@ export default function WarehouseInventoryPage() {
     {
       key: 'product',
       header: 'Product SKU',
+      className: 'whitespace-nowrap min-w-[150px]',
       render: (item) => (
-        <span className="font-mono font-bold text-slate-900">
+        <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200 whitespace-nowrap inline-block">
           {item.inventory?.product?.sku || item.inventory?.productId?.slice(0, 8)}
         </span>
       ),
@@ -356,6 +376,9 @@ export default function WarehouseInventoryPage() {
           columns={stockColumns}
           data={inventoryList}
           isLoading={isLoading}
+          pageSize={50}
+          searchKey="productName"
+          searchPlaceholder="Search formulation or SKU..."
           emptyMessage="No inventory records found in warehouse."
         />
       ) : (
@@ -363,6 +386,9 @@ export default function WarehouseInventoryPage() {
           columns={ledgerColumns}
           data={transactions}
           isLoading={isLoading}
+          pageSize={50}
+          searchKey="productName"
+          searchPlaceholder="Search transaction ledger..."
           emptyMessage="No ledger transactions recorded yet."
         />
       )}
@@ -384,10 +410,11 @@ export default function WarehouseInventoryPage() {
               required
               value={selectedProductId}
               onChange={(e) => setSelectedProductId(e.target.value)}
-              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-forest-600 focus:outline-none"
+              style={{ color: '#0f172a', backgroundColor: '#ffffff' }}
+              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 font-semibold focus:border-forest-600 focus:outline-none"
             >
               {products.map((p) => (
-                <option key={p.id} value={p.id}>
+                <option key={p.id} value={p.id} style={{ color: '#0f172a', backgroundColor: '#ffffff', fontWeight: 600 }}>
                   {p.name} ({p.sku})
                 </option>
               ))}

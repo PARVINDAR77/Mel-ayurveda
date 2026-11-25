@@ -20,6 +20,7 @@ const ROLE_CODE_PREFIX_MAP: Record<RoleType, string> = {
   [RoleType.PENDING_REVIEWER]: 'MEL-PND-',
   [RoleType.APPROVAL_OFFICER]: 'MEL-APR-',
   [RoleType.MANAGEMENT]: 'MEL-MGT-',
+  [RoleType.FOLLOWUP_EXECUTIVE]: 'MEL-FLW-',
 };
 
 @Injectable()

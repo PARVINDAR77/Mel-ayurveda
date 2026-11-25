@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -49,6 +50,30 @@ export class ProductsController {
     @Body('description') description?: string,
   ) {
     return this.productsService.createCategory(name, description);
+  }
+
+  @Patch('categories/:id')
+  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT)
+  @ApiOperation({ summary: 'Update a therapeutic disease category' })
+  @ApiResponse({ status: 200, description: 'Category updated' })
+  async updateCategory(
+    @Param('id') id: string,
+    @Body('name') name?: string,
+    @Body('description') description?: string,
+    @Body('isActive') isActive?: boolean,
+  ) {
+    return this.productsService.updateCategory(id, name, description, isActive);
+  }
+
+  @Delete('categories/:id')
+  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT)
+  @ApiOperation({ summary: 'Delete a therapeutic disease category' })
+  @ApiResponse({ status: 200, description: 'Category deleted' })
+  async deleteCategory(
+    @Param('id') id: string,
+    @Query('force') force?: string,
+  ) {
+    return this.productsService.deleteCategory(id, force === 'true');
   }
 
   @Get()
@@ -109,5 +134,17 @@ export class ProductsController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.productsService.updateProduct(id, dto, user);
+  }
+
+  @Delete(':id')
+  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT)
+  @ApiOperation({ summary: 'Delete or archive an Ayurvedic product formulation' })
+  @ApiResponse({ status: 200, description: 'Product deleted' })
+  async deleteProduct(
+    @Param('id') id: string,
+    @Query('force') force: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.productsService.deleteProduct(id, force === 'true', user);
   }
 }

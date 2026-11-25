@@ -24,6 +24,7 @@ import {
   Eye,
   EyeOff,
   Pencil,
+  Trash2,
   ArrowRight,
   ArrowLeft,
   Sparkles,
@@ -43,6 +44,9 @@ interface Category {
   name: string;
   description?: string;
   isActive: boolean;
+  _count?: {
+    products: number;
+  };
 }
 
 interface Product {
@@ -77,6 +81,7 @@ export default function SuperAdminProductsPage() {
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
   const [viewMode, setViewMode] = useState<'GRID' | 'TABLE'>('GRID');
   const [isLoading, setIsLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -116,12 +121,25 @@ export default function SuperAdminProductsPage() {
   const [isSubmittingProduct, setIsSubmittingProduct] = useState(false);
 
   // -------------------------------------------------------------
-  // Standalone Add Disease Category Modal State
+  // Disease Category Management (Add, Edit, Delete)
   // -------------------------------------------------------------
   const [isCatModalOpen, setIsCatModalOpen] = useState(false);
   const [newCatName, setNewCatName] = useState('');
   const [newCatDesc, setNewCatDesc] = useState('');
   const [isSubmittingCat, setIsSubmittingCat] = useState(false);
+
+  // Manage Categories Modal State
+  const [isManageCatsModalOpen, setIsManageCatsModalOpen] = useState(false);
+
+  // Edit Category Modal State
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [editCatName, setEditCatName] = useState('');
+  const [editCatDesc, setEditCatDesc] = useState('');
+  const [isSubmittingEditCat, setIsSubmittingEditCat] = useState(false);
+
+  // Delete Category Confirmation Modal State
+  const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
+  const [isSubmittingDeleteCat, setIsSubmittingDeleteCat] = useState(false);
 
   // -------------------------------------------------------------
   // Edit Product Modal State
@@ -140,6 +158,12 @@ export default function SuperAdminProductsPage() {
   const [editImageUrl, setEditImageUrl] = useState('');
   const [editIsActive, setEditIsActive] = useState(true);
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+
+  // -------------------------------------------------------------
+  // Delete Product Confirmation Modal State
+  // -------------------------------------------------------------
+  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [isSubmittingDelete, setIsSubmittingDelete] = useState(false);
 
   // Common dosage forms in Ayurveda
   const DOSAGE_FORMS = [
@@ -175,6 +199,7 @@ export default function SuperAdminProductsPage() {
       setIsLoading(true);
       setError(null);
       const params = new URLSearchParams();
+      params.append('limit', '100');
       if (selectedCategoryId && selectedCategoryId !== 'ALL') {
         params.append('categoryId', selectedCategoryId);
       }
@@ -194,9 +219,11 @@ export default function SuperAdminProductsPage() {
 
       const fetchedProds = prodsRes.data?.data || prodsRes.data || [];
       const fetchedCats = catsRes.data || [];
+      const totalFromMeta = prodsRes.data?.meta?.total ?? fetchedProds.length;
 
       setProducts(fetchedProds);
       setCategories(fetchedCats);
+      setTotalCount(totalFromMeta);
 
       if (fetchedCats.length > 0 && !step1Category) {
         setStep1Category(fetchedCats[0].id);
@@ -402,6 +429,66 @@ export default function SuperAdminProductsPage() {
     }
   };
 
+  // Open Edit Disease Category
+  const handleOpenEditCategory = (cat: Category) => {
+    setEditingCategory(cat);
+    setEditCatName(cat.name);
+    setEditCatDesc(cat.description || '');
+    setError(null);
+  };
+
+  // Submit Disease Category Edit
+  const handleUpdateCategorySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCategory || !editCatName.trim()) return;
+    try {
+      setIsSubmittingEditCat(true);
+      setError(null);
+      const res = await apiClient.patch(`/products/categories/${editingCategory.id}`, {
+        name: editCatName.trim(),
+        description: editCatDesc.trim() || undefined,
+      });
+      const updated = res.data?.data || res.data;
+      setSuccessMsg(`Disease category "${editCatName}" updated successfully.`);
+      setCategories((prev) =>
+        prev.map((c) => (c.id === editingCategory.id ? { ...c, ...updated } : c))
+      );
+      setEditingCategory(null);
+      fetchData();
+    } catch (err: any) {
+      setError(getErrorMessage(err));
+    } finally {
+      setIsSubmittingEditCat(false);
+    }
+  };
+
+  // Open Delete Disease Category
+  const handleOpenDeleteCategory = (cat: Category) => {
+    setDeletingCategory(cat);
+    setError(null);
+  };
+
+  // Submit Disease Category Deletion
+  const handleConfirmDeleteCategory = async () => {
+    if (!deletingCategory) return;
+    try {
+      setIsSubmittingDeleteCat(true);
+      setError(null);
+      await apiClient.delete(`/products/categories/${deletingCategory.id}?force=true`);
+      setSuccessMsg(`Disease category "${deletingCategory.name}" was successfully deleted.`);
+      setCategories((prev) => prev.filter((c) => c.id !== deletingCategory.id));
+      if (selectedCategoryId === deletingCategory.id) {
+        setSelectedCategoryId('ALL');
+      }
+      setDeletingCategory(null);
+      fetchData();
+    } catch (err: any) {
+      setError(getErrorMessage(err));
+    } finally {
+      setIsSubmittingDeleteCat(false);
+    }
+  };
+
   // Open Edit Product Modal
   const handleOpenEditModal = (p: Product) => {
     setEditingProduct(p);
@@ -453,6 +540,32 @@ export default function SuperAdminProductsPage() {
     }
   };
 
+  // Open Delete Product Confirmation Modal
+  const handleOpenDeleteModal = (p: Product) => {
+    setDeletingProduct(p);
+    setError(null);
+  };
+
+  // Submit Product Deletion
+  const handleConfirmDelete = async () => {
+    if (!deletingProduct) return;
+    try {
+      setIsSubmittingDelete(true);
+      setError(null);
+      await apiClient.delete(`/products/${deletingProduct.id}?force=true`);
+      setSuccessMsg(`Formulation "${deletingProduct.name}" (${deletingProduct.sku}) was successfully deleted.`);
+      setProducts((prev) => prev.filter((p) => p.id !== deletingProduct.id));
+      setDeletingProduct(null);
+      if (editingProduct?.id === deletingProduct.id) {
+        setEditingProduct(null);
+      }
+    } catch (err: any) {
+      setError(getErrorMessage(err));
+    } finally {
+      setIsSubmittingDelete(false);
+    }
+  };
+
   // Toggle Active/Inactive status directly
   const handleToggleProductStatus = async (product: Product) => {
     try {
@@ -474,7 +587,7 @@ export default function SuperAdminProductsPage() {
   // Metrics Calculation
   // -------------------------------------------------------------
   const metrics = useMemo(() => {
-    const total = products.length;
+    const total = totalCount > 0 ? totalCount : products.length;
     const activeCount = products.filter((p) => p.isActive).length;
     const totalCategories = categories.length;
     let totalStock = 0;
@@ -489,7 +602,7 @@ export default function SuperAdminProductsPage() {
     });
 
     return { total, activeCount, totalCategories, totalStock, lowStockCount };
-  }, [products, categories]);
+  }, [products, categories, totalCount]);
 
   // Selected Category details for Step 1
   const activeSelectedCategory = categories.find((c) => c.id === step1Category);
@@ -528,6 +641,16 @@ export default function SuperAdminProductsPage() {
           >
             <RefreshCw className={`w-4 h-4 mr-1.5 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsManageCatsModalOpen(true)}
+            className="border-emerald-300 bg-emerald-50/70 text-emerald-950 hover:bg-emerald-100 font-semibold"
+          >
+            <Layers className="w-4 h-4 mr-1.5 text-emerald-800" />
+            Manage Diseases ({categories.length})
           </Button>
 
           <Button
@@ -590,13 +713,19 @@ export default function SuperAdminProductsPage() {
           icon={Leaf}
           colorTheme="forest"
         />
-        <StatCard
-          title="DISEASE CATEGORIES"
-          value={metrics.totalCategories}
-          subtitle="Therapeutic health domains"
-          icon={Layers}
-          colorTheme="gold"
-        />
+        <div
+          onClick={() => setIsManageCatsModalOpen(true)}
+          className="cursor-pointer transition-transform hover:scale-[1.02] active:scale-[0.99]"
+          title="Click to view, edit, or delete disease categories"
+        >
+          <StatCard
+            title="DISEASE CATEGORIES"
+            value={metrics.totalCategories}
+            subtitle="Click to Manage, Edit & Delete →"
+            icon={Layers}
+            colorTheme="gold"
+          />
+        </div>
         <StatCard
           title="WAREHOUSE STOCK"
           value={`${metrics.totalStock.toLocaleString()} Units`}
@@ -618,10 +747,20 @@ export default function SuperAdminProductsPage() {
       {/* --------------------------------------------------------- */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-            <Tag className="w-3.5 h-3.5 text-emerald-700" />
-            Filter by Disease Category:
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+              <Tag className="w-3.5 h-3.5 text-emerald-700" />
+              Filter by Disease Category:
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsManageCatsModalOpen(true)}
+              className="text-[11px] font-bold text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1 transition-colors shadow-2xs"
+            >
+              <Pencil className="w-3 h-3 text-emerald-700" />
+              Edit / Delete Diseases ({categories.length})
+            </button>
+          </div>
           <span className="text-xs text-slate-400">
             Showing {products.length} of {metrics.total} products
           </span>
@@ -914,15 +1053,27 @@ export default function SuperAdminProductsPage() {
                       {p.isActive ? 'Active Listing' : 'Inactive'}
                     </button>
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleOpenEditModal(p)}
-                      className="text-xs py-1 px-2.5 h-auto text-slate-700 border-slate-300 hover:bg-slate-100"
-                    >
-                      <Pencil className="w-3 h-3 mr-1" />
-                      Edit Details
-                    </Button>
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenEditModal(p)}
+                        className="text-xs py-1 px-2.5 h-auto text-slate-700 border-slate-300 hover:bg-slate-100"
+                      >
+                        <Pencil className="w-3 h-3 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenDeleteModal(p)}
+                        className="text-xs py-1 px-2.5 h-auto text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200"
+                        title="Delete Formulation"
+                      >
+                        <Trash2 className="w-3 h-3 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1015,14 +1166,27 @@ export default function SuperAdminProductsPage() {
                         </button>
                       </td>
                       <td className="px-4 py-3.5 text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleOpenEditModal(p)}
-                          className="text-xs py-1 px-2 h-auto text-slate-700"
-                        >
-                          Edit
-                        </Button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenEditModal(p)}
+                            className="text-xs py-1 px-2.5 h-auto text-slate-700 hover:text-slate-900 border-slate-300"
+                          >
+                            <Pencil className="w-3 h-3 mr-1" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenDeleteModal(p)}
+                            className="text-xs py-1 px-2.5 h-auto text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200"
+                            title="Delete Formulation"
+                          >
+                            <Trash2 className="w-3 h-3 mr-1" />
+                            Delete
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -2043,27 +2207,362 @@ export default function SuperAdminProductsPage() {
             </div>
 
             {/* Fixed Footer */}
-            <div className="flex-shrink-0 px-6 py-3.5 border-t border-slate-200 bg-slate-50/95 flex items-center justify-end gap-2.5">
+            <div className="flex-shrink-0 px-6 py-3.5 border-t border-slate-200 bg-slate-50/95 flex items-center justify-between gap-2.5">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setEditingProduct(null)}
+                onClick={() => {
+                  const prod = editingProduct;
+                  setEditingProduct(null);
+                  if (prod) handleOpenDeleteModal(prod);
+                }}
+                className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200 text-xs font-semibold flex items-center gap-1.5"
               >
-                Cancel
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete Product
               </Button>
-              <Button
-                type="submit"
-                variant="primary"
-                size="sm"
-                isLoading={isSubmittingEdit}
-                className="bg-emerald-800 hover:bg-emerald-900 text-white font-semibold"
-              >
-                Save Changes
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditingProduct(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  isLoading={isSubmittingEdit}
+                  className="bg-emerald-800 hover:bg-emerald-900 text-white font-semibold"
+                >
+                  Save Changes
+                </Button>
+              </div>
             </div>
           </form>
         )}
+      </Modal>
+
+      {/* --------------------------------------------------------- */}
+      {/* 9. DELETE PRODUCT CONFIRMATION MODAL                      */}
+      {/* --------------------------------------------------------- */}
+      <Modal
+        isOpen={!!deletingProduct}
+        onClose={() => {
+          if (!isSubmittingDelete) setDeletingProduct(null);
+        }}
+        maxWidth="md"
+      >
+        <div className="p-6 space-y-4 bg-white text-center">
+          <div className="w-14 h-14 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto text-2xl shadow-xs border border-rose-200">
+            <Trash2 className="w-7 h-7" />
+          </div>
+
+          <div className="space-y-1.5">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900">
+              Delete Ayurvedic Formulation?
+            </h3>
+            <p className="text-xs text-slate-600">
+              Are you sure you want to permanently delete formulation{' '}
+              <span className="font-bold text-slate-900 block mt-1 text-sm">{deletingProduct?.name}</span>
+            </p>
+            <div className="inline-block mt-1 font-mono text-[11px] font-bold text-emerald-900 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+              SKU: {deletingProduct?.sku}
+            </div>
+          </div>
+
+          <div className="p-3 text-left text-xs bg-rose-50 border border-rose-200 rounded-xl space-y-1 text-rose-800">
+            <p className="font-bold flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>Permanent Deletion Notice:</span>
+            </p>
+            <p className="text-[11px] text-rose-700 leading-relaxed">
+              This formulation will be removed from the tele-sales formulation list and its warehouse inventory records will be deleted.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setDeletingProduct(null)}
+              disabled={isSubmittingDelete}
+              className="text-xs font-semibold"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleConfirmDelete}
+              isLoading={isSubmittingDelete}
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-4 shadow-sm"
+            >
+              Yes, Delete Product
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* --------------------------------------------------------- */}
+      {/* 10. MANAGE ALL DISEASE CATEGORIES MODAL                   */}
+      {/* --------------------------------------------------------- */}
+      <Modal
+        isOpen={isManageCatsModalOpen}
+        onClose={() => setIsManageCatsModalOpen(false)}
+        maxWidth="2xl"
+      >
+        <div className="flex flex-col max-h-[85vh] bg-white overflow-hidden">
+          {/* Header */}
+          <div className="flex-shrink-0 px-6 py-4 flex items-center justify-between border-b border-slate-200 bg-white">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center text-lg font-bold border border-amber-300">
+                <Layers className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 text-base">
+                  Manage Ayurvedic Disease Categories
+                </h3>
+                <span className="text-[11px] text-slate-500">
+                  {categories.length} therapeutic domains registered in clinical catalog
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  setIsManageCatsModalOpen(false);
+                  setIsCatModalOpen(true);
+                }}
+                className="bg-emerald-800 hover:bg-emerald-900 text-white font-semibold text-xs py-1.5"
+              >
+                <PlusCircle className="w-3.5 h-3.5 mr-1" />
+                + Add Category
+              </Button>
+              <button
+                onClick={() => setIsManageCatsModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 rounded-lg p-1.5 hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* List of categories */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-3">
+            {categories.length === 0 ? (
+              <div className="text-center py-8 text-slate-400 text-xs">
+                No disease categories registered. Click &quot;+ Add Category&quot; to create one.
+              </div>
+            ) : (
+              <div className="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100 shadow-2xs">
+                {categories.map((cat) => {
+                  const prodCount = cat._count?.products !== undefined
+                    ? cat._count.products
+                    : products.filter((p) => p.categoryId === cat.id).length;
+
+                  return (
+                    <div
+                      key={cat.id}
+                      className="p-3.5 sm:p-4 hover:bg-slate-50/70 transition-colors flex items-center justify-between gap-4"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-slate-900 text-xs sm:text-sm truncate">
+                            {cat.name}
+                          </h4>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                            {prodCount} Formulation{prodCount === 1 ? '' : 's'}
+                          </span>
+                        </div>
+                        {cat.description && (
+                          <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">
+                            {cat.description}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenEditCategory(cat)}
+                          className="text-xs py-1 px-2.5 h-auto text-slate-700 hover:text-slate-900 border-slate-300"
+                        >
+                          <Pencil className="w-3 h-3 mr-1" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenDeleteCategory(cat)}
+                          className="text-xs py-1 px-2.5 h-auto text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200"
+                          title="Delete Disease Category"
+                        >
+                          <Trash2 className="w-3 h-3 mr-1" />
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="flex-shrink-0 px-6 py-3 border-t border-slate-100 bg-slate-50 flex justify-between items-center text-xs text-slate-500">
+            <span>Total: {categories.length} Therapeutic Domains</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsManageCatsModalOpen(false)}
+            >
+              Close
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* --------------------------------------------------------- */}
+      {/* 11. EDIT DISEASE CATEGORY MODAL                           */}
+      {/* --------------------------------------------------------- */}
+      <Modal
+        isOpen={!!editingCategory}
+        onClose={() => {
+          if (!isSubmittingEditCat) setEditingCategory(null);
+        }}
+        maxWidth="md"
+      >
+        <form onSubmit={handleUpdateCategorySubmit} className="flex flex-col bg-white overflow-hidden">
+          <div className="px-6 py-4 flex items-center justify-between border-b border-slate-200">
+            <div className="flex items-center gap-2">
+              <Pencil className="w-4 h-4 text-emerald-800" />
+              <h3 className="font-bold text-slate-900 text-sm">Edit Disease Category</h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => setEditingCategory(null)}
+              className="text-slate-400 hover:text-slate-600 rounded-lg p-1"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="p-6 space-y-4">
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1">
+                Category / Disease Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={editCatName}
+                onChange={(e) => setEditCatName(e.target.value)}
+                placeholder="e.g. Piles & Anorectal Care"
+                className="w-full text-xs font-semibold text-slate-900 border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-700/20"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1">
+                Therapeutic Description (Optional)
+              </label>
+              <textarea
+                rows={3}
+                value={editCatDesc}
+                onChange={(e) => setEditCatDesc(e.target.value)}
+                placeholder="Brief description of clinical scope..."
+                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-700/20"
+              />
+            </div>
+          </div>
+
+          <div className="px-6 py-3.5 border-t border-slate-100 bg-slate-50 flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setEditingCategory(null)}
+              disabled={isSubmittingEditCat}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              isLoading={isSubmittingEditCat}
+              className="bg-emerald-800 hover:bg-emerald-900 text-white font-semibold text-xs"
+            >
+              Save Changes
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* --------------------------------------------------------- */}
+      {/* 12. DELETE DISEASE CATEGORY CONFIRMATION MODAL            */}
+      {/* --------------------------------------------------------- */}
+      <Modal
+        isOpen={!!deletingCategory}
+        onClose={() => {
+          if (!isSubmittingDeleteCat) setDeletingCategory(null);
+        }}
+        maxWidth="md"
+      >
+        <div className="p-6 space-y-4 bg-white text-center">
+          <div className="w-14 h-14 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto text-2xl shadow-xs border border-rose-200">
+            <Trash2 className="w-7 h-7" />
+          </div>
+
+          <div className="space-y-1.5">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900">
+              Delete Disease Category?
+            </h3>
+            <p className="text-xs text-slate-600">
+              Are you sure you want to permanently delete category{' '}
+              <span className="font-bold text-slate-900 block mt-1 text-sm">{deletingCategory?.name}</span>
+            </p>
+          </div>
+
+          <div className="p-3 text-left text-xs bg-amber-50 border border-amber-200 rounded-xl space-y-1 text-amber-900">
+            <p className="font-bold flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0" />
+              <span>Safe Reassignment Notice:</span>
+            </p>
+            <p className="text-[11px] text-amber-800 leading-relaxed">
+              Any formulations currently assigned to this category will be safely reassigned to &quot;General Health Care&quot; so your product inventory remains intact.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setDeletingCategory(null)}
+              disabled={isSubmittingDeleteCat}
+              className="text-xs font-semibold"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleConfirmDeleteCategory}
+              isLoading={isSubmittingDeleteCat}
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-4 shadow-sm"
+            >
+              Yes, Delete Category
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

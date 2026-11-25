@@ -14,7 +14,27 @@ export class InventoryService {
    * Retrieves warehouse stock levels across all SKUs with low-stock alerts
    */
   async getInventoryLevels() {
+    // 1. Ensure all active products have an inventory record
+    const allProducts = await this.prisma.product.findMany({
+      where: { isActive: true },
+      include: { inventory: true },
+    });
+
+    for (const p of allProducts) {
+      if (!p.inventory) {
+        await this.prisma.inventory.create({
+          data: {
+            productId: p.id,
+            availableQuantity: 100, // Default healthy starting stock
+            reservedQuantity: 0,
+            lowStockThreshold: 20,
+          },
+        }).catch(() => null);
+      }
+    }
+
     const inventory = await this.prisma.inventory.findMany({
+      where: { product: { isActive: true } },
       include: {
         product: {
           select: {
@@ -24,11 +44,13 @@ export class InventoryService {
             mrpPrice: true,
             sellingPrice: true,
             isActive: true,
+            targetDisease: true,
+            gstRate: true,
             category: { select: { id: true, name: true } },
           },
         },
       },
-      orderBy: { availableQuantity: 'asc' },
+      orderBy: { updatedAt: 'desc' },
     });
 
     const formatted = inventory.map((inv) => ({
@@ -43,13 +65,27 @@ export class InventoryService {
    * Records factory / vendor warehouse replenishment transaction
    */
   async restock(dto: RestockInventoryDto, user: AuthenticatedUser) {
-    const inventory = await this.prisma.inventory.findUnique({
+    let inventory = await this.prisma.inventory.findUnique({
       where: { productId: dto.productId },
       include: { product: true },
     });
 
     if (!inventory) {
-      throw new NotFoundException(`Inventory for product ID ${dto.productId} not found`);
+      const product = await this.prisma.product.findUnique({
+        where: { id: dto.productId },
+      });
+      if (!product) {
+        throw new NotFoundException(`Product with ID ${dto.productId} not found`);
+      }
+      inventory = await this.prisma.inventory.create({
+        data: {
+          productId: dto.productId,
+          availableQuantity: 0,
+          reservedQuantity: 0,
+          lowStockThreshold: 20,
+        },
+        include: { product: true },
+      });
     }
 
     const newAvailable = inventory.availableQuantity + dto.quantity;
@@ -60,15 +96,19 @@ export class InventoryService {
         data: { availableQuantity: newAvailable },
       });
 
+      const noteParts: string[] = [];
+      if (dto.batchNumber) noteParts.push(`Batch: ${dto.batchNumber}`);
+      if (dto.expiryDate) noteParts.push(`Exp: ${dto.expiryDate.slice(0, 10)}`);
+      if (dto.notes) noteParts.push(dto.notes);
+      const noteStr = noteParts.length > 0 ? noteParts.join(' | ') : `Replenished by ${user.employeeCode}`;
+
       const transaction = await tx.inventoryTransaction.create({
         data: {
           inventoryId: inventory.id,
           type: InventoryTxType.RESTOCK,
           quantity: dto.quantity,
           balanceAfter: newAvailable,
-          notes: dto.notes
-            ? `${dto.notes}${dto.batchNumber ? ` [Batch: ${dto.batchNumber}]` : ''}`
-            : dto.batchNumber ? `Batch ${dto.batchNumber}` : `Replenished by ${user.employeeCode}`,
+          notes: noteStr.slice(0, 255),
         },
       });
 
@@ -82,6 +122,7 @@ export class InventoryService {
             sku: inventory.product.sku,
             addedQuantity: dto.quantity,
             newBalance: newAvailable,
+            batchNumber: dto.batchNumber,
             restockedBy: user.employeeCode,
           },
         },

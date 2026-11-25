@@ -126,6 +126,35 @@ export class LeadsService {
       assignedToId = assignee.id;
       assignedAt = new Date();
       initialStatus = LeadStatus.ASSIGNED;
+    } else {
+      // If created by a salesperson, automatically assign to their desk
+      const creator = await this.prisma.user.findUnique({ where: { id: creatorId } });
+      if (creator && creator.role === RoleType.SALESPERSON) {
+        assignedToId = creator.id;
+        assignedAt = new Date();
+        initialStatus = LeadStatus.ASSIGNED;
+      }
+    }
+
+    // Resolve source type and source ID for Super Admin transparency
+    let resolvedSourceType: LeadSourceType = LeadSourceType.MANUAL;
+    let sourceId: string | null = null;
+
+    if (dto.sourceType) {
+      const upperSource = dto.sourceType.toUpperCase();
+      if (upperSource.includes('FACEBOOK')) resolvedSourceType = LeadSourceType.FACEBOOK_ADS;
+      else if (upperSource.includes('INSTAGRAM')) resolvedSourceType = LeadSourceType.INSTAGRAM_ADS;
+      else if (upperSource.includes('GOOGLE')) resolvedSourceType = LeadSourceType.GOOGLE_ADS;
+      else if (upperSource.includes('WHATSAPP')) resolvedSourceType = LeadSourceType.WHATSAPP;
+      else if (upperSource.includes('WEBSITE')) resolvedSourceType = LeadSourceType.WEBSITE;
+      else resolvedSourceType = LeadSourceType.MANUAL;
+
+      const matchedSource = await this.prisma.leadSource.findFirst({
+        where: { sourceType: resolvedSourceType },
+      });
+      if (matchedSource) {
+        sourceId = matchedSource.id;
+      }
     }
 
     // Database transaction to record lead, assignment history, and status change
@@ -145,7 +174,8 @@ export class LeadsService {
           notes: dto.notes?.trim(),
           priority: dto.priority || LeadPriority.NORMAL,
           status: initialStatus,
-          sourceType: LeadSourceType.MANUAL,
+          sourceType: resolvedSourceType,
+          sourceId,
           createdById: creatorId, // Guaranteed authenticated creator!
           assignedToId,
           assignedAt,

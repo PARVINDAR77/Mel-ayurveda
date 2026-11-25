@@ -37,10 +37,50 @@ export class OrderItemDto {
 }
 
 export class CreateDraftOrderDto {
-  @ApiProperty({ description: 'Customer UUID' })
+  @ApiPropertyOptional({ description: 'Customer UUID' })
+  @IsOptional()
   @IsUUID()
-  @IsNotEmpty()
-  customerId: string;
+  customerId?: string;
+
+  @ApiPropertyOptional({ description: 'Associated Lead UUID if converting from an inquiry' })
+  @IsOptional()
+  @IsUUID()
+  leadId?: string;
+
+  @ApiPropertyOptional({ description: 'Client full name' })
+  @IsOptional()
+  @IsString()
+  customerName?: string;
+
+  @ApiPropertyOptional({ description: 'Primary phone number' })
+  @IsOptional()
+  @IsString()
+  phoneNumber?: string;
+
+  @ApiPropertyOptional({ description: 'Alternative phone number' })
+  @IsOptional()
+  @IsString()
+  alternatePhone?: string;
+
+  @ApiPropertyOptional({ description: 'Delivery/Shipping address' })
+  @IsOptional()
+  @IsString()
+  shippingAddress?: string;
+
+  @ApiPropertyOptional({ description: 'City' })
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  @ApiPropertyOptional({ description: 'State' })
+  @IsOptional()
+  @IsString()
+  state?: string;
+
+  @ApiPropertyOptional({ description: 'Pincode' })
+  @IsOptional()
+  @IsString()
+  pincode?: string;
 
   @ApiProperty({
     type: [OrderItemDto],

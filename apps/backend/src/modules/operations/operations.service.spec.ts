@@ -3,6 +3,7 @@ import { InvoicesService } from './invoices.service';
 import { InventoryService } from './inventory.service';
 import { DispatchService } from './dispatch.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { OrderStatus, RoleType, ShipmentStatus } from '@prisma/client';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 
@@ -11,6 +12,11 @@ describe('OperationsModule Unit Tests (Bundle 13)', () => {
   let inventoryService: InventoryService;
   let dispatchService: DispatchService;
   let prisma: any;
+  const mockNotifications = {
+    createNotification: jest.fn().mockResolvedValue({}),
+    dispatchToRole: jest.fn().mockResolvedValue([]),
+    dispatchToUsers: jest.fn().mockResolvedValue([]),
+  };
 
   const mockUserMgmt = {
     id: 'user-mgt-1',
@@ -87,6 +93,7 @@ describe('OperationsModule Unit Tests (Bundle 13)', () => {
         InventoryService,
         DispatchService,
         { provide: PrismaService, useValue: prisma },
+        { provide: NotificationsService, useValue: mockNotifications },
       ],
     }).compile();
 

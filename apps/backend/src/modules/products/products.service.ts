@@ -23,6 +23,11 @@ export class ProductsService {
   async getCategories() {
     return this.prisma.productCategory.findMany({
       where: { isActive: true },
+      include: {
+        _count: {
+          select: { products: true },
+        },
+      },
       orderBy: { name: 'asc' },
     });
   }
@@ -44,6 +49,118 @@ export class ProductsService {
         name: name.trim(),
         description: description?.trim(),
       },
+      include: {
+        _count: {
+          select: { products: true },
+        },
+      },
+    });
+  }
+
+  /**
+   * Updates an existing therapeutic disease category
+   */
+  async updateCategory(id: string, name?: string, description?: string, isActive?: boolean) {
+    const existing = await this.prisma.productCategory.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      throw new NotFoundException(`Disease Category with ID "${id}" not found`);
+    }
+
+    if (name && name.trim() !== existing.name) {
+      const duplicate = await this.prisma.productCategory.findUnique({
+        where: { name: name.trim() },
+      });
+      if (duplicate && duplicate.id !== id) {
+        throw new ConflictException(`Category "${name}" already exists`);
+      }
+    }
+
+    const updated = await this.prisma.productCategory.update({
+      where: { id },
+      data: {
+        name: name !== undefined ? name.trim() : existing.name,
+        description: description !== undefined ? description?.trim() : existing.description,
+        isActive: isActive !== undefined ? isActive : existing.isActive,
+      },
+      include: {
+        _count: {
+          select: { products: true },
+        },
+      },
+    });
+
+    this.logger.log(`Disease Category updated: ${updated.name} (${updated.id})`);
+    return updated;
+  }
+
+  /**
+   * Deletes a therapeutic disease category
+   */
+  async deleteCategory(id: string, force: boolean) {
+    const existing = await this.prisma.productCategory.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: { products: true },
+        },
+      },
+    });
+
+    if (!existing) {
+      throw new NotFoundException(`Disease Category with ID "${id}" not found`);
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      if (existing._count.products > 0) {
+        if (!force) {
+          // Soft-delete / deactivate category
+          await tx.productCategory.update({
+            where: { id },
+            data: { isActive: false },
+          });
+
+          return {
+            success: true,
+            action: 'ARCHIVED',
+            message: `Disease Category "${existing.name}" has ${existing._count.products} products and was archived.`,
+            category: existing,
+          };
+        }
+
+        // Force delete: reassign products to default 'General Health Care' category
+        let defaultCategory = await tx.productCategory.findFirst({
+          where: { name: 'General Health Care' },
+        });
+
+        if (!defaultCategory) {
+          defaultCategory = await tx.productCategory.create({
+            data: {
+              name: 'General Health Care',
+              description: 'General therapeutic formulations',
+            },
+          });
+        }
+
+        await tx.product.updateMany({
+          where: { categoryId: id },
+          data: { categoryId: defaultCategory.id },
+        });
+      }
+
+      await tx.productCategory.delete({
+        where: { id },
+      });
+
+      this.logger.log(`Disease Category deleted: ${existing.name} (${existing.id})`);
+      return {
+        success: true,
+        action: 'DELETED',
+        message: `Disease Category "${existing.name}" was permanently deleted.`,
+        category: existing,
+      };
     });
   }
 
@@ -295,5 +412,94 @@ export class ProductsService {
     });
 
     return updated;
+  }
+
+  /**
+   * Deletes an Ayurvedic product formulation and associated warehouse records
+   */
+  async deleteProduct(id: string, force: boolean, user: AuthenticatedUser) {
+    const product = await this.prisma.product.findUnique({
+      where: { id },
+      include: {
+        inventory: true,
+        _count: {
+          select: { orderItems: true },
+        },
+      },
+    });
+
+    if (!product) {
+      throw new NotFoundException(`Product with ID ${id} not found`);
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. If product has order items
+      if (product._count.orderItems > 0) {
+        if (!force) {
+          // Soft-delete / deactivate if not forced
+          await tx.product.update({
+            where: { id },
+            data: { isActive: false },
+          });
+
+          await tx.auditLog.create({
+            data: {
+              userId: user.id,
+              action: 'PRODUCT_ARCHIVED',
+              entityType: 'Product',
+              entityId: product.id,
+              newState: { sku: product.sku, name: product.name },
+            },
+          });
+
+          return {
+            success: true,
+            action: 'ARCHIVED',
+            message: `Product ${product.name} (${product.sku}) has been archived because it is referenced in past orders.`,
+            product: { id, sku: product.sku, name: product.name },
+          };
+        }
+
+        // Force delete: clean up linked order items
+        await tx.orderItem.deleteMany({
+          where: { productId: id },
+        });
+      }
+
+      // 2. Clean up inventory transactions and inventory record
+      if (product.inventory) {
+        await tx.inventoryTransaction.deleteMany({
+          where: { inventoryId: product.inventory.id },
+        });
+        await tx.inventory.delete({
+          where: { id: product.inventory.id },
+        });
+      }
+
+      // 3. Delete the product
+      await tx.product.delete({
+        where: { id },
+      });
+
+      // 4. Audit Log
+      await tx.auditLog.create({
+        data: {
+          userId: user.id,
+          action: 'PRODUCT_DELETED',
+          entityType: 'Product',
+          entityId: product.id,
+          newState: { sku: product.sku, name: product.name },
+        },
+      });
+
+      this.logger.log(`Ayurvedic product deleted: ${product.name} (SKU: ${product.sku}) by ${user.employeeCode}`);
+
+      return {
+        success: true,
+        action: 'DELETED',
+        message: `Product ${product.name} (${product.sku}) was successfully deleted.`,
+        product: { id, sku: product.sku, name: product.name },
+      };
+    });
   }
 }

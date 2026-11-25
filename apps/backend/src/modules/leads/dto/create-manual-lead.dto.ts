@@ -66,6 +66,16 @@ export class CreateManualLeadDto {
   @IsString()
   notes?: string;
 
+  @ApiPropertyOptional({ example: 'FACEBOOK_ADS', description: 'Lead channel source' })
+  @IsOptional()
+  @IsString()
+  sourceType?: string;
+
+  @ApiPropertyOptional({ example: '2026-11-23', description: 'Date of customer inquiry' })
+  @IsOptional()
+  @IsString()
+  inquiryDate?: string;
+
   @ApiPropertyOptional({ enum: LeadPriority, default: LeadPriority.NORMAL })
   @IsOptional()
   @IsEnum(LeadPriority)

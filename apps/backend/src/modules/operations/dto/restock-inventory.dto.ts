@@ -17,6 +17,11 @@ export class RestockInventoryDto {
   @IsString()
   batchNumber?: string;
 
+  @ApiPropertyOptional({ description: 'Batch expiration date (ISO 8601 string or date)' })
+  @IsOptional()
+  @IsString()
+  expiryDate?: string;
+
   @ApiPropertyOptional({
     description: 'Procurement invoice reference or notes',
     example: 'Factory replenishment from Bharuch manufacturing unit.',

@@ -24,16 +24,27 @@ import {
   Radio,
   Leaf,
   ShieldCheck,
+  UserPlus,
+  ShoppingBag,
+  HeartHandshake,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { CreateLeadModal } from '../sales/create-lead-modal';
+import { CreateOrderModal } from '../sales/create-order-modal';
 
 interface SidebarProps {
   onClose?: () => void;
 }
 
 export function Sidebar({ onClose }: SidebarProps) {
+  const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
   const { unreadCountByPath, hasUnreadForPath, markPathAsRead } = useNotifications();
+
+  // Sidebar Quick Action Modals
+  const [isCreateLeadOpen, setIsCreateLeadOpen] = React.useState(false);
+  const [isCreateOrderOpen, setIsCreateOrderOpen] = React.useState(false);
 
   const getNavItems = () => {
     if (!user) return [];
@@ -45,6 +56,7 @@ export function Sidebar({ onClose }: SidebarProps) {
           { href: '/admin/orders', label: 'Order Management', icon: Package },
           { href: '/admin/products', label: 'Products & Formulations', icon: Leaf },
           { href: '/admin/assignments', label: 'Lead Distribution', icon: UserCheck },
+          { href: '/admin/customer-followups', label: 'Follow-Up Allocation', icon: HeartHandshake },
           { href: '/sales/leads', label: 'Sales Leads', icon: PhoneCall },
           { href: '/pending/queue', label: 'Pending Review Queue', icon: FileCheck2 },
           { href: '/approval/queue', label: 'Final Approval Queue', icon: CheckCircle2 },
@@ -61,6 +73,8 @@ export function Sidebar({ onClose }: SidebarProps) {
           { href: '/sales', label: 'Sales Dashboard', icon: LayoutDashboard },
           { href: '/sales/leads', label: 'My Assigned Leads', icon: Users },
           { href: '/sales/calling', label: 'Calling Workspace', icon: PhoneCall },
+          { href: '/sales/orders', label: 'My Booked Orders', icon: Package },
+          { href: '/sales/customer-care', label: 'Follow-Up Care Desk', icon: HeartHandshake },
           { href: '/sales/follow-ups', label: 'Follow-up Agenda', icon: CalendarClock },
           { href: '/sales/pending', label: 'Pending Submissions', icon: Send },
         ];
@@ -76,6 +90,7 @@ export function Sidebar({ onClose }: SidebarProps) {
         return [
           { href: '/approval', label: 'Approval Dashboard', icon: LayoutDashboard },
           { href: '/approval/queue', label: 'Verification Queue', icon: CheckCircle2 },
+          { href: '/approval/orders', label: 'Formulation Orders', icon: Package },
           { href: '/approval/history', label: 'Sign-off History', icon: History },
         ];
 
@@ -83,11 +98,17 @@ export function Sidebar({ onClose }: SidebarProps) {
         return [
           { href: '/management', label: 'Operations Dashboard', icon: LayoutDashboard },
           { href: '/management/customers', label: 'Customer CRM', icon: Users },
+          { href: '/admin/customer-followups', label: 'Follow-Up Allocation', icon: HeartHandshake },
           { href: '/management/products', label: 'Ayurvedic Products', icon: Layers },
           { href: '/management/orders', label: 'Formulation Orders', icon: Package },
           { href: '/management/invoices', label: 'GST Tax Invoicing', icon: FileText },
           { href: '/management/inventory', label: 'Warehouse Inventory', icon: Boxes },
           { href: '/management/dispatch', label: 'Courier Dispatch', icon: Truck },
+        ];
+
+      case 'FOLLOWUP_EXECUTIVE':
+        return [
+          { href: '/sales/customer-care', label: 'Follow-Up Care Desk', icon: HeartHandshake },
         ];
 
       default:
@@ -110,6 +131,8 @@ export function Sidebar({ onClose }: SidebarProps) {
         return 'Final Sign-off Officer';
       case 'MANAGEMENT':
         return 'Operations Executive';
+      case 'FOLLOWUP_EXECUTIVE':
+        return 'Follow-Up Executive';
       default:
         return role.replace('_', ' ');
     }
@@ -153,6 +176,28 @@ export function Sidebar({ onClose }: SidebarProps) {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Quick Sales Action Buttons in Sidebar (Exclusively for Salesperson role) */}
+      {user && user.role === 'SALESPERSON' && (
+        <div className="p-3 border-b border-slate-800/80 bg-white/[0.015] space-y-2">
+          <button
+            type="button"
+            onClick={() => setIsCreateLeadOpen(true)}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-[#0a4e2b] hover:bg-[#083d22] text-white font-bold text-xs shadow-md border border-emerald-600/40 transition-all active:scale-[0.98]"
+          >
+            <UserPlus className="h-4 w-4 text-emerald-200" />
+            <span>+ Register New Lead</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsCreateOrderOpen(true)}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-[#e58a00] hover:bg-[#cc7a00] text-emerald-950 font-extrabold text-xs shadow-md border border-amber-300/60 transition-all active:scale-[0.98]"
+          >
+            <ShoppingBag className="h-4 w-4 text-emerald-950" />
+            <span>Create Order</span>
+          </button>
         </div>
       )}
 
@@ -214,6 +259,32 @@ export function Sidebar({ onClose }: SidebarProps) {
         </div>
         <p className="text-slate-500 text-[9px] leading-tight pl-5">Ayurvedic Formulations & Tele-Sales</p>
       </div>
+
+      {/* 6-Field Lead Ingestion Modal */}
+      <CreateLeadModal
+        isOpen={isCreateLeadOpen}
+        onClose={() => setIsCreateLeadOpen(false)}
+        onLeadCreated={(newLead) => {
+          setIsCreateLeadOpen(false);
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('lead-created', { detail: newLead }));
+          }
+          router.refresh();
+        }}
+      />
+
+      {/* Disease-First Order Creation Modal with Editable Pricing */}
+      <CreateOrderModal
+        isOpen={isCreateOrderOpen}
+        onClose={() => setIsCreateOrderOpen(false)}
+        onOrderCreated={(order) => {
+          setIsCreateOrderOpen(false);
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('order-created', { detail: order }));
+          }
+          router.refresh();
+        }}
+      />
     </aside>
   );
 }

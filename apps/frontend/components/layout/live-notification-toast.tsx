@@ -12,6 +12,7 @@ import {
   PackageCheck,
   AlertTriangle,
   Info,
+  Truck,
 } from 'lucide-react';
 
 export function LiveNotificationToast() {
@@ -21,6 +22,9 @@ export function LiveNotificationToast() {
 
   const getIcon = () => {
     switch (activeToast.type) {
+      case 'DISPATCH_UPDATE':
+      case 'ORDER_DISPATCHED':
+        return <Truck className="h-5 w-5 text-emerald-700" />;
       case 'LEAD_ASSIGNED':
         return <UserCheck className="h-5 w-5 text-emerald-600" />;
       case 'REVIEW_REQUESTED':

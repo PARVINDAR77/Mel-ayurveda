@@ -1,12 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { OrdersService } from './orders.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { OrderStatus, RoleType } from '@prisma/client';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 describe('OrdersService Unit Tests', () => {
   let service: OrdersService;
   let prisma: any;
+  const mockNotifications = {
+    createNotification: jest.fn().mockResolvedValue({}),
+    dispatchToRole: jest.fn().mockResolvedValue([]),
+    dispatchToUsers: jest.fn().mockResolvedValue([]),
+  };
 
   const mockUserMgmt = {
     id: 'user-mgt-1',
@@ -66,6 +72,7 @@ describe('OrdersService Unit Tests', () => {
       providers: [
         OrdersService,
         { provide: PrismaService, useValue: prisma },
+        { provide: NotificationsService, useValue: mockNotifications },
       ],
     }).compile();
 

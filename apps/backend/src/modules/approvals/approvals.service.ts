@@ -519,7 +519,38 @@ export class ApprovalsService {
       throw new NotFoundException(`Approval request with ID ${id} not found`);
     }
 
-    return request;
+    // Attach linked formulation order for clinical and commercial audit
+    let linkedOrder = null;
+    if (request.lead) {
+      const phoneDigits = request.lead.phoneNumber.replace(/\D/g, '').slice(-10);
+      linkedOrder = await this.prisma.order.findFirst({
+        where: {
+          OR: [
+            { customer: { convertedFromId: request.lead.id } },
+            { customer: { phoneNumber: request.lead.phoneNumber } },
+            { customer: { phoneNumber: phoneDigits } },
+            { customer: { phoneNumber: `+91${phoneDigits}` } },
+          ],
+        },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          items: {
+            include: {
+              product: {
+                select: { id: true, sku: true, name: true, mrpPrice: true, sellingPrice: true, targetDisease: true },
+              },
+            },
+          },
+          customer: true,
+          createdBy: { select: { id: true, employeeCode: true, firstName: true, lastName: true, role: true } },
+        },
+      });
+    }
+
+    return {
+      ...request,
+      order: linkedOrder,
+    };
   }
 
   /**

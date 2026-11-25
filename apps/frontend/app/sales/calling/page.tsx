@@ -19,7 +19,15 @@ import {
   User,
   MapPin,
   Flame,
+  ShoppingBag,
+  UserPlus,
+  AlertTriangle,
+  RotateCcw,
 } from 'lucide-react';
+import { CreateLeadModal } from '../../../components/sales/create-lead-modal';
+import { CreateOrderModal } from '../../../components/sales/create-order-modal';
+import { EditOrderModal } from '../../../components/orders/edit-order-modal';
+import { Edit3 } from 'lucide-react';
 
 function CallingWorkspaceContent() {
   const searchParams = useSearchParams();
@@ -33,6 +41,12 @@ function CallingWorkspaceContent() {
   const [isSubmittingCall, setIsSubmittingCall] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Lead & Order Modals
+  const [isCreateLeadOpen, setIsCreateLeadOpen] = useState(false);
+  const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false);
+  const [linkedOrder, setLinkedOrder] = useState<any | null>(null);
+  const [isFixOrderModalOpen, setIsFixOrderModalOpen] = useState(false);
 
   // Call form state
   const [outcome, setOutcome] = useState('INTERESTED');
@@ -66,19 +80,42 @@ function CallingWorkspaceContent() {
 
   useEffect(() => {
     fetchLeads();
+
+    const onLeadCreated = () => fetchLeads();
+    const onOrderCreated = () => fetchLeads();
+    window.addEventListener('lead-created', onLeadCreated);
+    window.addEventListener('order-created', onOrderCreated);
+    return () => {
+      window.removeEventListener('lead-created', onLeadCreated);
+      window.removeEventListener('order-created', onOrderCreated);
+    };
   }, [initialLeadId]);
 
   // Fetch call history when selected lead changes
   useEffect(() => {
     if (!selectedLead) return;
 
+    // Fetch call history and linked order when selected lead changes
     const fetchHistory = async () => {
       try {
         setIsLoadingHistory(true);
-        const res = await apiClient.get(`/calling/logs/lead/${selectedLead.id}`);
-        setCallHistory(res.data || []);
+        const [historyRes, orderRes] = await Promise.allSettled([
+          apiClient.get(`/calling/logs/lead/${selectedLead.id}`),
+          apiClient.get(`/orders/by-lead/${selectedLead.id}`),
+        ]);
+        if (historyRes.status === 'fulfilled') {
+          setCallHistory(historyRes.value.data || []);
+        } else {
+          setCallHistory([]);
+        }
+        if (orderRes.status === 'fulfilled' && orderRes.value.data) {
+          setLinkedOrder(orderRes.value.data);
+        } else {
+          setLinkedOrder(null);
+        }
       } catch {
         setCallHistory([]);
+        setLinkedOrder(null);
       } finally {
         setIsLoadingHistory(false);
       }
@@ -188,6 +225,27 @@ function CallingWorkspaceContent() {
             Dialing queue, customer inquiry details, immutable consultation logging, and follow-up scheduler.
           </p>
         </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsCreateLeadOpen(true)}
+            icon={<UserPlus className="h-3.5 w-3.5" />}
+            className="text-xs font-semibold"
+          >
+            + Register Lead
+          </Button>
+          <Button
+            variant="gold"
+            size="sm"
+            onClick={() => setIsCreateOrderOpen(true)}
+            icon={<ShoppingBag className="h-3.5 w-3.5" />}
+            className="bg-amber-500 hover:bg-amber-400 text-emerald-950 font-extrabold text-xs shadow-sm"
+          >
+            Create Order
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -235,9 +293,16 @@ function CallingWorkspaceContent() {
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-mono text-xs font-bold text-slate-900">{l.leadCode}</span>
-                      <Badge variant="priority" className="text-[9px] px-1.5 py-0">
-                        {l.priority}
-                      </Badge>
+                      <div className="flex items-center gap-1">
+                        {(l.notes?.includes('[MANAGEMENT DIRECTIVE') || l.customerRequirements?.includes('[MANAGEMENT DIRECTIVE')) && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-amber-500 text-white animate-pulse shadow-xs">
+                            ⚡ Recovery
+                          </span>
+                        )}
+                        <Badge variant="priority" className="text-[9px] px-1.5 py-0">
+                          {l.priority}
+                        </Badge>
+                      </div>
                     </div>
                     <p className="mt-1 font-semibold text-xs text-slate-900 truncate">
                       {l.customerName}
@@ -259,6 +324,81 @@ function CallingWorkspaceContent() {
         <div className="lg:col-span-8 space-y-4">
           {selectedLead ? (
             <>
+              {/* Management Directive Banner (if routed from cancellation) */}
+              {(selectedLead.notes?.includes('[MANAGEMENT DIRECTIVE') ||
+                selectedLead.customerRequirements?.includes('[MANAGEMENT DIRECTIVE')) && (
+                <div className="rounded-xl border-2 border-amber-400 bg-amber-50/90 p-4 shadow-md">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-amber-500 text-white rounded-lg shadow-xs shrink-0 mt-0.5">
+                      <AlertTriangle className="h-5 w-5 animate-pulse" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-amber-600 text-white shadow-xs">
+                          ⚡ Priority Action Required
+                        </span>
+                        <span className="text-xs font-bold text-amber-950">
+                          Management Directive for Customer Lead Recovery
+                        </span>
+                      </div>
+                      <div className="mt-2 text-xs font-semibold text-amber-950 whitespace-pre-line leading-relaxed bg-white p-3 rounded-lg border border-amber-200 shadow-xs">
+                        {
+                          (selectedLead.customerRequirements?.includes('[MANAGEMENT DIRECTIVE')
+                            ? selectedLead.customerRequirements
+                            : selectedLead.notes
+                          )?.split('\n\n')[0]
+                        }
+                      </div>
+                      <p className="mt-2 text-[11px] text-amber-800 font-medium">
+                        💡 Management has requested immediate re-engagement. Address customer reservations, revise order dosage/products if needed, and confirm renewed order booking.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Approval Officer Rectification Directive Banner */}
+              {linkedOrder &&
+                linkedOrder.notes &&
+                (linkedOrder.notes.includes('RECTIFICATION') ||
+                  linkedOrder.notes.includes('AMENDMENT') ||
+                  linkedOrder.notes.includes('REJECTED')) && (
+                  <div className="rounded-xl border-2 border-rose-300 bg-rose-50/90 p-4 shadow-sm">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-rose-600 text-white rounded-lg shadow-xs shrink-0 mt-0.5">
+                          <RotateCcw className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-rose-600 text-white">
+                              ⚠️ Approval Desk Directive
+                            </span>
+                            <span className="font-mono text-xs font-bold text-slate-900">
+                              Order {linkedOrder.orderNumber}
+                            </span>
+                          </div>
+                          <p className="mt-1.5 font-mono text-xs text-rose-950 font-semibold whitespace-pre-line bg-white p-2.5 rounded border border-rose-200">
+                            {linkedOrder.notes.split('\n').pop()}
+                          </p>
+                        </div>
+                      </div>
+
+                      {linkedOrder.status === 'DRAFT' && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => setIsFixOrderModalOpen(true)}
+                          className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0 shadow-sm"
+                          icon={<Edit3 className="h-3.5 w-3.5" />}
+                        >
+                          Fix & Re-submit Order
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
               {/* Customer Banner */}
               <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -287,6 +427,15 @@ function CallingWorkspaceContent() {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => setIsCreateOrderOpen(true)}
+                      className="bg-emerald-800 hover:bg-emerald-900 text-white font-bold shadow-sm"
+                      icon={<ShoppingBag className="h-3.5 w-3.5 text-amber-300" />}
+                    >
+                      Create Customer Order
+                    </Button>
                     <a
                       href={`tel:${selectedLead.phoneNumber}`}
                       className="inline-flex items-center gap-1.5 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-bold text-white hover:bg-slate-900 shadow-sm transition"
@@ -527,6 +676,42 @@ function CallingWorkspaceContent() {
           )}
         </div>
       </div>
+
+      {/* 6-Field Lead Ingestion Modal */}
+      <CreateLeadModal
+        isOpen={isCreateLeadOpen}
+        onClose={() => setIsCreateLeadOpen(false)}
+        onLeadCreated={(newLead) => {
+          setSuccessMsg(`New Lead ${newLead.leadCode} registered successfully!`);
+          fetchLeads();
+          setSelectedLead(newLead);
+        }}
+      />
+
+      {/* Disease-First Order Creation Modal with Editable Pricing */}
+      <CreateOrderModal
+        isOpen={isCreateOrderOpen}
+        onClose={() => setIsCreateOrderOpen(false)}
+        lead={selectedLead}
+        onOrderCreated={(order) => {
+          setSuccessMsg(`Order ${order.orderNumber} successfully booked and dispatched!`);
+          fetchLeads();
+        }}
+      />
+
+      {/* Fix & Re-submit Order Modal */}
+      {isFixOrderModalOpen && linkedOrder && (
+        <EditOrderModal
+          isOpen={isFixOrderModalOpen}
+          onClose={() => setIsFixOrderModalOpen(false)}
+          order={linkedOrder}
+          onOrderUpdated={(updated) => {
+            setSuccessMsg(`Order ${updated.orderNumber} successfully updated and re-submitted to approval desk!`);
+            setLinkedOrder(updated);
+            fetchLeads();
+          }}
+        />
+      )}
     </div>
   );
 }

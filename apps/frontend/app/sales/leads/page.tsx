@@ -6,18 +6,17 @@ import { apiClient, getErrorMessage } from '../../../lib/api-client';
 import { DataTable, Column } from '../../../components/ui/data-table';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
-import { Input } from '../../../components/ui/input';
-import { Modal } from '../../../components/ui/modal';
+import { CreateLeadModal } from '../../../components/sales/create-lead-modal';
+import { CreateOrderModal } from '../../../components/sales/create-order-modal';
 import {
   UserPlus,
   RefreshCw,
   PhoneCall,
   MapPin,
-  Calendar,
   AlertCircle,
   CheckCircle2,
-  FileCheck,
   Clock,
+  ShoppingBag,
 } from 'lucide-react';
 
 export default function MyAssignedLeadsPage() {
@@ -27,20 +26,10 @@ export default function MyAssignedLeadsPage() {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Manual Lead Modal
-  const [isManualModalOpen, setIsManualModalOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [manualForm, setManualForm] = useState({
-    customerName: '',
-    phoneNumber: '',
-    alternatePhone: '',
-    city: '',
-    state: 'Gujarat',
-    address: '',
-    productInterest: 'Sandhivata Joint Care',
-    priority: 'NORMAL',
-    notes: '',
-  });
+  // Modals state
+  const [isCreateLeadOpen, setIsCreateLeadOpen] = useState(false);
+  const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false);
+  const [selectedLeadForOrder, setSelectedLeadForOrder] = useState<any | null>(null);
 
   const fetchLeads = async () => {
     try {
@@ -57,6 +46,15 @@ export default function MyAssignedLeadsPage() {
 
   useEffect(() => {
     fetchLeads();
+
+    const onLeadCreated = () => fetchLeads();
+    const onOrderCreated = () => fetchLeads();
+    window.addEventListener('lead-created', onLeadCreated);
+    window.addEventListener('order-created', onOrderCreated);
+    return () => {
+      window.removeEventListener('lead-created', onLeadCreated);
+      window.removeEventListener('order-created', onOrderCreated);
+    };
   }, []);
 
   const handleApproveLead = async (lead: any) => {
@@ -94,34 +92,17 @@ export default function MyAssignedLeadsPage() {
     }
   };
 
-  const handleCreateManualLead = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      setIsSubmitting(true);
-      setError(null);
-      const res = await apiClient.post('/leads/manual', manualForm);
-      setSuccessMsg(`Manual Lead created successfully: ${res.data.leadCode}`);
-      setIsManualModalOpen(false);
-      setManualForm({
-        customerName: '',
-        phoneNumber: '',
-        alternatePhone: '',
-        city: '',
-        state: 'Gujarat',
-        address: '',
-        productInterest: 'Sandhivata Joint Care',
-        priority: 'NORMAL',
-        notes: '',
-      });
-      fetchLeads();
-    } catch (err: any) {
-      setError(getErrorMessage(err));
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleLeadCreated = (newLead: any) => {
+    setSuccessMsg(`New Lead ${newLead.leadCode} registered successfully and assigned to your desk!`);
+    fetchLeads();
   };
 
-  // STRICT INVARIANT: ZERO SOURCE COLUMN IN THIS TABLE
+  const handleOrderCreated = (order: any) => {
+    setSuccessMsg(`Customer Order ${order.orderNumber} successfully booked and dispatched to verification queue!`);
+    fetchLeads();
+  };
+
+  // STRICT INVARIANT: ZERO SOURCE COLUMN IN THIS SALES TABLE (SOURCES VISIBLE ONLY IN SUPER ADMIN)
   const columns: Column<any>[] = [
     {
       key: 'leadCode',
@@ -140,15 +121,23 @@ export default function MyAssignedLeadsPage() {
           <span className="font-semibold text-slate-900">{item.customerName}</span>
           <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono mt-0.5">
             <span>{item.phoneNumber}</span>
+            {item.alternatePhone && (
+              <span className="text-slate-400">/ {item.alternatePhone}</span>
+            )}
           </div>
         </div>
       ),
     },
     {
       key: 'productInterest',
-      header: 'Medicine / Product Interest',
+      header: 'Clinical Concern / Notes',
       render: (item) => (
-        <span className="font-medium text-slate-700">{item.productInterest || 'General Product Inquiry'}</span>
+        <div>
+          <span className="font-medium text-slate-800 text-xs">{item.productInterest || 'Ayurvedic Consultation'}</span>
+          {item.notes && (
+            <p className="text-[11px] text-slate-500 line-clamp-1 italic mt-0.5">&quot;{item.notes}&quot;</p>
+          )}
+        </div>
       ),
     },
     {
@@ -177,14 +166,28 @@ export default function MyAssignedLeadsPage() {
       className: 'text-right',
       render: (item) => (
         <div className="flex items-center justify-end gap-1.5">
+          {/* Quick Create Order Button for Deal Closing */}
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => {
+              setSelectedLeadForOrder(item);
+              setIsCreateOrderOpen(true);
+            }}
+            className="bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-[11px] px-2.5 py-1 h-7 shadow-sm"
+            icon={<ShoppingBag className="h-3 w-3 text-amber-300" />}
+          >
+            Create Order
+          </Button>
+
           {item.status !== 'APPROVAL_REQUESTED' && item.status !== 'APPROVED' && item.status !== 'CONVERTED' && (
             <>
               <Button
-                variant="primary"
+                variant="outline"
                 size="sm"
                 onClick={() => handleApproveLead(item)}
                 isLoading={actionLoadingId === item.id}
-                className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-[11px] px-2 py-1 h-7"
+                className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300 font-medium text-[11px] px-2 py-1 h-7"
                 icon={<CheckCircle2 className="h-3 w-3" />}
               >
                 Approve
@@ -194,13 +197,14 @@ export default function MyAssignedLeadsPage() {
                 size="sm"
                 onClick={() => handlePendingLead(item)}
                 isLoading={actionLoadingId === item.id}
-                className="bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-medium text-[11px] px-2 py-1 h-7"
+                className="bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-medium text-[11px] px-2 py-1 h-7"
                 icon={<Clock className="h-3 w-3" />}
               >
                 Pending
               </Button>
             </>
           )}
+
           <Link href={`/sales/calling?leadId=${item.id}`}>
             <Button variant="outline" size="sm" icon={<PhoneCall className="h-3 w-3" />} className="text-[11px] px-2.5 py-1 h-7">
               Call
@@ -237,10 +241,23 @@ export default function MyAssignedLeadsPage() {
           <Button
             variant="primary"
             size="sm"
-            onClick={() => setIsManualModalOpen(true)}
+            onClick={() => setIsCreateLeadOpen(true)}
             icon={<UserPlus className="h-3.5 w-3.5" />}
+            className="bg-emerald-800 hover:bg-emerald-900 text-white font-bold"
           >
-            Create Inbound Lead
+            + Register New Lead
+          </Button>
+          <Button
+            variant="gold"
+            size="sm"
+            onClick={() => {
+              setSelectedLeadForOrder(null);
+              setIsCreateOrderOpen(true);
+            }}
+            icon={<ShoppingBag className="h-3.5 w-3.5" />}
+            className="bg-amber-500 hover:bg-amber-400 text-emerald-950 font-extrabold shadow-sm"
+          >
+            Create Order
           </Button>
         </div>
       </div>
@@ -274,121 +291,23 @@ export default function MyAssignedLeadsPage() {
         emptyMessage="No assigned leads in your portfolio."
       />
 
-      {/* Manual Inbound Lead Modal */}
-      <Modal
-        isOpen={isManualModalOpen}
-        onClose={() => setIsManualModalOpen(false)}
-        title="Create Inbound Product Lead"
-        description="Register a walk-in or incoming phone product inquiry. Automatically allocated to your desk."
-      >
-        <form onSubmit={handleCreateManualLead} className="space-y-3.5">
-          <Input
-            label="Customer Full Name"
-            value={manualForm.customerName}
-            onChange={(e) => setManualForm({ ...manualForm, customerName: e.target.value })}
-            placeholder="e.g. Ramesh Patel"
-            required
-          />
+      {/* 6-Field Lead Ingestion Modal */}
+      <CreateLeadModal
+        isOpen={isCreateLeadOpen}
+        onClose={() => setIsCreateLeadOpen(false)}
+        onLeadCreated={handleLeadCreated}
+      />
 
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="Primary Phone Number"
-              type="tel"
-              value={manualForm.phoneNumber}
-              onChange={(e) => setManualForm({ ...manualForm, phoneNumber: e.target.value })}
-              placeholder="9876543210"
-              required
-            />
-            <Input
-              label="Alternate Phone (Optional)"
-              type="tel"
-              value={manualForm.alternatePhone}
-              onChange={(e) => setManualForm({ ...manualForm, alternatePhone: e.target.value })}
-              placeholder="9876500000"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="City"
-              value={manualForm.city}
-              onChange={(e) => setManualForm({ ...manualForm, city: e.target.value })}
-              placeholder="Ahmedabad"
-              required
-            />
-            <Input
-              label="State"
-              value={manualForm.state}
-              onChange={(e) => setManualForm({ ...manualForm, state: e.target.value })}
-              placeholder="Gujarat"
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
-                Priority
-              </label>
-              <select
-                value={manualForm.priority}
-                onChange={(e) => setManualForm({ ...manualForm, priority: e.target.value })}
-                className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-forest-700"
-              >
-                <option value="LOW">Low</option>
-                <option value="NORMAL">Normal</option>
-                <option value="HIGH">High</option>
-                <option value="URGENT">Urgent</option>
-              </select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
-                Ayurvedic Formulation Interest
-              </label>
-              <input
-                type="text"
-                value={manualForm.productInterest}
-                onChange={(e) => setManualForm({ ...manualForm, productInterest: e.target.value })}
-                className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-forest-700"
-                placeholder="e.g. Joint Care, Skin, Digestion"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
-              Customer Inquiry & Product Notes
-            </label>
-            <textarea
-              value={manualForm.notes}
-              onChange={(e) => setManualForm({ ...manualForm, notes: e.target.value })}
-              rows={2}
-              placeholder="Customer requirements, preferred medicines/formulations, dosage inquiries..."
-              className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-forest-700"
-            />
-          </div>
-
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setIsManualModalOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              size="sm"
-              isLoading={isSubmitting}
-            >
-              Save Inbound Lead
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      {/* Disease-First Order Creation Modal with Editable Pricing */}
+      <CreateOrderModal
+        isOpen={isCreateOrderOpen}
+        onClose={() => {
+          setIsCreateOrderOpen(false);
+          setSelectedLeadForOrder(null);
+        }}
+        lead={selectedLeadForOrder}
+        onOrderCreated={handleOrderCreated}
+      />
     </div>
   );
 }

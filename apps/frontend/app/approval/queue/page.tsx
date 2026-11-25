@@ -7,6 +7,8 @@ import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Modal } from '../../../components/ui/modal';
 import { Drawer } from '../../../components/ui/drawer';
+import { EditOrderModal } from '../../../components/orders/edit-order-modal';
+import { DecideOrderModal } from '../../../components/orders/decide-order-modal';
 import {
   FileCheck,
   RefreshCw,
@@ -25,6 +27,11 @@ import {
   Activity,
   DollarSign,
   AlertTriangle,
+  Package,
+  Edit3,
+  MapPin,
+  Tag,
+  Receipt,
 } from 'lucide-react';
 
 export default function ApprovalQueuePage() {
@@ -50,6 +57,11 @@ export default function ApprovalQueuePage() {
   const [dossierId, setDossierId] = useState<string | null>(null);
   const [dossierData, setDossierData] = useState<any | null>(null);
   const [loadingDossier, setLoadingDossier] = useState(false);
+
+  // Order Edit & Decide Modals
+  const [editingOrder, setEditingOrder] = useState<any | null>(null);
+  const [decidingOrder, setDecidingOrder] = useState<any | null>(null);
+  const [decidingOrderAction, setDecidingOrderAction] = useState<'CONFIRM' | 'REQUEST_RECTIFICATION' | 'REJECT'>('CONFIRM');
 
   const fetchQueue = async () => {
     try {
@@ -96,7 +108,18 @@ export default function ApprovalQueuePage() {
     setLoadingDossier(true);
     try {
       const res = await apiClient.get(`/approvals/${requestId}`);
-      setDossierData(res.data);
+      let fullData = res.data;
+      if (!fullData.order && fullData.lead?.id) {
+        try {
+          const orderRes = await apiClient.get(`/orders/by-lead/${fullData.lead.id}`);
+          if (orderRes.data) {
+            fullData.order = orderRes.data;
+          }
+        } catch {
+          // No active order linked yet
+        }
+      }
+      setDossierData(fullData);
     } catch (err: any) {
       setError(getErrorMessage(err));
       setDossierId(null);
@@ -524,6 +547,147 @@ export default function ApprovalQueuePage() {
               )}
             </div>
 
+            {/* Prescribed Formulation Order & Commercial Review */}
+            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4 text-forest-700" />
+                  <h5 className="font-bold text-slate-900 text-xs uppercase tracking-wider">
+                    Formulation Order & Treatment Deal
+                  </h5>
+                  {dossierData.order && (
+                    <span className="font-mono text-[11px] font-bold bg-slate-100 text-slate-800 px-2 py-0.5 rounded border border-slate-200">
+                      {dossierData.order.orderNumber}
+                    </span>
+                  )}
+                </div>
+                {dossierData.order && (
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant={dossierData.order.status === 'CONFIRMED' ? 'success' : dossierData.order.status === 'CANCELLED' ? 'danger' : 'gold'}>
+                      {dossierData.order.status}
+                    </Badge>
+                  </div>
+                )}
+              </div>
+
+              {!dossierData.order ? (
+                <div className="rounded-lg border border-dashed border-slate-200 p-4 text-center text-slate-400 text-xs">
+                  No formulation order booked yet for this lead inquiry.
+                </div>
+              ) : (
+                <div className="space-y-3 text-xs">
+                  {/* Order Financials & Booking Consultant Bar */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-50 p-2.5 rounded-lg border border-slate-200 font-mono text-[11px]">
+                    <div>
+                      <span className="text-slate-500 block text-[10px]">Consultant</span>
+                      <span className="font-bold text-slate-900">{dossierData.order.createdBy?.employeeCode || 'N/A'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block text-[10px]">Payment Mode</span>
+                      <span className="font-bold text-slate-800">{dossierData.order.paymentMode}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block text-[10px]">Subtotal + GST</span>
+                      <span className="text-slate-700">₹{dossierData.order.subtotal} + ₹{dossierData.order.taxAmount}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-slate-500 block text-[10px]">Payable Total</span>
+                      <span className="text-base font-black text-forest-800">₹{dossierData.order.totalAmount}</span>
+                    </div>
+                  </div>
+
+                  {/* Formulations Line Items Table */}
+                  <div className="overflow-x-auto rounded-lg border border-slate-200">
+                    <table className="w-full text-left border-collapse text-[11px]">
+                      <thead className="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider">
+                        <tr>
+                          <th className="px-2.5 py-1.5">Formulation</th>
+                          <th className="px-2 py-1.5 text-center">Qty</th>
+                          <th className="px-2 py-1.5 text-right">Unit Price</th>
+                          <th className="px-2.5 py-1.5">Prescribed Dosage</th>
+                          <th className="px-2.5 py-1.5 text-right">Line Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {dossierData.order.items?.map((item: any, idx: number) => (
+                          <tr key={idx} className="hover:bg-slate-50/80">
+                            <td className="px-2.5 py-1.5">
+                              <span className="font-semibold text-slate-900 block">{item.product?.name}</span>
+                              <span className="font-mono text-[10px] text-slate-400">{item.product?.sku}</span>
+                            </td>
+                            <td className="px-2 py-1.5 text-center font-mono font-bold text-slate-900">
+                              {item.quantity}
+                            </td>
+                            <td className="px-2 py-1.5 text-right font-mono text-slate-800">
+                              ₹{item.unitPrice}
+                            </td>
+                            <td className="px-2.5 py-1.5 text-slate-700 italic">
+                              {item.dosageInstructions || 'As directed'}
+                            </td>
+                            <td className="px-2.5 py-1.5 text-right font-mono font-bold text-slate-900">
+                              ₹{item.totalPrice || (Number(item.unitPrice) * Number(item.quantity)).toFixed(2)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Order Chronological Remarks Banner */}
+                  {dossierData.order.notes && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-[11px] text-amber-900">
+                      <span className="font-bold uppercase tracking-wider block text-[10px] text-amber-950">
+                        Chronological Directives & Notes:
+                      </span>
+                      <p className="font-mono whitespace-pre-line mt-0.5">{dossierData.order.notes}</p>
+                    </div>
+                  )}
+
+                  {/* Order Action Buttons */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditingOrder(dossierData.order)}
+                      icon={<Edit3 className="h-3.5 w-3.5 text-amber-600" />}
+                    >
+                      Edit Order & Prices
+                    </Button>
+
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        variant="gold"
+                        size="sm"
+                        onClick={() => {
+                          setDecidingOrder(dossierData.order);
+                          setDecidingOrderAction('REQUEST_RECTIFICATION');
+                        }}
+                        icon={<RotateCcw className="h-3.5 w-3.5" />}
+                        className="bg-amber-600 hover:bg-amber-700 text-white"
+                      >
+                        Request Rectification
+                      </Button>
+
+                      {dossierData.order.status !== 'CONFIRMED' && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => {
+                            setDecidingOrder(dossierData.order);
+                            setDecidingOrderAction('CONFIRM');
+                          }}
+                          icon={<CheckCircle2 className="h-3.5 w-3.5" />}
+                          className="bg-emerald-700 hover:bg-emerald-800 text-white"
+                        >
+                          Confirm Order
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Bottom Actions inside Drawer */}
             <div className="pt-4 border-t border-slate-200 flex justify-end gap-2">
               <Button
@@ -780,6 +944,35 @@ export default function ApprovalQueuePage() {
           </div>
         </form>
       </Modal>
+
+      {/* Edit Formulation Order Modal */}
+      {editingOrder && (
+        <EditOrderModal
+          isOpen={!!editingOrder}
+          onClose={() => setEditingOrder(null)}
+          order={editingOrder}
+          onOrderUpdated={(updated) => {
+            setSuccessMsg(`Order ${updated.orderNumber} successfully updated.`);
+            if (dossierId) openDossier(dossierId);
+            fetchQueue();
+          }}
+        />
+      )}
+
+      {/* Decide Formulation Order Modal */}
+      {decidingOrder && (
+        <DecideOrderModal
+          isOpen={!!decidingOrder}
+          onClose={() => setDecidingOrder(null)}
+          order={decidingOrder}
+          initialDecision={decidingOrderAction}
+          onDecided={() => {
+            setSuccessMsg(`Order decision recorded successfully.`);
+            if (dossierId) openDossier(dossierId);
+            fetchQueue();
+          }}
+        />
+      )}
     </div>
   );
 }

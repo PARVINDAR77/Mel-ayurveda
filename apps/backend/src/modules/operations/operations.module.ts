@@ -6,9 +6,10 @@ import { InventoryService } from './inventory.service';
 import { DispatchController } from './dispatch.controller';
 import { DispatchService } from './dispatch.service';
 import { PrismaModule } from '../../prisma/prisma.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, NotificationsModule],
   controllers: [InvoicesController, InventoryController, DispatchController],
   providers: [InvoicesService, InventoryService, DispatchService],
   exports: [InvoicesService, InventoryService, DispatchService],

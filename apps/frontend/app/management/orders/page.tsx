@@ -9,6 +9,7 @@ import { Button } from '../../../components/ui/button';
 import { Modal } from '../../../components/ui/modal';
 import { Drawer } from '../../../components/ui/drawer';
 import { StatCard } from '../../../components/ui/stat-card';
+import { EditOrderModal } from '../../../components/orders/edit-order-modal';
 import {
   Package,
   PlusCircle,
@@ -24,6 +25,8 @@ import {
   Clock,
   Trash2,
   Boxes,
+  Edit3,
+  Receipt,
 } from 'lucide-react';
 
 export default function FormulationOrdersPage() {
@@ -39,6 +42,9 @@ export default function FormulationOrdersPage() {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [orderDetail, setOrderDetail] = useState<any | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+
+  // Edit Order Modal
+  const [editingOrder, setEditingOrder] = useState<any | null>(null);
 
   // Create Draft Order Modal state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -369,6 +375,15 @@ export default function FormulationOrdersPage() {
             View
           </Button>
 
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setEditingOrder(item)}
+            icon={<Edit3 className="h-3 w-3 text-amber-600" />}
+          >
+            Edit
+          </Button>
+
           {item.status === 'DRAFT' && (
             <Button
               variant="primary"
@@ -625,6 +640,19 @@ export default function FormulationOrdersPage() {
               </div>
             </div>
 
+            {/* Chronological Directives & Notes */}
+            {orderDetail.notes && (
+              <div className="space-y-1.5">
+                <h5 className="font-bold text-slate-900 flex items-center gap-1.5">
+                  <Receipt className="h-4 w-4 text-forest-700" />
+                  Approval Directives & Chronological Notes
+                </h5>
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950 font-mono whitespace-pre-line">
+                  {orderDetail.notes}
+                </div>
+              </div>
+            )}
+
             {/* Invoicing & Shipping Info */}
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-1">
@@ -677,6 +705,18 @@ export default function FormulationOrdersPage() {
                 }}
               >
                 Close Dossier
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setEditingOrder(orderDetail);
+                  setSelectedOrderId(null);
+                }}
+                icon={<Edit3 className="h-3.5 w-3.5 text-amber-600" />}
+              >
+                Edit Order & Prices
               </Button>
 
               {orderDetail.status === 'DRAFT' && (
@@ -875,6 +915,19 @@ export default function FormulationOrdersPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Edit Order Modal */}
+      {editingOrder && (
+        <EditOrderModal
+          isOpen={!!editingOrder}
+          onClose={() => setEditingOrder(null)}
+          order={editingOrder}
+          onOrderUpdated={(updated) => {
+            setSuccessMsg(`Order ${updated.orderNumber} successfully updated.`);
+            fetchOrders();
+          }}
+        />
+      )}
     </div>
   );
 }

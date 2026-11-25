@@ -319,6 +319,11 @@ export default function EmployeesAdminPage() {
             count: employees.filter((e) => e.role === 'SALESPERSON').length,
           },
           {
+            key: 'FOLLOWUP_EXECUTIVE',
+            label: 'Follow-Up Care (Panel 06)',
+            count: employees.filter((e) => e.role === 'FOLLOWUP_EXECUTIVE').length,
+          },
+          {
             key: 'PENDING_REVIEWER',
             label: 'Pending Reviewers (Panel 03)',
             count: employees.filter((e) => e.role === 'PENDING_REVIEWER').length,
@@ -429,6 +434,7 @@ export default function EmployeesAdminPage() {
               className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-700"
             >
               <option value="SALESPERSON">Panel 02: Salesperson (Tele-Consultant • 0% Source Exposure)</option>
+              <option value="FOLLOWUP_EXECUTIVE">Panel 06: Follow-Up Executive (Customer Care, Wellness & Refills • MEL-FLW-)</option>
               <option value="PENDING_REVIEWER">Panel 03: Pending Reviewer (Formulation & Dosage Verification)</option>
               <option value="APPROVAL_OFFICER">Panel 04: Approval Officer (Commercial & Medical Clearance)</option>
               <option value="MANAGEMENT">Panel 05: Management (GST Invoicing, Inventory & Dispatch)</option>

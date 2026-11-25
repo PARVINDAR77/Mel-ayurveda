@@ -17,6 +17,7 @@ enum RoleType {
   PENDING_REVIEWER
   APPROVAL_OFFICER
   MANAGEMENT
+  FOLLOWUP_EXECUTIVE
 }
 
 model User {
@@ -47,6 +48,9 @@ model User {
   auditLogs          AuditLog[]
   ordersCreated      Order[]          @relation("OrdersCreated")
   notifications      Notification[]
+  customerFollowUpsAssigned CustomerFollowUp[] @relation("FollowUpAssignedTo")
+  customerFollowUpsCreated  CustomerFollowUp[] @relation("FollowUpAssignedBy")
+  customerFollowUpLogs      CustomerFollowUpLog[]
 
   @@index([role, isActive])
   @@index([employeeCode])
@@ -361,6 +365,7 @@ model Customer {
 
   convertedFrom   Lead?      @relation(fields: [convertedFromId], references: [id])
   orders          Order[]
+  followUps       CustomerFollowUp[]
 
   @@index([createdAt])
   @@index([fullName])
@@ -421,6 +426,8 @@ enum OrderStatus {
 
 enum PaymentMode {
   CASH_ON_DELIVERY
+  FACE_TO_FACE
+  PREPAID
   UPI
   NET_BANKING
   CARD
@@ -597,6 +604,7 @@ enum NotificationType {
   APPROVAL_GRANTED
   ORDER_CONFIRMED
   DISPATCH_UPDATE
+  FOLLOWUP_ASSIGNED
 }
 
 model Notification {
@@ -615,5 +623,68 @@ model Notification {
   @@index([userId, isRead])
   @@index([userId, createdAt])
   @@map("notifications")
+}
+
+// ==========================================
+// 14. CUSTOMER POST-SALES CARE & FOLLOW-UP DESK
+// ==========================================
+
+enum CustomerFollowUpStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  RESCHEDULED
+  CANCELLED
+}
+
+enum HealthReliefRating {
+  SIGNIFICANT_RELIEF
+  MODERATE_RELIEF
+  MILD_RELIEF
+  NO_CHANGE
+  ADVERSE_CONCERN
+}
+
+model CustomerFollowUp {
+  id                String                 @id @default(uuid()) @db.Uuid
+  customerId        String                 @db.Uuid
+  assignedToId      String                 @db.Uuid
+  assignedById      String                 @db.Uuid
+  scheduledTime     DateTime               @default(now()) @db.Timestamptz
+  status            CustomerFollowUpStatus @default(PENDING)
+  campaignObjective String                 @db.VarChar(255)
+  adminDirectives   String?                @db.Text
+  completedAt       DateTime?              @db.Timestamptz
+  createdAt         DateTime               @default(now()) @db.Timestamptz
+  updatedAt         DateTime               @updatedAt @db.Timestamptz
+
+  customer          Customer               @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  assignedTo        User                   @relation("FollowUpAssignedTo", fields: [assignedToId], references: [id])
+  assignedBy        User                   @relation("FollowUpAssignedBy", fields: [assignedById], references: [id])
+  logs              CustomerFollowUpLog[]
+
+  @@index([assignedToId, status, scheduledTime])
+  @@index([customerId])
+  @@map("customer_follow_ups")
+}
+
+model CustomerFollowUpLog {
+  id                  String              @id @default(uuid()) @db.Uuid
+  followUpId          String              @db.Uuid
+  callerId            String              @db.Uuid
+  callDurationSeconds Int                 @default(0)
+  disposition         String              @db.VarChar(100)
+  healthRating        HealthReliefRating?
+  consultationNotes   String              @db.Text
+  patientFeedback     String?             @db.Text
+  refillRequested     Boolean             @default(false)
+  nextFollowUpDate    DateTime?           @db.Timestamptz
+  createdAt           DateTime            @default(now()) @db.Timestamptz
+
+  followUp            CustomerFollowUp    @relation(fields: [followUpId], references: [id], onDelete: Cascade)
+  caller              User                @relation(fields: [callerId], references: [id])
+
+  @@index([followUpId])
+  @@map("customer_follow_up_logs")
 }
 

@@ -26,8 +26,8 @@ export class LeadsController {
   constructor(private readonly leadsService: LeadsService) {}
 
   @Post('manual')
-  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT)
-  @ApiOperation({ summary: 'Manually create lead (Super Admin / Management)' })
+  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT, RoleType.SALESPERSON)
+  @ApiOperation({ summary: 'Manually create lead (Super Admin / Management / Salesperson)' })
   @ApiResponse({ status: 201, description: 'Lead created successfully' })
   async createManualLead(
     @Body() dto: CreateManualLeadDto,

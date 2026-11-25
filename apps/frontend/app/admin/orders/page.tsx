@@ -9,12 +9,15 @@ import { Button } from '../../../components/ui/button';
 import { Modal } from '../../../components/ui/modal';
 import { Drawer } from '../../../components/ui/drawer';
 import { StatCard } from '../../../components/ui/stat-card';
+import { EditOrderModal } from '../../../components/orders/edit-order-modal';
+import { DecideOrderModal } from '../../../components/orders/decide-order-modal';
 import {
   Package,
   PlusCircle,
   RefreshCw,
   Search,
   CheckCircle2,
+  CheckCheck,
   XCircle,
   FileText,
   Truck,
@@ -29,6 +32,7 @@ import {
   TrendingUp,
   Receipt,
   ArrowLeft,
+  Edit3,
 } from 'lucide-react';
 
 export default function SuperAdminOrdersPage() {
@@ -45,6 +49,10 @@ export default function SuperAdminOrdersPage() {
   const [orderDetail, setOrderDetail] = useState<any | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
+  // Edit & Decide Modals
+  const [editingOrder, setEditingOrder] = useState<any | null>(null);
+  const [decidingOrder, setDecidingOrder] = useState<any | null>(null);
+
   // Create Draft Order Modal state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [customers, setCustomers] = useState<any[]>([]);
@@ -60,6 +68,13 @@ export default function SuperAdminOrdersPage() {
   const [cancelReason, setCancelReason] = useState('Super Admin requested cancellation');
   const [isCancelling, setIsCancelling] = useState(false);
 
+  // Dispatch Consignment Modal state
+  const [dispatchOrder, setDispatchOrder] = useState<any | null>(null);
+  const [courierPartner, setCourierPartner] = useState('BlueDart Express');
+  const [trackingAwb, setTrackingAwb] = useState('');
+  const [trackingUrl, setTrackingUrl] = useState('');
+  const [isDispatching, setIsDispatching] = useState(false);
+
   // Action Loading state
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
@@ -68,6 +83,7 @@ export default function SuperAdminOrdersPage() {
       setIsLoading(true);
       setError(null);
       const params = new URLSearchParams();
+      params.append('limit', '50');
       if (statusFilter && statusFilter !== 'ALL') {
         params.append('status', statusFilter);
       }
@@ -241,6 +257,57 @@ export default function SuperAdminOrdersPage() {
     }
   };
 
+  const openDispatchModal = (order: any) => {
+    setDispatchOrder(order);
+    setCourierPartner('BlueDart Express');
+    const orderNumClean = (order.orderNumber || '').replace(/[^0-9]/g, '');
+    const randDigits = Math.floor(100000 + Math.random() * 900000);
+    setTrackingAwb(`BD${orderNumClean || randDigits}IN`);
+    setTrackingUrl('');
+  };
+
+  const handleDispatchSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dispatchOrder) return;
+    try {
+      setIsDispatching(true);
+      setError(null);
+      await apiClient.post(`/dispatch/${dispatchOrder.id}`, {
+        courierPartner,
+        trackingAwb: trackingAwb.trim().toUpperCase(),
+        trackingUrl: trackingUrl.trim() || undefined,
+      });
+      setSuccessMsg(`Order ${dispatchOrder.orderNumber} successfully manifested & dispatched via ${courierPartner} (AWB: ${trackingAwb.trim().toUpperCase()}).`);
+      setDispatchOrder(null);
+      fetchOrders();
+    } catch (err: any) {
+      setError(getErrorMessage(err));
+    } finally {
+      setIsDispatching(false);
+    }
+  };
+
+  const handleDeliverOrder = async (order: any) => {
+    if (!window.confirm(`Mark order ${order.orderNumber} as DELIVERED to customer? This will fulfill warehouse reserved inventory and mark payment as PAID.`)) {
+      return;
+    }
+    try {
+      setActionLoadingId(order.id);
+      setError(null);
+      if (order.shipment?.id) {
+        await apiClient.patch(`/dispatch/${order.shipment.id}/status`, { status: 'DELIVERED' });
+      } else {
+        await apiClient.patch(`/orders/${order.id}`, { status: 'DELIVERED' });
+      }
+      setSuccessMsg(`Order ${order.orderNumber} successfully marked as DELIVERED.`);
+      fetchOrders();
+    } catch (err: any) {
+      setError(getErrorMessage(err));
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
   const columns: Column<any>[] = [
     {
       key: 'orderNumber',
@@ -268,37 +335,82 @@ export default function SuperAdminOrdersPage() {
       ),
     },
     {
-      key: 'items',
-      header: 'Formulations / Regimen',
+      key: 'createdBy',
+      header: 'Sales Agent',
       render: (item) => (
         <div>
-          <span className="font-medium text-slate-800 text-xs block">
-            {item.items?.[0]?.product?.name || 'Ayurvedic Medicine'}
+          <span className="font-semibold text-xs text-emerald-950 flex items-center gap-1">
+            <span>👤</span> {item.createdBy?.firstName ? `${item.createdBy.firstName} ${item.createdBy.lastName || ''}` : 'Sales Agent'}
           </span>
-          <span className="text-[11px] text-slate-500">
-            {item.items?.length || 0} formulation unit(s)
+          <span className="text-[10px] text-slate-500 font-mono block">
+            {item.createdBy?.employeeCode || 'MEL-SLS'}
           </span>
         </div>
       ),
     },
     {
+      key: 'items',
+      header: 'Disease & Formulation',
+      render: (item) => {
+        const firstItem = item.items?.[0];
+        const disease = firstItem?.product?.targetDisease;
+        return (
+          <div>
+            {disease && (
+              <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300 mb-1">
+                {disease}
+              </span>
+            )}
+            <span className="font-semibold text-slate-800 text-xs block truncate max-w-[180px]">
+              {firstItem?.product?.name || 'Ayurvedic Medicine'}
+            </span>
+            <span className="text-[11px] text-slate-500">
+              {item.items?.length || 0} line item(s)
+            </span>
+          </div>
+        );
+      },
+    },
+    {
       key: 'amount',
-      header: 'Order Value & Payment',
-      render: (item) => (
-        <div>
-          <span className="font-bold font-mono text-slate-900">
-            ₹{Number(item.totalAmount || 0).toLocaleString('en-IN')}
-          </span>
-          <span className="block text-[10px] uppercase font-semibold text-slate-500">
-            {item.paymentMode?.replace(/_/g, ' ') || 'COD'}
-          </span>
-        </div>
-      ),
+      header: 'Agreed Price vs MRP',
+      render: (item) => {
+        const firstItem = item.items?.[0];
+        const mrp = firstItem?.product?.mrpPrice ? Number(firstItem.product.mrpPrice) : null;
+        const total = Number(item.totalAmount || 0);
+        const discount = item.discountAmount ? Number(item.discountAmount) : (mrp && mrp > total ? mrp - total : 0);
+        return (
+          <div>
+            <span className="font-bold font-mono text-emerald-900 text-sm block">
+              ₹{total.toLocaleString('en-IN')}
+            </span>
+            {mrp && mrp > total && (
+              <div className="flex items-center gap-1.5 text-[10px]">
+                <span className="line-through text-slate-400 font-mono">₹{mrp.toLocaleString('en-IN')}</span>
+                <span className="text-emerald-700 font-semibold">-₹{discount.toLocaleString('en-IN')}</span>
+              </div>
+            )}
+            <span className="block text-[10px] uppercase font-semibold text-slate-500 mt-0.5">
+              {item.paymentMode === 'FACE_TO_FACE' ? 'Face to Face' : item.paymentMode === 'PREPAID' ? 'Prepaid' : item.paymentMode === 'CASH_ON_DELIVERY' ? 'COD' : item.paymentMode?.replace(/_/g, ' ') || 'COD'}
+            </span>
+          </div>
+        );
+      },
     },
     {
       key: 'status',
       header: 'Status',
-      render: (item) => <Badge variant="leadStatus" status={item.status}>{item.status}</Badge>,
+      render: (item) => (
+        <div>
+          <Badge variant="leadStatus" status={item.status}>{item.status}</Badge>
+          {item.shipment?.trackingAwb && (
+            <div className="flex items-center gap-1 text-[10px] text-blue-700 font-mono mt-0.5" title={`Dispatched via ${item.shipment.courierPartner}`}>
+              <Truck className="h-2.5 w-2.5 shrink-0" />
+              <span className="truncate max-w-[130px]">{item.shipment.trackingAwb}</span>
+            </div>
+          )}
+        </div>
+      ),
     },
     {
       key: 'createdAt',
@@ -328,6 +440,31 @@ export default function SuperAdminOrdersPage() {
             </Button>
           )}
 
+          {(item.status === 'CONFIRMED' || item.status === 'PROCESSING') && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => openDispatchModal(item)}
+              className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-300 font-semibold text-xs px-2.5 py-1 h-7"
+              icon={<Truck className="h-3 w-3 text-blue-600" />}
+            >
+              Dispatch
+            </Button>
+          )}
+
+          {item.status === 'SHIPPED' && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleDeliverOrder(item)}
+              isLoading={actionLoadingId === item.id}
+              className="bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-300 font-semibold text-xs px-2.5 py-1 h-7"
+              icon={<CheckCheck className="h-3 w-3 text-purple-600" />}
+            >
+              Deliver
+            </Button>
+          )}
+
           <Button
             variant="outline"
             size="sm"
@@ -336,6 +473,16 @@ export default function SuperAdminOrdersPage() {
             className="text-xs px-2 py-1 h-7"
           >
             Details
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setEditingOrder(item)}
+            icon={<Edit3 className="h-3 w-3 text-amber-600" />}
+            className="text-xs px-2 py-1 h-7"
+          >
+            Edit
           </Button>
 
           {item.status !== 'CANCELLED' && item.status !== 'DELIVERED' && (
@@ -427,7 +574,7 @@ export default function SuperAdminOrdersPage() {
       )}
 
       {/* KPI StatCards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
         <StatCard
           title="Total Orders"
           value={metrics?.totalOrders ?? (isLoading ? '...' : 0)}
@@ -447,9 +594,17 @@ export default function SuperAdminOrdersPage() {
         <StatCard
           title="Shipped & Dispatched"
           value={metrics?.shippedOrders ?? (isLoading ? '...' : 0)}
-          subtitle="In transit via BlueDart/DTDC"
+          subtitle="In transit via courier"
           icon={Truck}
           colorTheme="blue"
+        />
+
+        <StatCard
+          title="Delivered to Customer"
+          value={metrics?.deliveredOrders ?? (isLoading ? '...' : 0)}
+          subtitle="Fulfilled & finalized"
+          icon={CheckCheck}
+          colorTheme="purple"
         />
 
         <StatCard
@@ -464,15 +619,32 @@ export default function SuperAdminOrdersPage() {
       {/* Filter Tabs and Search Toolbar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs overflow-x-auto">
-          {['ALL', 'DRAFT', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'].map((st) => (
+          {[
+            { id: 'ALL', label: 'ALL', count: metrics?.totalOrders },
+            { id: 'CONFIRMED', label: 'CONFIRMED', count: metrics?.confirmedOrders },
+            { id: 'SHIPPED', label: 'SHIPPED', count: metrics?.shippedOrders },
+            { id: 'DELIVERED', label: 'DELIVERED', count: metrics?.deliveredOrders },
+            { id: 'PROCESSING', label: 'PROCESSING', count: metrics?.processingOrders },
+            { id: 'DRAFT', label: 'DRAFT', count: metrics?.draftOrders },
+            { id: 'CANCELLED', label: 'CANCELLED', count: metrics?.cancelledOrders },
+          ].map((tab) => (
             <button
-              key={st}
-              onClick={() => setStatusFilter(st)}
-              className={`px-3 py-1.5 rounded-md font-semibold transition shrink-0 ${
-                statusFilter === st ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              key={tab.id}
+              onClick={() => setStatusFilter(tab.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-semibold transition shrink-0 ${
+                statusFilter === tab.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              {st}
+              <span>{tab.label}</span>
+              {tab.count !== undefined && (
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
+                    statusFilter === tab.id ? 'bg-slate-900 text-white' : 'bg-slate-200 text-slate-700'
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -533,7 +705,9 @@ export default function SuperAdminOrdersPage() {
               <div className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-200/80 pt-3 text-xs">
                 <div>
                   <span className="text-[10px] uppercase font-bold text-slate-400">Payment Mode</span>
-                  <p className="font-bold text-slate-900 mt-0.5">{orderDetail.paymentMode?.replace(/_/g, ' ')}</p>
+                  <p className="font-bold text-slate-900 mt-0.5">
+                    {orderDetail.paymentMode === 'FACE_TO_FACE' ? 'Face to Face' : orderDetail.paymentMode === 'PREPAID' ? 'Prepaid' : orderDetail.paymentMode === 'CASH_ON_DELIVERY' ? 'Cash on Delivery (COD)' : orderDetail.paymentMode?.replace(/_/g, ' ')}
+                  </p>
                 </div>
                 <div>
                   <span className="text-[10px] uppercase font-bold text-slate-400">Total Bill Value</span>
@@ -607,6 +781,18 @@ export default function SuperAdminOrdersPage() {
               </div>
             </div>
 
+            {/* Notes & Remarks History */}
+            {orderDetail.notes && (
+              <div className="space-y-2">
+                <h4 className="font-bold text-slate-900 flex items-center gap-2">
+                  <Receipt className="h-4 w-4 text-emerald-700" /> Approver Directives & Chronological Notes
+                </h4>
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-950 font-mono whitespace-pre-line">
+                  {orderDetail.notes}
+                </div>
+              </div>
+            )}
+
             {/* Tax & GST Summary */}
             <div className="rounded-xl border border-slate-200 p-4 bg-slate-50/60 space-y-2">
               <div className="flex items-center justify-between text-slate-600">
@@ -631,6 +817,16 @@ export default function SuperAdminOrdersPage() {
 
             {/* Drawer Quick Actions */}
             <div className="pt-2 flex items-center justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setEditingOrder(orderDetail);
+                  setSelectedOrderId(null);
+                }}
+                icon={<Edit3 className="h-4 w-4 text-amber-600" />}
+              >
+                Edit Order & Prices
+              </Button>
               {orderDetail.status === 'DRAFT' && (
                 <Button
                   variant="primary"
@@ -642,6 +838,32 @@ export default function SuperAdminOrdersPage() {
                   className="bg-emerald-700 hover:bg-emerald-800 text-white"
                 >
                   Confirm & Allocate Stock
+                </Button>
+              )}
+              {(orderDetail.status === 'CONFIRMED' || orderDetail.status === 'PROCESSING') && (
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    openDispatchModal(orderDetail);
+                    setSelectedOrderId(null);
+                  }}
+                  icon={<Truck className="h-4 w-4" />}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Dispatch via Courier
+                </Button>
+              )}
+              {orderDetail.status === 'SHIPPED' && (
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    handleDeliverOrder(orderDetail);
+                    setSelectedOrderId(null);
+                  }}
+                  icon={<CheckCheck className="h-4 w-4" />}
+                  className="bg-purple-700 hover:bg-purple-800 text-white"
+                >
+                  Mark Delivered to Customer
                 </Button>
               )}
             </div>
@@ -742,11 +964,12 @@ export default function SuperAdminOrdersPage() {
               <select
                 value={paymentMode}
                 onChange={(e) => setPaymentMode(e.target.value)}
-                className="w-full rounded-md border border-slate-300 p-2 text-xs focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                style={{ color: '#0f172a', backgroundColor: '#ffffff' }}
+                className="w-full rounded-md border border-slate-300 p-2 text-xs font-bold text-slate-900 bg-white focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
               >
-                <option value="CASH_ON_DELIVERY">Cash on Delivery (COD)</option>
-                <option value="PREPAID_UPI">Prepaid UPI / QR</option>
-                <option value="NET_BANKING">Net Banking / NEFT</option>
+                <option value="CASH_ON_DELIVERY" style={{ color: '#0f172a', backgroundColor: '#ffffff', fontWeight: 600 }}>Cash on Delivery (COD)</option>
+                <option value="FACE_TO_FACE" style={{ color: '#0f172a', backgroundColor: '#ffffff', fontWeight: 600 }}>Face to Face</option>
+                <option value="PREPAID" style={{ color: '#0f172a', backgroundColor: '#ffffff', fontWeight: 600 }}>Prepaid</option>
               </select>
             </div>
 
@@ -806,6 +1029,107 @@ export default function SuperAdminOrdersPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Dispatch Consignment Modal */}
+      <Modal
+        isOpen={!!dispatchOrder}
+        onClose={() => setDispatchOrder(null)}
+        title="Dispatch Order via Courier Consignment"
+        description="Manifest an express courier consignment to dispatch this confirmed formulation order."
+      >
+        {dispatchOrder && (
+          <form onSubmit={handleDispatchSubmit} className="space-y-4 text-xs">
+            <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-3 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-blue-950 font-mono text-sm">{dispatchOrder.orderNumber}</span>
+                <span className="font-bold text-emerald-800 font-mono">₹{Number(dispatchOrder.totalAmount || 0).toLocaleString('en-IN')}</span>
+              </div>
+              <p className="text-slate-700">
+                <span className="font-semibold">Recipient:</span> {dispatchOrder.customer?.fullName} ({dispatchOrder.customer?.phoneNumber})
+              </p>
+              <p className="text-slate-600 truncate">
+                <span className="font-semibold">Destination:</span> {[dispatchOrder.customer?.city, dispatchOrder.customer?.state, dispatchOrder.customer?.pincode].filter(Boolean).join(', ') || 'Gujarat'}
+              </p>
+            </div>
+
+            <div>
+              <label className="block font-semibold uppercase tracking-wider text-slate-700 mb-1">
+                Courier Partner *
+              </label>
+              <select
+                value={courierPartner}
+                onChange={(e) => setCourierPartner(e.target.value)}
+                className="w-full rounded-md border border-slate-300 p-2 text-xs font-semibold text-slate-900 bg-white focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
+                required
+              >
+                <option value="BlueDart Express">BlueDart Express (Air Priority)</option>
+                <option value="DTDC Priority">DTDC Priority Logistics</option>
+                <option value="Delhivery Surface">Delhivery Surface Cargo</option>
+                <option value="Ekart Logistics">Ekart Logistics</option>
+                <option value="India Post Speed Post">India Post Speed Post</option>
+              </select>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="font-semibold uppercase tracking-wider text-slate-700">
+                  AWB Tracking Number *
+                </label>
+                <span className="text-[10px] text-slate-400 font-mono">Consignment Manifest ID</span>
+              </div>
+              <input
+                type="text"
+                value={trackingAwb}
+                onChange={(e) => setTrackingAwb(e.target.value.toUpperCase())}
+                placeholder="e.g. BD78392101IN"
+                className="w-full rounded-md border border-slate-300 p-2 text-xs font-mono font-bold tracking-wide uppercase text-slate-900 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block font-semibold uppercase tracking-wider text-slate-700 mb-1">
+                Tracking URL (Optional)
+              </label>
+              <input
+                type="url"
+                value={trackingUrl}
+                onChange={(e) => setTrackingUrl(e.target.value)}
+                placeholder="https://track.bluedart.com/..."
+                className="w-full rounded-md border border-slate-300 p-2 text-xs text-slate-900 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
+              />
+            </div>
+
+            <div className="pt-3 border-t border-slate-200 flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setDispatchOrder(null)}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                isLoading={isDispatching}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                icon={<Truck className="h-4 w-4" />}
+              >
+                Manifest & Dispatch Order
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* Edit Order Modal */}
+      {editingOrder && (
+        <EditOrderModal
+          isOpen={!!editingOrder}
+          onClose={() => setEditingOrder(null)}
+          order={editingOrder}
+          onOrderUpdated={(updated) => {
+            setSuccessMsg(`Order ${updated.orderNumber} successfully updated.`);
+            fetchOrders();
+          }}
+        />
+      )}
     </div>
   );
 }

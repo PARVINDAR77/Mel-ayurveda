@@ -2,13 +2,16 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateDraftOrderDto } from './dto/create-draft-order.dto';
+import { UpdateOrderDto } from './dto/update-order.dto';
+import { DecideOrderDto } from './dto/decide-order.dto';
 import { OrderQueryDto } from './dto/order-query.dto';
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
-import { InventoryTxType, OrderStatus, PaymentMode, PaymentStatus, LeadStatus, RoleType, NotificationType } from '@prisma/client';
+import { InventoryTxType, OrderStatus, PaymentMode, PaymentStatus, LeadStatus, LeadPriority, RoleType, NotificationType } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
@@ -29,33 +32,147 @@ export class OrdersService {
     const existing = await this.prisma.order.findMany({
       where: { orderNumber: { startsWith: prefix } },
       select: { orderNumber: true },
-      orderBy: { createdAt: 'desc' },
-      take: 100,
+      orderBy: { orderNumber: 'desc' },
+      take: 50,
     });
 
     let maxNumber = 100; // Baseline start
     for (const o of existing) {
-      const numPart = o.orderNumber.replace(prefix, '');
+      const numPart = o.orderNumber.replace(prefix, '').trim();
       const parsed = parseInt(numPart, 10);
       if (!isNaN(parsed) && parsed > maxNumber) {
         maxNumber = parsed;
       }
     }
 
-    const nextNumber = maxNumber + 1;
-    return `${prefix}${String(nextNumber).padStart(5, '0')}`;
+    let nextNumber = maxNumber + 1;
+    let candidate = `${prefix}${String(nextNumber).padStart(5, '0')}`;
+
+    // Safety verification: ensure candidate order token does not exist in database
+    let duplicateCheck = await this.prisma.order.findUnique({
+      where: { orderNumber: candidate },
+    });
+    while (duplicateCheck) {
+      nextNumber += 1;
+      candidate = `${prefix}${String(nextNumber).padStart(5, '0')}`;
+      duplicateCheck = await this.prisma.order.findUnique({
+        where: { orderNumber: candidate },
+      });
+    }
+
+    return candidate;
   }
 
   /**
-   * Create a draft order for a verified customer
+   * Create a draft order for a verified customer or lead
    */
   async createDraftOrder(dto: CreateDraftOrderDto, user: AuthenticatedUser) {
-    const customer = await this.prisma.customer.findUnique({
-      where: { id: dto.customerId },
-    });
+    let customer: any = null;
+
+    if (dto.customerId) {
+      customer = await this.prisma.customer.findUnique({
+        where: { id: dto.customerId },
+      });
+    }
+
+    if (!customer && (dto.phoneNumber || dto.leadId)) {
+      const phoneDigits = dto.phoneNumber
+        ? dto.phoneNumber.replace(/\D/g, '').slice(-10)
+        : null;
+
+      if (phoneDigits) {
+        customer = await this.prisma.customer.findFirst({
+          where: {
+            OR: [
+              { phoneNumber: dto.phoneNumber },
+              { phoneNumber: phoneDigits },
+              { phoneNumber: `+91${phoneDigits}` },
+            ],
+          },
+        });
+      }
+
+      if (!customer && dto.leadId) {
+        const lead = await this.prisma.lead.findUnique({
+          where: { id: dto.leadId },
+        });
+        if (lead) {
+          const leadDigits = lead.phoneNumber.replace(/\D/g, '').slice(-10);
+          customer = await this.prisma.customer.findFirst({
+            where: {
+              OR: [
+                { phoneNumber: lead.phoneNumber },
+                { phoneNumber: leadDigits },
+                { phoneNumber: `+91${leadDigits}` },
+              ],
+            },
+          });
+
+          if (!customer) {
+            const count = await this.prisma.customer.count();
+            const customerCode = `MEL-CUST-${String(count + 1).padStart(5, '0')}`;
+            customer = await this.prisma.customer.create({
+              data: {
+                customerCode,
+                fullName: dto.customerName?.trim() || lead.customerName,
+                phoneNumber: lead.phoneNumber,
+                alternatePhone: dto.alternatePhone?.trim() || lead.alternatePhone,
+                address: dto.shippingAddress?.trim() || lead.address,
+                city: dto.city?.trim() || lead.city,
+                state: dto.state?.trim() || lead.state,
+                pincode: dto.pincode?.trim(),
+                convertedFromId: lead.id,
+              },
+            });
+          }
+        }
+      } else if (!customer && dto.customerName && dto.phoneNumber) {
+        const phoneDigits = dto.phoneNumber.replace(/\D/g, '').slice(-10);
+        customer = await this.prisma.customer.findFirst({
+          where: {
+            OR: [
+              { phoneNumber: dto.phoneNumber.trim() },
+              { phoneNumber: phoneDigits },
+              { phoneNumber: `+91${phoneDigits}` },
+            ],
+          },
+        });
+
+        if (!customer) {
+          const count = await this.prisma.customer.count();
+          const timestamp = Date.now().toString().slice(-4);
+          const customerCode = `MEL-CUST-${String(count + 1).padStart(4, '0')}-${timestamp}`;
+          try {
+            customer = await this.prisma.customer.create({
+              data: {
+                customerCode,
+                fullName: dto.customerName.trim(),
+                phoneNumber: phoneDigits || dto.phoneNumber.trim(),
+                alternatePhone: dto.alternatePhone?.trim(),
+                address: dto.shippingAddress?.trim(),
+                city: dto.city?.trim() || 'Gujarat',
+                state: dto.state?.trim() || 'Gujarat',
+                pincode: dto.pincode?.trim(),
+              },
+            });
+          } catch (createErr) {
+            // If duplicate phone or customerCode happened concurrently, fetch existing
+            customer = await this.prisma.customer.findFirst({
+              where: {
+                OR: [
+                  { phoneNumber: dto.phoneNumber.trim() },
+                  { phoneNumber: phoneDigits },
+                ],
+              },
+            });
+            if (!customer) throw createErr;
+          }
+        }
+      }
+    }
 
     if (!customer) {
-      throw new NotFoundException(`Customer with ID ${dto.customerId} not found`);
+      throw new NotFoundException('Customer could not be found or created. Please provide valid customer details or lead ID.');
     }
 
     if (!dto.items || dto.items.length === 0) {
@@ -81,7 +198,11 @@ export class OrdersService {
 
     for (const item of dto.items) {
       const product = productMap.get(item.productId)!;
-      const unitPrice = Number(product.sellingPrice);
+      // Allow custom negotiated unitPrice entered by salesperson to close deals
+      const unitPrice =
+        item.unitPrice !== undefined && item.unitPrice !== null && !isNaN(Number(item.unitPrice)) && Number(item.unitPrice) >= 0
+          ? Number(item.unitPrice)
+          : Number(product.sellingPrice);
       const totalPrice = unitPrice * item.quantity;
       const gstRate = Number(product.gstRate) || 12.0;
       const itemTax = (totalPrice * gstRate) / 100;
@@ -123,7 +244,7 @@ export class OrdersService {
           items: {
             include: {
               product: {
-                select: { id: true, sku: true, name: true, sellingPrice: true },
+                select: { id: true, sku: true, name: true, sellingPrice: true, mrpPrice: true, targetDisease: true },
               },
             },
           },
@@ -140,6 +261,24 @@ export class OrdersService {
         },
       });
 
+      // If associated with a Lead, update status to CONVERTED or PENDING_REVIEW
+      if (dto.leadId) {
+        await tx.lead.update({
+          where: { id: dto.leadId },
+          data: { status: LeadStatus.CONVERTED },
+        }).catch(() => null);
+
+        await tx.leadStatusHistory.create({
+          data: {
+            leadId: dto.leadId,
+            fromStatus: LeadStatus.INTERESTED,
+            toStatus: LeadStatus.CONVERTED,
+            changedById: user.id,
+            reason: `Order ${orderNumber} created with negotiated deal by ${user.employeeCode}`,
+          },
+        }).catch(() => null);
+      }
+
       await tx.auditLog.create({
         data: {
           userId: user.id,
@@ -151,6 +290,8 @@ export class OrdersService {
             totalAmount: order.totalAmount,
             customerCode: customer.customerCode,
             createdBy: user.employeeCode,
+            negotiatedDiscount: discountAmount,
+            itemCount: dto.items.length,
           },
         },
       });
@@ -253,7 +394,7 @@ export class OrdersService {
           items: {
             include: {
               product: {
-                select: { id: true, sku: true, name: true },
+                select: { id: true, sku: true, name: true, mrpPrice: true, sellingPrice: true, targetDisease: true },
               },
             },
           },
@@ -263,11 +404,11 @@ export class OrdersService {
 
       // 3. Automatically transition associated Lead to CONVERTED
       let associatedLead = null;
-      if (order.customer.convertedFromId) {
+      if (order.customer?.convertedFromId) {
         associatedLead = await tx.lead.findUnique({
           where: { id: order.customer.convertedFromId },
         });
-      } else if (order.customer.phoneNumber) {
+      } else if (order.customer?.phoneNumber) {
         associatedLead = await tx.lead.findFirst({
           where: { phoneNumber: order.customer.phoneNumber },
           orderBy: { createdAt: 'desc' },
@@ -370,12 +511,19 @@ export class OrdersService {
   /**
    * Retrieves paginated list of orders
    */
-  async findAll(query: OrderQueryDto) {
+  async findAll(query: OrderQueryDto, user?: AuthenticatedUser) {
     const page = Math.max(1, Number(query.page) || 1);
     const limit = Math.max(1, Math.min(100, Number(query.limit) || 20));
     const skip = (page - 1) * limit;
 
     const where: any = {};
+
+    // Role-based scoping: Salesperson only views their own booked orders
+    if (user?.role === RoleType.SALESPERSON) {
+      where.createdById = user.id;
+    } else if (query.createdById) {
+      where.createdById = query.createdById;
+    }
 
     if (query.status) {
       where.status = query.status;
@@ -391,6 +539,7 @@ export class OrdersService {
         { orderNumber: { contains: s, mode: 'insensitive' } },
         { customer: { fullName: { contains: s, mode: 'insensitive' } } },
         { customer: { customerCode: { contains: s, mode: 'insensitive' } } },
+        { customer: { phoneNumber: { contains: s } } },
       ];
     }
 
@@ -415,7 +564,7 @@ export class OrdersService {
           items: {
             include: {
               product: {
-                select: { id: true, sku: true, name: true },
+                select: { id: true, sku: true, name: true, mrpPrice: true, sellingPrice: true, targetDisease: true },
               },
             },
           },
@@ -565,31 +714,492 @@ export class OrdersService {
   }
 
   /**
-   * Order Metrics for Management Dashboard
+   * Order Metrics for Management & Super Admin Dashboards
    */
   async getMetrics() {
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    const [totalOrders, confirmedCount, draftCount, todaySales] =
-      await Promise.all([
-        this.prisma.order.count(),
-        this.prisma.order.count({ where: { status: OrderStatus.CONFIRMED } }),
-        this.prisma.order.count({ where: { status: OrderStatus.DRAFT } }),
-        this.prisma.order.aggregate({
-          where: {
-            status: { in: [OrderStatus.CONFIRMED, OrderStatus.PROCESSING, OrderStatus.SHIPPED, OrderStatus.DELIVERED] },
-            createdAt: { gte: startOfToday },
-          },
-          _sum: { totalAmount: true },
-        }),
-      ]);
+    const [
+      totalOrders,
+      draftOrders,
+      confirmedOrders,
+      processingOrders,
+      shippedOrders,
+      deliveredOrders,
+      cancelledOrders,
+      returnedOrders,
+      totalRevenueAgg,
+      todayRevenueAgg,
+    ] = await Promise.all([
+      this.prisma.order.count(),
+      this.prisma.order.count({ where: { status: OrderStatus.DRAFT } }),
+      this.prisma.order.count({ where: { status: OrderStatus.CONFIRMED } }),
+      this.prisma.order.count({ where: { status: OrderStatus.PROCESSING } }),
+      this.prisma.order.count({ where: { status: OrderStatus.SHIPPED } }),
+      this.prisma.order.count({ where: { status: OrderStatus.DELIVERED } }),
+      this.prisma.order.count({ where: { status: OrderStatus.CANCELLED } }),
+      this.prisma.order.count({ where: { status: OrderStatus.RETURNED } }),
+      this.prisma.order.aggregate({
+        where: {
+          status: { in: [OrderStatus.CONFIRMED, OrderStatus.PROCESSING, OrderStatus.SHIPPED, OrderStatus.DELIVERED] },
+        },
+        _sum: { totalAmount: true },
+      }),
+      this.prisma.order.aggregate({
+        where: {
+          status: { in: [OrderStatus.CONFIRMED, OrderStatus.PROCESSING, OrderStatus.SHIPPED, OrderStatus.DELIVERED] },
+          createdAt: { gte: startOfToday },
+        },
+        _sum: { totalAmount: true },
+      }),
+    ]);
+
+    const totalRevenue = Number(totalRevenueAgg._sum.totalAmount || 0);
+    const todayRevenue = Number(todayRevenueAgg._sum.totalAmount || 0);
 
     return {
       totalOrders,
-      confirmedCount,
-      draftCount,
-      todayRevenue: Number(todaySales._sum.totalAmount || 0),
+      draftOrders,
+      draftCount: draftOrders,
+      confirmedOrders,
+      confirmedCount: confirmedOrders,
+      processingOrders,
+      shippedOrders,
+      deliveredOrders,
+      cancelledOrders,
+      returnedOrders,
+      totalRevenue,
+      todayRevenue,
+    };
+  }
+
+  /**
+   * Retrieve active formulation order linked to a lead or customer
+   */
+  async findByLeadId(leadId: string) {
+    const lead = await this.prisma.lead.findUnique({
+      where: { id: leadId },
+    });
+    if (!lead) return null;
+
+    const phoneDigits = lead.phoneNumber.replace(/\D/g, '').slice(-10);
+
+    const order = await this.prisma.order.findFirst({
+      where: {
+        OR: [
+          { customer: { convertedFromId: leadId } },
+          { customer: { phoneNumber: lead.phoneNumber } },
+          { customer: { phoneNumber: phoneDigits } },
+          { customer: { phoneNumber: `+91${phoneDigits}` } },
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        items: {
+          include: {
+            product: {
+              select: { id: true, sku: true, name: true, mrpPrice: true, sellingPrice: true, targetDisease: true },
+            },
+          },
+        },
+        customer: true,
+        createdBy: { select: { id: true, employeeCode: true, firstName: true, lastName: true, role: true } },
+      },
+    });
+
+    return order;
+  }
+
+  /**
+   * Update order attributes, items, quantities, pricing, and capture approver remarks
+   */
+  async updateOrder(orderId: string, dto: UpdateOrderDto, user: AuthenticatedUser) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: { include: { product: true } },
+        customer: true,
+        createdBy: true,
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order with ID ${orderId} not found`);
+    }
+
+    // Role check: Salesperson can only edit their own DRAFT orders
+    if (user.role === RoleType.SALESPERSON && order.createdById !== user.id) {
+      throw new ForbiddenException('You can only edit orders created by your desk');
+    }
+
+    // Cannot edit cancelled or dispatched orders unless Super Admin
+    if (order.status === OrderStatus.CANCELLED && user.role !== RoleType.SUPER_ADMIN) {
+      throw new BadRequestException('Cannot edit a CANCELLED order');
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      // 1. If customer info or address updated
+      if (
+        dto.customerName ||
+        dto.phoneNumber ||
+        dto.shippingAddress ||
+        dto.city ||
+        dto.state ||
+        dto.pincode ||
+        dto.alternatePhone
+      ) {
+        await tx.customer.update({
+          where: { id: order.customerId },
+          data: {
+            fullName: dto.customerName?.trim() || undefined,
+            phoneNumber: dto.phoneNumber?.trim() || undefined,
+            alternatePhone: dto.alternatePhone?.trim() || undefined,
+            address: dto.shippingAddress?.trim() || undefined,
+            city: dto.city?.trim() || undefined,
+            state: dto.state?.trim() || undefined,
+            pincode: dto.pincode?.trim() || undefined,
+          },
+        });
+      }
+
+      // 2. If items updated, recalculate financial totals
+      let subtotal = Number(order.subtotal);
+      let taxAmount = Number(order.taxAmount);
+      let discountAmount = dto.discountAmount !== undefined ? dto.discountAmount : Number(order.discountAmount);
+      let totalAmount = Number(order.totalAmount);
+
+      if (dto.items && dto.items.length > 0) {
+        // Delete existing items
+        await tx.orderItem.deleteMany({
+          where: { orderId: order.id },
+        });
+
+        // Fetch products and calculate line totals
+        let newSubtotal = 0;
+        const newOrderItemsData = [];
+
+        for (const itemDto of dto.items) {
+          const product = await tx.product.findUnique({
+            where: { id: itemDto.productId },
+          });
+          if (!product) {
+            throw new NotFoundException(`Product with ID ${itemDto.productId} not found`);
+          }
+
+          const unitPrice = itemDto.unitPrice !== undefined ? Number(itemDto.unitPrice) : Number(product.sellingPrice);
+          const lineTotal = Number((unitPrice * itemDto.quantity).toFixed(2));
+          newSubtotal += lineTotal;
+
+          newOrderItemsData.push({
+            orderId: order.id,
+            productId: product.id,
+            quantity: itemDto.quantity,
+            unitPrice,
+            totalPrice: lineTotal,
+          });
+        }
+
+        await tx.orderItem.createMany({
+          data: newOrderItemsData,
+        });
+
+        subtotal = Number(newSubtotal.toFixed(2));
+        taxAmount = Number((subtotal * 0.12).toFixed(2)); // 12% GST
+        const calculatedTotal = subtotal + taxAmount - discountAmount;
+        totalAmount = Math.max(0, Number(calculatedTotal.toFixed(2)));
+      } else if (dto.discountAmount !== undefined) {
+        const calculatedTotal = subtotal + taxAmount - discountAmount;
+        totalAmount = Math.max(0, Number(calculatedTotal.toFixed(2)));
+      }
+
+      // 3. Format and append note if approverRemarks or notes provided
+      let formattedNotes = order.notes || '';
+      if (dto.approverRemarks?.trim()) {
+        const timestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+        const remarkEntry = `\n[AMENDMENT by ${user.employeeCode} (${user.role}) - ${timestamp}]: ${dto.approverRemarks.trim()}`;
+        formattedNotes = formattedNotes ? `${formattedNotes}${remarkEntry}` : remarkEntry.trim();
+      } else if (dto.notes?.trim()) {
+        formattedNotes = dto.notes.trim();
+      }
+
+      // 4. Update order & lifecycle status transitions if specified
+      let targetPaymentStatus = dto.paymentStatus || undefined;
+      const targetStatus = (user.role !== RoleType.SALESPERSON && dto.status) ? dto.status : undefined;
+
+      if (targetStatus === OrderStatus.DELIVERED && order.paymentMode === PaymentMode.CASH_ON_DELIVERY) {
+        targetPaymentStatus = PaymentStatus.PAID;
+      }
+
+      // Handle inventory fulfillment if marked DELIVERED
+      if (targetStatus === OrderStatus.DELIVERED && order.status !== OrderStatus.DELIVERED) {
+        for (const it of order.items) {
+          const inv = await tx.inventory.findUnique({ where: { productId: it.productId } });
+          if (inv && inv.reservedQuantity > 0) {
+            const newReserved = Math.max(0, inv.reservedQuantity - it.quantity);
+            await tx.inventory.update({
+              where: { id: inv.id },
+              data: { reservedQuantity: newReserved },
+            });
+            await tx.inventoryTransaction.create({
+              data: {
+                inventoryId: inv.id,
+                type: InventoryTxType.ORDER_FULFILLED,
+                quantity: it.quantity,
+                balanceAfter: inv.availableQuantity,
+                notes: `Fulfilled on delivery update for Order ${order.orderNumber}`,
+              },
+            });
+          }
+        }
+      }
+
+      // Handle inventory reservation if moving from DRAFT to CONFIRMED
+      if (targetStatus === OrderStatus.CONFIRMED && order.status === OrderStatus.DRAFT) {
+        const itemsToReserve = dto.items && dto.items.length > 0 ? dto.items : order.items;
+        for (const it of itemsToReserve) {
+          const inv = await tx.inventory.findUnique({ where: { productId: it.productId } });
+          if (inv) {
+            const newAvailable = Math.max(0, inv.availableQuantity - it.quantity);
+            const newReserved = inv.reservedQuantity + it.quantity;
+            await tx.inventory.update({
+              where: { id: inv.id },
+              data: { availableQuantity: newAvailable, reservedQuantity: newReserved },
+            });
+            await tx.inventoryTransaction.create({
+              data: {
+                inventoryId: inv.id,
+                type: InventoryTxType.ORDER_RESERVATION,
+                quantity: it.quantity,
+                balanceAfter: newAvailable,
+                notes: `Atomic reservation on confirm for Order ${order.orderNumber}`,
+              },
+            });
+          }
+        }
+      }
+
+      const resOrder = await tx.order.update({
+        where: { id: order.id },
+        data: {
+          status: targetStatus,
+          subtotal,
+          taxAmount,
+          discountAmount,
+          totalAmount,
+          paymentMode: dto.paymentMode || undefined,
+          paymentStatus: targetPaymentStatus,
+          paymentRef: dto.paymentRef || undefined,
+          notes: formattedNotes || undefined,
+        },
+        include: {
+          items: {
+            include: {
+              product: {
+                select: { id: true, sku: true, name: true, mrpPrice: true, sellingPrice: true, targetDisease: true },
+              },
+            },
+          },
+          customer: true,
+          createdBy: { select: { id: true, employeeCode: true, firstName: true, lastName: true, role: true } },
+        },
+      });
+
+      // 5. Audit Log
+      await tx.auditLog.create({
+        data: {
+          userId: user.id,
+          action: 'ORDER_UPDATED',
+          entityType: 'Order',
+          entityId: order.id,
+          newState: {
+            orderNumber: order.orderNumber,
+            totalAmount,
+            discountAmount,
+            updatedBy: user.employeeCode,
+            approverRemarks: dto.approverRemarks || null,
+          },
+        },
+      });
+
+      return resOrder;
+    });
+
+    // 6. Real-time notification to salesperson who created the order
+    if (order.createdById && order.createdById !== user.id) {
+      try {
+        await this.notificationsService.createNotification({
+          userId: order.createdById,
+          title: `✏️ Order ${order.orderNumber} Updated by ${user.employeeCode}`,
+          message: dto.approverRemarks
+            ? `Approval Authority updated your booked order. Remarks: "${dto.approverRemarks}"`
+            : `Order details updated by ${user.employeeCode}. Total: ₹${updated.totalAmount}.`,
+          type: NotificationType.INFO,
+          link: '/sales/orders',
+        });
+      } catch (err) {
+        this.logger.warn(`Failed to dispatch order update notification: ${err}`);
+      }
+    }
+
+    return updated;
+  }
+
+  /**
+   * Decide on order: CONFIRM, REJECT, or REQUEST_RECTIFICATION with structured remarks
+   */
+  async decideOrder(orderId: string, dto: DecideOrderDto, user: AuthenticatedUser) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: { include: { product: true } },
+        customer: true,
+        createdBy: true,
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order with ID ${orderId} not found`);
+    }
+
+    const timestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+
+    if (dto.decision === 'CONFIRM') {
+      // Execute confirm logic
+      const confirmed = await this.confirmOrder(orderId, user);
+
+      // Append confirmation remarks to notes if provided
+      if (dto.remarks?.trim()) {
+        const remarkEntry = `\n[CONFIRMED by ${user.employeeCode} (${user.role}) - ${timestamp}]: ${dto.remarks.trim()}`;
+        await this.prisma.order.update({
+          where: { id: order.id },
+          data: { notes: (confirmed.notes || '') + remarkEntry },
+        });
+      }
+
+      // Notify salesperson
+      if (order.createdById && order.createdById !== user.id) {
+        try {
+          await this.notificationsService.createNotification({
+            userId: order.createdById,
+            title: `✅ Order ${order.orderNumber} Confirmed!`,
+            message: `Approval Authority has verified and confirmed your order. Remarks: "${dto.remarks}". Sent to Courier Dispatch.`,
+            type: NotificationType.ORDER_CONFIRMED,
+            link: '/sales/orders',
+          });
+        } catch (err) {
+          this.logger.warn(`Failed to dispatch confirm notification: ${err}`);
+        }
+      }
+
+      return {
+        success: true,
+        decision: 'CONFIRM',
+        message: `Order ${order.orderNumber} successfully confirmed and inventory reserved.`,
+        order: confirmed,
+      };
+    }
+
+    // Otherwise: REJECT or REQUEST_RECTIFICATION
+    const isRectification = dto.decision === 'REQUEST_RECTIFICATION';
+    const statusNotePrefix = isRectification ? 'RECTIFICATION REQUESTED' : 'ORDER REJECTED';
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Append remarks to order notes
+      const remarkEntry = `\n[${statusNotePrefix} by ${user.employeeCode} (${user.role}) - ${timestamp}]: ${dto.rejectionReason ? `[${dto.rejectionReason}] ` : ''}${dto.remarks.trim()}`;
+      const updatedNotes = (order.notes || '') + remarkEntry;
+
+      // If REJECT: mark order as CANCELLED. If REQUEST_RECTIFICATION: keep as DRAFT (ready to fix)
+      const targetStatus = isRectification ? OrderStatus.DRAFT : OrderStatus.CANCELLED;
+
+      const updatedOrder = await tx.order.update({
+        where: { id: order.id },
+        data: {
+          status: targetStatus,
+          notes: updatedNotes,
+        },
+        include: {
+          items: { include: { product: true } },
+          customer: true,
+          createdBy: true,
+        },
+      });
+
+      // Update associated lead if any: re-open as FOLLOW_UP_REQUIRED so salesperson sees it immediately
+      let associatedLead = null;
+      if (order.customer.convertedFromId) {
+        associatedLead = await tx.lead.findUnique({
+          where: { id: order.customer.convertedFromId },
+        });
+      } else if (order.customer.phoneNumber) {
+        associatedLead = await tx.lead.findFirst({
+          where: { phoneNumber: order.customer.phoneNumber },
+          orderBy: { createdAt: 'desc' },
+        });
+      }
+
+      if (associatedLead) {
+        await tx.lead.update({
+          where: { id: associatedLead.id },
+          data: {
+            status: LeadStatus.FOLLOW_UP_REQUIRED,
+            priority: LeadPriority.URGENT,
+          },
+        });
+
+        await tx.leadStatusHistory.create({
+          data: {
+            leadId: associatedLead.id,
+            fromStatus: associatedLead.status,
+            toStatus: LeadStatus.FOLLOW_UP_REQUIRED,
+            changedById: user.id,
+            reason: `Order ${order.orderNumber} ${isRectification ? 'requires rectification' : 'rejected'}: ${dto.remarks.slice(0, 450)}`,
+          },
+        });
+      }
+
+      // Record Audit Log
+      await tx.auditLog.create({
+        data: {
+          userId: user.id,
+          action: isRectification ? 'ORDER_RECTIFICATION_REQUESTED' : 'ORDER_REJECTED',
+          entityType: 'Order',
+          entityId: order.id,
+          newState: {
+            orderNumber: order.orderNumber,
+            decision: dto.decision,
+            reason: dto.rejectionReason || null,
+            remarks: dto.remarks,
+            decidedBy: user.employeeCode,
+          },
+        },
+      });
+
+      return updatedOrder;
+    });
+
+    // Notify booking salesperson
+    if (order.createdById) {
+      try {
+        await this.notificationsService.createNotification({
+          userId: order.createdById,
+          title: isRectification
+            ? `⚠️ Rectification Needed: Order ${order.orderNumber}`
+            : `❌ Order ${order.orderNumber} Rejected`,
+          message: `Approval Officer ${user.employeeCode} directive: "${dto.remarks}". Click to inspect and fix.`,
+          type: NotificationType.WARNING,
+          link: '/sales/orders',
+        });
+      } catch (err) {
+        this.logger.warn(`Failed to dispatch rejection notification: ${err}`);
+      }
+    }
+
+    return {
+      success: true,
+      decision: dto.decision,
+      message: `Order ${order.orderNumber} ${isRectification ? 'marked for rectification' : 'rejected'}. Salesperson notified.`,
+      order: result,
     };
   }
 }

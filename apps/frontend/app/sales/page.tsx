@@ -20,11 +20,15 @@ import {
   TrendingUp,
   Flame,
   PhoneForwarded,
+  Truck,
+  ExternalLink,
+  Package,
 } from 'lucide-react';
 
 export default function SalesDashboardPage() {
   const [data, setData] = useState<any>(null);
   const [leads, setLeads] = useState<any[]>([]);
+  const [dispatches, setDispatches] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -36,13 +40,15 @@ export default function SalesDashboardPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const [analyticsRes, leadsRes] = await Promise.all([
+      const [analyticsRes, leadsRes, dispatchRes] = await Promise.all([
         apiClient.get('/analytics/dashboard/sales'),
         apiClient.get('/leads?limit=10'),
+        apiClient.get('/dispatch?limit=5').catch(() => ({ data: { data: [] } })),
       ]);
 
       setData(analyticsRes.data);
       setLeads(leadsRes.data?.data || []);
+      setDispatches(dispatchRes.data?.data || dispatchRes.data || []);
     } catch (err: any) {
       setError(getErrorMessage(err));
     } finally {
@@ -365,6 +371,93 @@ export default function SalesDashboardPage() {
                               </Button>
                             </Link>
                           </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Live Dispatched Orders & Consignments Card */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <Truck className="h-5 w-5 text-emerald-700" />
+                  <span>Recent Dispatched Consignments & Tracking</span>
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-500">
+                  Real-time physical dispatches handed over to courier partners for your booked customer orders.
+                </CardDescription>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-950 border border-emerald-300">
+                Live Courier Sync
+              </span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 border-y border-slate-200 text-slate-600 font-bold uppercase tracking-wider">
+                  <tr>
+                    <th className="px-3 py-2.5">AWB Tracking #</th>
+                    <th className="px-3 py-2.5">Order Reference</th>
+                    <th className="px-3 py-2.5">Patient / Client</th>
+                    <th className="px-3 py-2.5">Courier Network</th>
+                    <th className="px-3 py-2.5">Transit Status</th>
+                    <th className="px-3 py-2.5">Dispatched Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-700">
+                  {dispatches.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-6 text-center text-slate-400">
+                        No recent dispatched consignments found.
+                      </td>
+                    </tr>
+                  ) : (
+                    dispatches.map((shipment: any) => (
+                      <tr key={shipment.id} className="hover:bg-slate-50/70 transition">
+                        <td className="px-3 py-2.5 font-mono font-bold text-slate-900">
+                          <span className="bg-slate-100 border border-slate-200 px-2 py-0.5 rounded text-[11px]">
+                            {shipment.trackingAwb}
+                          </span>
+                          {shipment.trackingUrl && (
+                            <a
+                              href={shipment.trackingUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="ml-1.5 text-emerald-700 hover:text-emerald-900 inline-block align-middle"
+                              title="Track with Courier"
+                            >
+                              <ExternalLink className="h-3 w-3 inline" />
+                            </a>
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 font-mono font-bold text-emerald-800">
+                          {shipment.order?.orderNumber || 'MEL-ORD-N/A'}
+                        </td>
+                        <td className="px-3 py-2.5 font-semibold text-slate-900">
+                          {shipment.order?.customer?.fullName || 'Patient'}
+                        </td>
+                        <td className="px-3 py-2.5 font-medium text-slate-700">
+                          {shipment.courierPartner}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <Badge variant={shipment.status === 'DELIVERED' ? 'success' : 'priority'}>
+                            {shipment.status}
+                          </Badge>
+                        </td>
+                        <td className="px-3 py-2.5 text-slate-500 font-mono text-[11px]">
+                          {new Date(shipment.createdAt).toLocaleDateString('en-IN', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
                         </td>
                       </tr>
                     ))

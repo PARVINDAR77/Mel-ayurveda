@@ -14,6 +14,7 @@ import { ConvertLeadDto } from './dto/convert-lead.dto';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { CustomerQueryDto } from './dto/customer-query.dto';
+import { RouteCustomerToSalesDto } from './dto/route-customer-to-sales.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -60,6 +61,14 @@ export class CustomersController {
     return this.customersService.getMetrics();
   }
 
+  @Get('salespersons/list')
+  @Roles(RoleType.MANAGEMENT, RoleType.SUPER_ADMIN)
+  @ApiOperation({ summary: 'List active sales consultants for order recovery and lead reassignment' })
+  @ApiResponse({ status: 200, description: 'Salespersons returned' })
+  async getSalespersons() {
+    return this.customersService.getActiveSalespersons();
+  }
+
   @Get()
   @Roles(RoleType.MANAGEMENT, RoleType.SUPER_ADMIN)
   @ApiOperation({ summary: 'List customer CRM profiles with search and pagination' })
@@ -89,5 +98,20 @@ export class CustomersController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.customersService.updateCustomer(id, dto, user);
+  }
+
+  @Post(':id/route-to-sales')
+  @Roles(RoleType.MANAGEMENT, RoleType.SUPER_ADMIN)
+  @ApiOperation({
+    summary:
+      'Cancel customer order, release warehouse stock, and route lead back to specific salesperson with directive notes',
+  })
+  @ApiResponse({ status: 200, description: 'Customer successfully routed back to sales desk' })
+  async routeToSales(
+    @Param('id') id: string,
+    @Body() dto: RouteCustomerToSalesDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.customersService.routeToSales(id, dto, user);
   }
 }

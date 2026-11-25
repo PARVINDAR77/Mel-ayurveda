@@ -9,13 +9,25 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateShipmentDto } from './dto/create-shipment.dto';
 import { UpdateShipmentStatusDto } from './dto/update-shipment-status.dto';
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
-import { InventoryTxType, OrderStatus, PaymentMode, PaymentStatus, ShipmentStatus } from '@prisma/client';
+import {
+  InventoryTxType,
+  OrderStatus,
+  PaymentMode,
+  PaymentStatus,
+  ShipmentStatus,
+  NotificationType,
+  RoleType,
+} from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class DispatchService {
   private readonly logger = new Logger(DispatchService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   /**
    * Retrieves all confirmed formulation orders awaiting courier dispatch
@@ -126,7 +138,12 @@ export class DispatchService {
       where: { id: orderId },
       include: {
         shipment: true,
-        customer: true,
+        customer: {
+          include: {
+            convertedFrom: true,
+          },
+        },
+        createdBy: true,
       },
     });
 
@@ -158,7 +175,7 @@ export class DispatchService {
       );
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const createdShipment = await this.prisma.$transaction(async (tx) => {
       // 1. Create Shipment
       const shipment = await tx.shipment.create({
         data: {
@@ -199,6 +216,78 @@ export class DispatchService {
 
       return shipment;
     });
+
+    // 4. Send Real-Time Push Notification directly to the Salesperson who closed/booked this deal
+    try {
+      const salesUserIds = new Set<string>();
+      if (order.createdById) {
+        salesUserIds.add(order.createdById);
+      }
+      if (order.customer?.convertedFrom?.assignedToId) {
+        salesUserIds.add(order.customer.convertedFrom.assignedToId);
+      }
+      if (order.customer?.convertedFrom?.createdById) {
+        salesUserIds.add(order.customer.convertedFrom.createdById);
+      }
+
+      // Also look up any related lead matching the customer's phone number
+      if (order.customer?.phoneNumber) {
+        const phoneDigits = order.customer.phoneNumber.replace(/\D/g, '').slice(-10);
+        const relatedLeads = await this.prisma.lead.findMany({
+          where: {
+            OR: [
+              { phoneNumber: order.customer.phoneNumber },
+              { phoneNumber: phoneDigits },
+              { phoneNumber: `+91${phoneDigits}` },
+            ],
+          },
+          select: { assignedToId: true, createdById: true },
+        });
+        for (const ld of relatedLeads) {
+          if (ld.assignedToId) salesUserIds.add(ld.assignedToId);
+          if (ld.createdById) salesUserIds.add(ld.createdById);
+        }
+      }
+
+      const clientName = order.customer?.fullName || 'Patient';
+      for (const salesUserId of salesUserIds) {
+        await this.notificationsService.createNotification({
+          userId: salesUserId,
+          title: `📦 Order ${order.orderNumber} Dispatched!`,
+          message: `Good news! Your patient ${clientName}'s Ayurvedic formulation parcel has been handed over to ${createdShipment.courierPartner} (AWB: ${createdShipment.trackingAwb}).`,
+          type: NotificationType.DISPATCH_UPDATE,
+          link: `/sales`,
+        });
+      }
+
+      // Also notify all Salespersons if no specific creator was linked
+      if (salesUserIds.size === 0) {
+        await this.notificationsService.dispatchToRole(
+          [RoleType.SALESPERSON],
+          {
+            title: `📦 Order ${order.orderNumber} Dispatched!`,
+            message: `Ayurvedic formulation parcel for ${clientName} handed over to ${createdShipment.courierPartner} (AWB: ${createdShipment.trackingAwb}).`,
+            type: NotificationType.DISPATCH_UPDATE,
+            link: `/sales`,
+          },
+        );
+      }
+
+      // Also notify Super Admin & Management Operations
+      await this.notificationsService.dispatchToRole(
+        [RoleType.SUPER_ADMIN, RoleType.MANAGEMENT],
+        {
+          title: `🚚 Order ${order.orderNumber} Dispatched`,
+          message: `Consignment manifested via ${createdShipment.courierPartner} (AWB: ${createdShipment.trackingAwb}) by ${user.employeeCode}.`,
+          type: NotificationType.INFO,
+          link: `/management/dispatch`,
+        },
+      );
+    } catch (notifErr) {
+      this.logger.warn(`Failed to dispatch salesperson notifications: ${notifErr}`);
+    }
+
+    return createdShipment;
   }
 
   /**
@@ -215,6 +304,11 @@ export class DispatchService {
         order: {
           include: {
             items: true,
+            customer: {
+              include: {
+                convertedFrom: true,
+              },
+            },
           },
         },
       },
@@ -224,7 +318,7 @@ export class DispatchService {
       throw new NotFoundException(`Shipment with ID ${shipmentId} not found`);
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const updatedShipment = await this.prisma.$transaction(async (tx) => {
       let deliveredAt = shipment.deliveredAt;
 
       // Handle delivery fulfillment
@@ -305,7 +399,7 @@ export class DispatchService {
       }
 
       // Update Shipment record
-      const updatedShipment = await tx.shipment.update({
+      const updated = await tx.shipment.update({
         where: { id: shipment.id },
         data: {
           status: dto.status,
@@ -331,8 +425,45 @@ export class DispatchService {
         `Shipment ${shipment.trackingAwb} updated to ${dto.status} by ${user.employeeCode}`,
       );
 
-      return updatedShipment;
+      return updated;
     });
+
+    // Send status update notification to the salesperson
+    try {
+      const salesUserIds = new Set<string>();
+      if (shipment.order.createdById) {
+        salesUserIds.add(shipment.order.createdById);
+      }
+      if (shipment.order.customer?.convertedFrom?.assignedToId) {
+        salesUserIds.add(shipment.order.customer.convertedFrom.assignedToId);
+      }
+
+      const isDelivered = dto.status === ShipmentStatus.DELIVERED;
+      const isRTO = dto.status === ShipmentStatus.RTO;
+      const clientName = shipment.order.customer?.fullName || 'Patient';
+
+      for (const salesUserId of salesUserIds) {
+        await this.notificationsService.createNotification({
+          userId: salesUserId,
+          title: isDelivered
+            ? `🎉 Order ${shipment.order.orderNumber} Delivered!`
+            : isRTO
+              ? `⚠️ Order ${shipment.order.orderNumber} Returned (RTO)`
+              : `🚚 Order ${shipment.order.orderNumber} Status: ${dto.status}`,
+          message: isDelivered
+            ? `Ayurvedic course successfully delivered to ${clientName}. Payment settled.`
+            : isRTO
+              ? `Parcel for ${clientName} returned by courier ${shipment.courierPartner}. Stock restored.`
+              : `Courier updated consignment ${shipment.trackingAwb} to ${dto.status}.`,
+          type: isDelivered ? NotificationType.SUCCESS : isRTO ? NotificationType.WARNING : NotificationType.DISPATCH_UPDATE,
+          link: `/sales/calling`,
+        });
+      }
+    } catch (notifErr) {
+      this.logger.warn(`Failed to dispatch salesperson status notification: ${notifErr}`);
+    }
+
+    return updatedShipment;
   }
 
   /**

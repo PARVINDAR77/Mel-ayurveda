@@ -10,14 +10,26 @@ import { ConvertLeadDto } from './dto/convert-lead.dto';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { CustomerQueryDto } from './dto/customer-query.dto';
+import { RouteCustomerToSalesDto } from './dto/route-customer-to-sales.dto';
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
-import { LeadStatus } from '@prisma/client';
+import {
+  LeadStatus,
+  LeadPriority,
+  OrderStatus,
+  InventoryTxType,
+  NotificationType,
+  RoleType,
+} from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class CustomersService {
   private readonly logger = new Logger(CustomersService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   /**
    * Generates sequential unique customer identifier: MEL-CUST-000101, MEL-CUST-000102, ...
@@ -391,6 +403,247 @@ export class CustomersService {
       totalCustomers,
       convertedFromLeads,
       createdThisMonth,
+    };
+  }
+
+  /**
+   * Retrieves all active sales consultants for re-assignment
+   */
+  async getActiveSalespersons() {
+    return this.prisma.user.findMany({
+      where: {
+        role: RoleType.SALESPERSON,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        employeeCode: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phoneNumber: true,
+        isAcceptingLeads: true,
+      },
+      orderBy: { firstName: 'asc' },
+    });
+  }
+
+  /**
+   * Routes a customer back to the sales desk when an order is cancelled or customer needs re-engagement.
+   * Atomically:
+   * 1. Cancels active/confirmed order & returns reserved stock back to warehouse inventory.
+   * 2. Re-opens or generates a high-priority URGENT lead assigned to the specific salesperson.
+   * 3. Attaches management's directive note to the lead record.
+   * 4. Pushes an URGENT real-time notification with audio alert to the salesperson's desk.
+   */
+  async routeToSales(
+    customerId: string,
+    dto: RouteCustomerToSalesDto,
+    user: AuthenticatedUser,
+  ) {
+    const customer = await this.prisma.customer.findUnique({
+      where: { id: customerId },
+      include: {
+        convertedFrom: true,
+        orders: {
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          include: { items: true },
+        },
+      },
+    });
+
+    if (!customer) {
+      throw new NotFoundException(`Customer with ID ${customerId} not found`);
+    }
+
+    const salesperson = await this.prisma.user.findUnique({
+      where: { id: dto.assignedSalespersonId },
+    });
+
+    if (!salesperson) {
+      throw new NotFoundException(`Salesperson with ID ${dto.assignedSalespersonId} not found`);
+    }
+
+    // Determine target order to cancel, if any
+    let targetOrder: any = null;
+    if (dto.orderId) {
+      targetOrder = customer.orders.find((o) => o.id === dto.orderId);
+      if (!targetOrder) {
+        targetOrder = await this.prisma.order.findUnique({
+          where: { id: dto.orderId },
+          include: { items: true },
+        });
+      }
+    } else {
+      // Auto-target most recent CONFIRMED or DRAFT order
+      targetOrder = customer.orders.find(
+        (o) => o.status === OrderStatus.CONFIRMED || o.status === OrderStatus.DRAFT,
+      );
+    }
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      // 1. If target order is CONFIRMED, return reserved inventory batches back to available pool
+      if (targetOrder && targetOrder.status === OrderStatus.CONFIRMED) {
+        for (const item of targetOrder.items) {
+          const inv = await tx.inventory.findUnique({
+            where: { productId: item.productId },
+          });
+
+          if (inv) {
+            const newAvailable = inv.availableQuantity + item.quantity;
+            const newReserved = Math.max(0, inv.reservedQuantity - item.quantity);
+
+            await tx.inventory.update({
+              where: { id: inv.id },
+              data: {
+                availableQuantity: newAvailable,
+                reservedQuantity: newReserved,
+              },
+            });
+
+            await tx.inventoryTransaction.create({
+              data: {
+                inventoryId: inv.id,
+                type: InventoryTxType.ORDER_CANCELLED,
+                quantity: item.quantity,
+                balanceAfter: newAvailable,
+                notes: `Stock returned: Order ${targetOrder.orderNumber} cancelled & routed to sales by ${user.employeeCode}`,
+              },
+            });
+          }
+        }
+      }
+
+      // 2. Mark order CANCELLED if active
+      if (targetOrder && (targetOrder.status === OrderStatus.CONFIRMED || targetOrder.status === OrderStatus.DRAFT)) {
+        await tx.order.update({
+          where: { id: targetOrder.id },
+          data: {
+            status: OrderStatus.CANCELLED,
+            notes: targetOrder.notes
+              ? `${targetOrder.notes} | Cancelled by management: ${dto.cancellationReason || 'Customer requested removal'} (${dto.directiveMessage})`
+              : `Cancelled by management: ${dto.cancellationReason || 'Customer requested removal'} (${dto.directiveMessage})`,
+          },
+        });
+      }
+
+      // 3. Re-open existing Lead or create new re-engagement recovery Lead
+      const directiveHeader = `🚨 [MANAGEMENT DIRECTIVE - ${user.employeeCode} (${new Date().toLocaleDateString('en-IN')})]: ${dto.directiveMessage.trim()}`;
+      let activeLead: any = customer.convertedFrom;
+
+      if (activeLead) {
+        activeLead = await tx.lead.update({
+          where: { id: activeLead.id },
+          data: {
+            status: LeadStatus.FOLLOW_UP_REQUIRED,
+            priority: LeadPriority.URGENT,
+            assignedToId: dto.assignedSalespersonId,
+            assignedAt: new Date(),
+            customerRequirements: activeLead.customerRequirements
+              ? `${directiveHeader}\n\n${activeLead.customerRequirements}`
+              : directiveHeader,
+            notes: activeLead.notes
+              ? `${directiveHeader}\n\n${activeLead.notes}`
+              : directiveHeader,
+          },
+        });
+
+        await tx.leadStatusHistory.create({
+          data: {
+            leadId: activeLead.id,
+            fromStatus: LeadStatus.CONVERTED,
+            toStatus: LeadStatus.FOLLOW_UP_REQUIRED,
+            changedById: user.id,
+            reason: `Order cancelled & routed to ${salesperson.firstName} ${salesperson.lastName}: ${dto.directiveMessage.slice(0, 450)}`,
+          },
+        });
+      } else {
+        const year = new Date().getFullYear();
+        const prefix = `MEL-LEAD-${year}-`;
+        const count = await tx.lead.count();
+        const leadCode = `${prefix}${String(count + 101).padStart(5, '0')}`;
+
+        activeLead = await tx.lead.create({
+          data: {
+            leadCode,
+            customerName: customer.fullName,
+            phoneNumber: customer.phoneNumber,
+            alternatePhone: customer.alternatePhone,
+            city: customer.city,
+            state: customer.state,
+            address: customer.address,
+            status: LeadStatus.FOLLOW_UP_REQUIRED,
+            priority: LeadPriority.URGENT,
+            assignedToId: dto.assignedSalespersonId,
+            assignedAt: new Date(),
+            createdById: user.id,
+            productInterest: 'Ayurvedic Deal Recovery',
+            customerRequirements: directiveHeader,
+            notes: directiveHeader,
+          },
+        });
+
+        await tx.customer.update({
+          where: { id: customer.id },
+          data: { convertedFromId: activeLead.id },
+        });
+
+        await tx.leadStatusHistory.create({
+          data: {
+            leadId: activeLead.id,
+            fromStatus: LeadStatus.NEW,
+            toStatus: LeadStatus.FOLLOW_UP_REQUIRED,
+            changedById: user.id,
+            reason: `Direct walk-in recovery lead created: ${dto.directiveMessage.slice(0, 450)}`,
+          },
+        });
+      }
+
+      // 4. Audit Log
+      await tx.auditLog.create({
+        data: {
+          userId: user.id,
+          action: 'CUSTOMER_ROUTED_TO_SALES',
+          entityType: 'Customer',
+          entityId: customer.id,
+          newState: {
+            customerCode: customer.customerCode,
+            leadCode: activeLead.leadCode,
+            assignedSalesperson: salesperson.employeeCode,
+            cancelledOrderNumber: targetOrder?.orderNumber,
+            directive: dto.directiveMessage,
+            reason: dto.cancellationReason,
+          },
+        },
+      });
+
+      return {
+        customer,
+        lead: activeLead,
+        cancelledOrder: targetOrder,
+        salesperson,
+      };
+    });
+
+    // 5. Send Real-Time URGENT Notification to Salesperson
+    try {
+      const orderInfo = result.cancelledOrder ? ` (Order ${result.cancelledOrder.orderNumber} Cancelled)` : '';
+      await this.notificationsService.createNotification({
+        userId: dto.assignedSalespersonId,
+        title: `🚨 Customer Re-routed to Your Desk: ${customer.fullName}`,
+        message: `Management Directive: "${dto.directiveMessage.slice(0, 140)}..."${orderInfo}. Please call and re-engage immediately.`,
+        type: NotificationType.URGENT,
+        link: `/sales/calling?leadId=${result.lead.id}`,
+      });
+    } catch (notifErr) {
+      this.logger.warn(`Failed to dispatch recovery notification: ${notifErr}`);
+    }
+
+    return {
+      success: true,
+      message: `Customer ${customer.fullName} successfully re-assigned to ${salesperson.firstName} ${salesperson.lastName} (${salesperson.employeeCode}).`,
+      data: result,
     };
   }
 }
