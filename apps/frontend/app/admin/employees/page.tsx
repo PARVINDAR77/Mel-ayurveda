@@ -341,38 +341,44 @@ export default function EmployeesAdminPage() {
         </div>
       )}
 
-      {/* Role Filter Tabs */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-slate-200/80">
+      {/* Role Filter Tabs - Executive Segmented Pill Group (Zero Native Scrollbar) */}
+      <div className="bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/80 flex flex-wrap items-center gap-1.5 md:gap-2 shadow-2xs">
         {[
-          { key: 'ALL', label: 'All Roles', count: employees.length },
+          { key: 'ALL', label: 'All Staff Roles', panel: null, count: employees.length },
           {
             key: 'SALESPERSON',
-            label: 'Sales Consultants (Panel 02)',
+            label: 'Sales Consultants',
+            panel: 'Panel 02',
             count: employees.filter((e) => e.role === 'SALESPERSON').length,
           },
           {
             key: 'FOLLOWUP_EXECUTIVE',
-            label: 'Follow-Up Care (Panel 06)',
+            label: 'Follow-Up Care',
+            panel: 'Panel 06',
             count: employees.filter((e) => e.role === 'FOLLOWUP_EXECUTIVE').length,
           },
           {
             key: 'PENDING_REVIEWER',
-            label: 'Pending Reviewers (Panel 03)',
+            label: 'Clinical Triage',
+            panel: 'Panel 03',
             count: employees.filter((e) => e.role === 'PENDING_REVIEWER').length,
           },
           {
             key: 'APPROVAL_OFFICER',
-            label: 'Approval Officers (Panel 04)',
+            label: 'Medical Approvals',
+            panel: 'Panel 04',
             count: employees.filter((e) => e.role === 'APPROVAL_OFFICER').length,
           },
           {
             key: 'MANAGEMENT',
-            label: 'Management (Panel 05)',
+            label: 'Operations & Mgt',
+            panel: 'Panel 05',
             count: employees.filter((e) => e.role === 'MANAGEMENT').length,
           },
           {
             key: 'SUPER_ADMIN',
-            label: 'Super Admins (Panel 01)',
+            label: 'Super Admin',
+            panel: 'Panel 01',
             count: employees.filter((e) => e.role === 'SUPER_ADMIN').length,
           },
         ].map((tab) => {
@@ -381,16 +387,29 @@ export default function EmployeesAdminPage() {
             <button
               key={tab.key}
               onClick={() => setSelectedRoleFilter(tab.key)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition shrink-0 cursor-pointer ${
+              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer select-none ${
                 isActive
-                  ? 'bg-emerald-800 text-white shadow-xs'
-                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                  ? 'bg-emerald-800 text-white shadow-sm ring-1 ring-emerald-900/10'
+                  : 'bg-white/80 hover:bg-white text-slate-700 hover:text-slate-900 border border-slate-200/80 shadow-2xs hover:shadow-xs'
               }`}
             >
               <span>{tab.label}</span>
+              {tab.panel && (
+                <span
+                  className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
+                    isActive
+                      ? 'bg-emerald-900/80 text-emerald-300 border border-emerald-700/50'
+                      : 'bg-slate-100 text-slate-500 border border-slate-200/60'
+                  }`}
+                >
+                  {tab.panel}
+                </span>
+              )}
               <span
-                className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
-                  isActive ? 'bg-emerald-950 text-emerald-200' : 'bg-slate-100 text-slate-500'
+                className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full ${
+                  isActive
+                    ? 'bg-emerald-950 text-emerald-200'
+                    : 'bg-slate-100 text-slate-600'
                 }`}
               >
                 {tab.count}

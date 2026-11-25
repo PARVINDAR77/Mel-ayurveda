@@ -766,7 +766,7 @@ export default function SuperAdminProductsPage() {
           </span>
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
           <button
             onClick={() => setSelectedCategoryId('ALL')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${

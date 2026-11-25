@@ -10,4 +10,4 @@ import { RecycleBinModule } from '../recycle-bin/recycle-bin.module';
   providers: [ProductsService],
   exports: [ProductsService],
 })
-export class ProductsModule {}
+export class ProductsModule { }

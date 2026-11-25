@@ -247,7 +247,7 @@ export default function AuditAdminPage() {
       </div>
 
       {/* Action Filter Pills */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-slate-200/80">
+      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 border-b border-slate-200/80">
         {[
           { key: 'ALL', label: 'All Operations' },
           { key: 'LEAD', label: 'Lead Lifecycle' },

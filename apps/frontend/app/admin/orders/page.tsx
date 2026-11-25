@@ -618,7 +618,7 @@ export default function SuperAdminOrdersPage() {
 
       {/* Filter Tabs and Search Toolbar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs overflow-x-auto">
+        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs overflow-x-auto no-scrollbar">
           {[
             { id: 'ALL', label: 'ALL', count: metrics?.totalOrders },
             { id: 'CONFIRMED', label: 'CONFIRMED', count: metrics?.confirmedOrders },
