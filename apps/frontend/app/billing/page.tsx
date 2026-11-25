@@ -5,6 +5,7 @@ import { apiClient, getErrorMessage } from '../../lib/api-client';
 import { DataTable, Column } from '../../components/ui/data-table';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
 import { Drawer } from '../../components/ui/drawer';
 import { Modal } from '../../components/ui/modal';
 import {
@@ -27,6 +28,11 @@ import {
   Clock,
   Phone,
   MapPin,
+  Plus,
+  Minus,
+  History,
+  SlidersHorizontal,
+  Calendar,
 } from 'lucide-react';
 
 export default function BillingWorkspacePage() {
@@ -63,6 +69,25 @@ export default function BillingWorkspacePage() {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [invoiceDetail, setInvoiceDetail] = useState<any | null>(null);
   const [loadingInvoiceDetail, setLoadingInvoiceDetail] = useState(false);
+
+  // Manage Stock Modal State (Add / Remove / Calibrate)
+  const [selectedInventoryForManage, setSelectedInventoryForManage] = useState<any | null>(null);
+  const [stockAction, setStockAction] = useState<'ADD' | 'REMOVE' | 'SET_COUNT'>('ADD');
+  const [stockQuantity, setStockQuantity] = useState<number>(50);
+  const [stockReason, setStockReason] = useState<string>('Factory Restock Batch');
+  const [stockBatch, setStockBatch] = useState<string>('');
+  const [stockThreshold, setStockThreshold] = useState<number>(20);
+  const [stockNotes, setStockNotes] = useState<string>('');
+  const [isSubmittingStock, setIsSubmittingStock] = useState(false);
+
+  // General Quick Restock Modal
+  const [isGeneralRestockOpen, setIsGeneralRestockOpen] = useState(false);
+  const [generalProductId, setGeneralProductId] = useState('');
+
+  // Stock History Drawer State
+  const [selectedInventoryForHistory, setSelectedInventoryForHistory] = useState<any | null>(null);
+  const [historyTransactions, setHistoryTransactions] = useState<any[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // Feedback Messages
   const [error, setError] = useState<string | null>(null);
@@ -138,7 +163,7 @@ export default function BillingWorkspacePage() {
   }, [activeTab]);
 
   // -------------------------------------------------------------
-  // ACTIONS
+  // ACTIONS: BILLING
   // -------------------------------------------------------------
   const handleGenerateInvoice = async () => {
     if (!selectedOrderForBilling) return;
@@ -179,6 +204,81 @@ export default function BillingWorkspacePage() {
       setSelectedInvoiceId(null);
     } finally {
       setLoadingInvoiceDetail(false);
+    }
+  };
+
+  // -------------------------------------------------------------
+  // ACTIONS: STOCK MANAGEMENT (ADD / REMOVE / ADJUST)
+  // -------------------------------------------------------------
+  const openManageStockModal = (inv: any, defaultAction: 'ADD' | 'REMOVE' | 'SET_COUNT' = 'ADD') => {
+    setSelectedInventoryForManage(inv);
+    setStockAction(defaultAction);
+    setStockQuantity(defaultAction === 'REMOVE' ? 5 : 50);
+    setStockReason(defaultAction === 'REMOVE' ? 'Damaged Packaging' : 'Factory Restock Batch');
+    setStockBatch(`BATCH-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`);
+    setStockThreshold(inv.lowStockThreshold || 20);
+    setStockNotes('');
+  };
+
+  const openGeneralRestockModal = () => {
+    if (inventoryList.length > 0) {
+      setGeneralProductId(inventoryList[0].productId || inventoryList[0].product?.id);
+    }
+    setStockAction('ADD');
+    setStockQuantity(50);
+    setStockReason('Factory Restock Batch');
+    setStockBatch(`BATCH-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`);
+    setStockThreshold(20);
+    setStockNotes('');
+    setIsGeneralRestockOpen(true);
+  };
+
+  const handleStockSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const targetProductId = selectedInventoryForManage
+      ? selectedInventoryForManage.productId || selectedInventoryForManage.product?.id
+      : generalProductId;
+
+    if (!targetProductId) return;
+
+    try {
+      setIsSubmittingStock(true);
+      setError(null);
+
+      const res = await apiClient.post('/inventory/adjust', {
+        productId: targetProductId,
+        action: stockAction,
+        quantity: Number(stockQuantity),
+        reason: stockReason.trim(),
+        batchNumber: stockBatch.trim() || undefined,
+        lowStockThreshold: Number(stockThreshold) || 20,
+        notes: stockNotes.trim() || undefined,
+      });
+
+      setSuccessMsg(res.data?.message || 'Warehouse stock updated successfully.');
+      setSelectedInventoryForManage(null);
+      setIsGeneralRestockOpen(false);
+      fetchStock();
+      fetchStats();
+    } catch (err: any) {
+      setError(getErrorMessage(err));
+    } finally {
+      setIsSubmittingStock(false);
+    }
+  };
+
+  const openStockHistory = async (inv: any) => {
+    setSelectedInventoryForHistory(inv);
+    setIsLoadingHistory(true);
+    try {
+      const res = await apiClient.get(`/inventory/transactions?productId=${inv.productId || inv.product?.id}&limit=50`);
+      setHistoryTransactions(res.data?.data || res.data || []);
+    } catch (err: any) {
+      setError(getErrorMessage(err));
+      setSelectedInventoryForHistory(null);
+    } finally {
+      setIsLoadingHistory(false);
     }
   };
 
@@ -282,7 +382,7 @@ export default function BillingWorkspacePage() {
   ];
 
   // -------------------------------------------------------------
-  // STOCK INVENTORY COLUMNS
+  // STOCK INVENTORY COLUMNS WITH ACTIONS (ADD / REMOVE / HISTORY)
   // -------------------------------------------------------------
   const filteredStock = inventoryList.filter((inv) => {
     if (!stockSearch.trim()) return true;
@@ -356,6 +456,38 @@ export default function BillingWorkspacePage() {
         }
         return <Badge variant="success">Fully In Stock</Badge>;
       },
+    },
+    {
+      key: 'actions',
+      header: 'Stock Actions',
+      className: 'text-right',
+      render: (inv) => (
+        <div className="flex items-center justify-end gap-1.5">
+          <button
+            onClick={() => openManageStockModal(inv, 'ADD')}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-800 text-white hover:bg-emerald-900 shadow-2xs transition cursor-pointer"
+            title="Add Units / Batch Restock"
+          >
+            <Plus className="h-3 w-3" />
+            <span>Add Stock</span>
+          </button>
+          <button
+            onClick={() => openManageStockModal(inv, 'REMOVE')}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white text-rose-700 hover:bg-rose-50 border border-rose-200 shadow-2xs transition cursor-pointer"
+            title="Remove / Deduct Damaged or Expired Units"
+          >
+            <Minus className="h-3 w-3" />
+            <span>Remove</span>
+          </button>
+          <button
+            onClick={() => openStockHistory(inv)}
+            className="p-1 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-slate-200 shadow-2xs transition cursor-pointer"
+            title="Inspect Stock Movement Ledger"
+          >
+            <History className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      ),
     },
   ];
 
@@ -472,7 +604,7 @@ export default function BillingWorkspacePage() {
             Billing & Stock Management Workspace
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Manage warehouse inventory, verify formulation stock allocation, and generate GST tax bills. Once billed, orders automatically transition to Courier Dispatch.
+            Manage warehouse inventory (add new batches, remove write-offs, calibrate counts), verify formulation stock allocation, and generate GST tax bills. Once billed, orders automatically transition to Courier Dispatch.
           </p>
         </div>
 
@@ -653,27 +785,36 @@ export default function BillingWorkspacePage() {
         </div>
       )}
 
-      {/* TAB 2: WAREHOUSE STOCK */}
+      {/* TAB 2: WAREHOUSE STOCK (WITH ADD / REMOVE / ADJUST ACTIONS) */}
       {activeTab === 'STOCK' && (
         <div className="space-y-4">
           <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 className="text-base font-bold text-slate-900">Warehouse Stock & Batch Inventory</h3>
+                <h3 className="text-base font-bold text-slate-900">Warehouse Stock & Batch Inventory Management</h3>
                 <p className="text-xs text-slate-500">
-                  Live stock levels across all Ayurvedic single herbs, classical rasayanas, and proprietary formulations.
+                  Full inventory control: add factory stock batches, write off damaged or expired items, calibrate count, and track chronological movements.
                 </p>
               </div>
 
-              <div className="relative w-full sm:w-72">
-                <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Filter stock by name, SKU, ailment..."
-                  value={stockSearch}
-                  onChange={(e) => setStockSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-700"
-                />
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="relative flex-1 sm:w-64">
+                  <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Filter stock by name, SKU, ailment..."
+                    value={stockSearch}
+                    onChange={(e) => setStockSearch(e.target.value)}
+                    className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-700"
+                  />
+                </div>
+                <button
+                  onClick={openGeneralRestockModal}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-800 text-white hover:bg-emerald-900 shadow-sm transition shrink-0 cursor-pointer"
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  <span>+ Quick Restock</span>
+                </button>
               </div>
             </div>
 
@@ -827,6 +968,343 @@ export default function BillingWorkspacePage() {
           </div>
         )}
       </Modal>
+
+      {/* MANAGE STOCK MODAL (ADD / REMOVE / CALIBRATE) */}
+      <Modal
+        isOpen={!!selectedInventoryForManage || isGeneralRestockOpen}
+        onClose={() => {
+          setSelectedInventoryForManage(null);
+          setIsGeneralRestockOpen(false);
+        }}
+        title={
+          selectedInventoryForManage
+            ? `Manage Warehouse Stock: ${selectedInventoryForManage.product?.name}`
+            : 'Warehouse Stock Replenishment'
+        }
+        description="Add new factory batches, deduct damaged or expired units, or calibrate physical warehouse count."
+      >
+        <form onSubmit={handleStockSubmit} className="space-y-4 text-xs text-slate-700">
+          {/* Product Selector for General Restock */}
+          {isGeneralRestockOpen && !selectedInventoryForManage && (
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-slate-700">Select Formulation SKU</label>
+              <select
+                value={generalProductId}
+                onChange={(e) => setGeneralProductId(e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white font-medium focus:ring-2 focus:ring-emerald-700 focus:outline-none"
+                required
+              >
+                {inventoryList.map((inv) => (
+                  <option key={inv.product?.id || inv.productId} value={inv.product?.id || inv.productId}>
+                    {inv.product?.name} ({inv.product?.sku}) • Available: {inv.availableQuantity} units
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Current Stock Banner */}
+          {selectedInventoryForManage && (
+            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 flex items-center justify-between">
+              <div>
+                <span className="font-bold text-slate-900 block">{selectedInventoryForManage.product?.name}</span>
+                <span className="text-[10px] font-mono text-slate-400 block">{selectedInventoryForManage.product?.sku}</span>
+              </div>
+              <div className="text-right">
+                <span className="font-mono font-black text-sm text-emerald-800 block">
+                  {selectedInventoryForManage.availableQuantity} Units
+                </span>
+                <span className="text-[10px] text-slate-400 block font-mono">
+                  Reserved: {selectedInventoryForManage.reservedQuantity}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Operation Mode Selector */}
+          <div className="space-y-1">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              Select Stock Action
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setStockAction('ADD');
+                  setStockReason('Factory Restock Batch');
+                }}
+                className={`py-2 px-3 rounded-xl text-xs font-bold flex flex-col items-center gap-1 border transition cursor-pointer ${
+                  stockAction === 'ADD'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-400 ring-2 ring-emerald-600/20'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                <Plus className="h-4 w-4 text-emerald-700" />
+                <span>Add Stock</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setStockAction('REMOVE');
+                  setStockReason('Damaged Packaging');
+                }}
+                className={`py-2 px-3 rounded-xl text-xs font-bold flex flex-col items-center gap-1 border transition cursor-pointer ${
+                  stockAction === 'REMOVE'
+                    ? 'bg-rose-50 text-rose-800 border-rose-400 ring-2 ring-rose-600/20'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                <Minus className="h-4 w-4 text-rose-700" />
+                <span>Remove Stock</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setStockAction('SET_COUNT');
+                  setStockReason('Audit Physical Count');
+                }}
+                className={`py-2 px-3 rounded-xl text-xs font-bold flex flex-col items-center gap-1 border transition cursor-pointer ${
+                  stockAction === 'SET_COUNT'
+                    ? 'bg-blue-50 text-blue-800 border-blue-400 ring-2 ring-blue-600/20'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                <SlidersHorizontal className="h-4 w-4 text-blue-700" />
+                <span>Calibrate</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Quantity Input */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                {stockAction === 'ADD'
+                  ? 'Units to Add'
+                  : stockAction === 'REMOVE'
+                  ? 'Units to Deduct'
+                  : 'New Exact Unit Count'}
+              </label>
+              <input
+                type="number"
+                min="1"
+                max={
+                  stockAction === 'REMOVE' && selectedInventoryForManage
+                    ? selectedInventoryForManage.availableQuantity
+                    : 999999
+                }
+                value={stockQuantity}
+                onChange={(e) => setStockQuantity(Math.max(1, parseInt(e.target.value) || 0))}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-mono font-bold focus:ring-2 focus:ring-emerald-700 focus:outline-none"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Low-Stock Threshold
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={stockThreshold}
+                onChange={(e) => setStockThreshold(Math.max(1, parseInt(e.target.value) || 20))}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-mono focus:ring-2 focus:ring-emerald-700 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Reason & Batch Inputs */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Reason / Category</label>
+              {stockAction === 'REMOVE' ? (
+                <select
+                  value={stockReason}
+                  onChange={(e) => setStockReason(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white font-medium focus:ring-2 focus:ring-emerald-700 focus:outline-none"
+                >
+                  <option value="Damaged Packaging">Damaged Packaging</option>
+                  <option value="Expired Formulation">Expired Formulation</option>
+                  <option value="Quality Scrap / QC Rejection">Quality Scrap / QC Rejection</option>
+                  <option value="Doctor Sampling / Promotion">Doctor Sampling / Promotion</option>
+                  <option value="Audit Physical Discrepancy">Audit Physical Discrepancy</option>
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  value={stockReason}
+                  onChange={(e) => setStockReason(e.target.value)}
+                  placeholder="e.g. Factory Batch Inward"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-700 focus:outline-none"
+                  required
+                />
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Batch # / Lot Ref</label>
+              <input
+                type="text"
+                value={stockBatch}
+                onChange={(e) => setStockBatch(e.target.value)}
+                placeholder="e.g. BATCH-2026-NOV-15"
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-mono focus:ring-2 focus:ring-emerald-700 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Operational Notes (Optional)</label>
+            <input
+              type="text"
+              value={stockNotes}
+              onChange={(e) => setStockNotes(e.target.value)}
+              placeholder="e.g. Received from Bharuch manufacturing unit via transport manifest"
+              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-700 focus:outline-none"
+            />
+          </div>
+
+          {/* Live Balance Preview Calculation */}
+          {(() => {
+            const current = selectedInventoryForManage ? selectedInventoryForManage.availableQuantity : 100;
+            let after = current;
+            if (stockAction === 'ADD') after = current + stockQuantity;
+            else if (stockAction === 'REMOVE') after = Math.max(0, current - stockQuantity);
+            else if (stockAction === 'SET_COUNT') after = stockQuantity;
+
+            return (
+              <div className="bg-emerald-50/80 p-3 rounded-xl border border-emerald-200 flex justify-between items-center text-xs">
+                <div>
+                  <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-bold">Balance Impact</span>
+                  <span className="text-slate-700">
+                    Current: <strong>{current} Units</strong> ➔ New: <strong>{after} Units</strong>
+                  </span>
+                </div>
+                <span className="font-mono font-black text-sm text-emerald-900 bg-white px-2.5 py-1 rounded-lg border border-emerald-300">
+                  {stockAction === 'ADD' ? `+${stockQuantity}` : stockAction === 'REMOVE' ? `-${stockQuantity}` : `=${after}`} Units
+                </span>
+              </div>
+            );
+          })()}
+
+          {/* Modal Actions */}
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSelectedInventoryForManage(null);
+                setIsGeneralRestockOpen(false);
+              }}
+              disabled={isSubmittingStock}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              isLoading={isSubmittingStock}
+              className="bg-emerald-800 hover:bg-emerald-900 text-white font-bold"
+            >
+              Confirm & Save Stock Update
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* STOCK HISTORY DRAWER */}
+      <Drawer
+        isOpen={!!selectedInventoryForHistory}
+        onClose={() => {
+          setSelectedInventoryForHistory(null);
+          setHistoryTransactions([]);
+        }}
+        title={`Stock Movement Ledger: ${selectedInventoryForHistory?.product?.name || ''}`}
+        width="lg"
+      >
+        <div className="space-y-4 text-xs text-slate-700">
+          <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 flex justify-between items-center">
+            <div>
+              <span className="font-bold text-slate-900 block">{selectedInventoryForHistory?.product?.name}</span>
+              <span className="font-mono text-[10px] text-slate-500 block">SKU: {selectedInventoryForHistory?.product?.sku}</span>
+            </div>
+            <div className="text-right">
+              <span className="font-mono font-black text-sm text-emerald-800 block">
+                {selectedInventoryForHistory?.availableQuantity} Units Available
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono block">
+                Threshold: {selectedInventoryForHistory?.lowStockThreshold} Units
+              </span>
+            </div>
+          </div>
+
+          {isLoadingHistory ? (
+            <div className="py-16 text-center text-xs text-slate-400">Loading chronological ledger...</div>
+          ) : historyTransactions.length === 0 ? (
+            <div className="py-16 text-center text-xs text-slate-400">No previous inventory transactions recorded.</div>
+          ) : (
+            <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-2xs">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-100 text-slate-600 font-bold text-[10px] uppercase">
+                  <tr>
+                    <th className="p-2.5">Date & Time</th>
+                    <th className="p-2.5">Operation</th>
+                    <th className="p-2.5 text-center">Change</th>
+                    <th className="p-2.5 text-right">Balance</th>
+                    <th className="p-2.5">Audit Notes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-mono text-[11px]">
+                  {historyTransactions.map((tx, idx) => {
+                    const isPositive = tx.quantity > 0;
+                    return (
+                      <tr key={idx} className="hover:bg-slate-50">
+                        <td className="p-2.5 text-slate-500 whitespace-nowrap">
+                          {new Date(tx.createdAt).toLocaleDateString('en-IN', {
+                            day: '2-digit',
+                            month: 'short',
+                          })}{' '}
+                          {new Date(tx.createdAt).toLocaleTimeString('en-IN', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </td>
+                        <td className="p-2.5">
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-sans font-bold ${
+                              tx.type === 'RESTOCK'
+                                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                : tx.type === 'ADJUSTMENT'
+                                ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                                : 'bg-slate-100 text-slate-700'
+                            }`}
+                          >
+                            {tx.type}
+                          </span>
+                        </td>
+                        <td className="p-2.5 text-center font-bold">
+                          <span className={isPositive ? 'text-emerald-700' : 'text-rose-700'}>
+                            {isPositive ? `+${tx.quantity}` : tx.quantity}
+                          </span>
+                        </td>
+                        <td className="p-2.5 text-right font-bold text-slate-900">{tx.balanceAfter}</td>
+                        <td className="p-2.5 text-[10px] text-slate-600 font-sans max-w-xs truncate" title={tx.notes}>
+                          {tx.notes || 'Automated transaction'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </Drawer>
 
       {/* OFFICIAL PRINTABLE TAX INVOICE DRAWER */}
       <Drawer

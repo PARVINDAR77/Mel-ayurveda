@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { InventoryService } from './inventory.service';
 import { RestockInventoryDto } from './dto/restock-inventory.dto';
+import { AdjustInventoryDto } from './dto/adjust-inventory.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -32,6 +33,17 @@ export class InventoryController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.inventoryService.restock(dto, user);
+  }
+
+  @Post('adjust')
+  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT, RoleType.BILLING_EXECUTIVE)
+  @ApiOperation({ summary: 'Add, remove, or calibrate warehouse stock with full audit tracking' })
+  @ApiResponse({ status: 200, description: 'Inventory adjusted successfully' })
+  async adjustStock(
+    @Body() dto: AdjustInventoryDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.inventoryService.adjustStock(dto, user);
   }
 
   @Get('transactions')
