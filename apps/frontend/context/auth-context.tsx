@@ -10,7 +10,8 @@ export type RoleType =
   | 'PENDING_REVIEWER'
   | 'APPROVAL_OFFICER'
   | 'MANAGEMENT'
-  | 'FOLLOWUP_EXECUTIVE';
+  | 'FOLLOWUP_EXECUTIVE'
+  | 'BILLING_EXECUTIVE';
 
 export interface UserProfile {
   id: string;
@@ -50,6 +51,8 @@ export function getPanelRoute(role?: RoleType): string {
       return '/management';
     case 'FOLLOWUP_EXECUTIVE':
       return '/sales/customer-care';
+    case 'BILLING_EXECUTIVE':
+      return '/billing';
     default:
       return '/login';
   }

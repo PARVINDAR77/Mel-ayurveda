@@ -16,7 +16,7 @@ export class InventoryController {
   constructor(private readonly inventoryService: InventoryService) {}
 
   @Get()
-  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT)
+  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT, RoleType.BILLING_EXECUTIVE)
   @ApiOperation({ summary: 'View warehouse stock levels across all SKUs with low-stock alerts' })
   @ApiResponse({ status: 200, description: 'Inventory stock levels returned' })
   async getInventoryLevels() {
@@ -24,7 +24,7 @@ export class InventoryController {
   }
 
   @Post('restock')
-  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT)
+  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT, RoleType.BILLING_EXECUTIVE)
   @ApiOperation({ summary: 'Record warehouse replenishment from factory / manufacturing batches' })
   @ApiResponse({ status: 201, description: 'Stock restocked and ledger updated' })
   async restock(
@@ -35,7 +35,7 @@ export class InventoryController {
   }
 
   @Get('transactions')
-  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT)
+  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT, RoleType.BILLING_EXECUTIVE)
   @ApiOperation({ summary: 'Query chronological warehouse inventory transaction history' })
   @ApiResponse({ status: 200, description: 'Transactions returned' })
   async getTransactions(

@@ -28,6 +28,7 @@ import {
   ShoppingBag,
   HeartHandshake,
   ArchiveRestore,
+  Clock,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { CreateLeadModal } from '../sales/create-lead-modal';
@@ -55,6 +56,7 @@ export function Sidebar({ onClose }: SidebarProps) {
         return [
           { href: '/admin', label: 'Master Dashboard', icon: LayoutDashboard },
           { href: '/admin/orders', label: 'Order Management', icon: Package },
+          { href: '/billing', label: 'Billing & Stock Desk', icon: FileText },
           { href: '/admin/products', label: 'Products & Formulations', icon: Leaf },
           { href: '/admin/assignments', label: 'Lead Distribution', icon: UserCheck },
           { href: '/admin/customer-followups', label: 'Follow-Up Allocation', icon: HeartHandshake },
@@ -113,6 +115,14 @@ export function Sidebar({ onClose }: SidebarProps) {
           { href: '/sales/customer-care', label: 'Follow-Up Care Desk', icon: HeartHandshake },
         ];
 
+      case 'BILLING_EXECUTIVE':
+        return [
+          { href: '/billing', label: 'Billing Workspace', icon: LayoutDashboard },
+          { href: '/billing', label: 'Billing Queue', icon: Clock },
+          { href: '/management/inventory', label: 'Warehouse Stock', icon: Boxes },
+          { href: '/management/invoices', label: 'Issued GST Invoices', icon: FileText },
+        ];
+
       default:
         return [];
     }
@@ -135,6 +145,8 @@ export function Sidebar({ onClose }: SidebarProps) {
         return 'Operations Executive';
       case 'FOLLOWUP_EXECUTIVE':
         return 'Follow-Up Executive';
+      case 'BILLING_EXECUTIVE':
+        return 'Billing & Stock Specialist';
       default:
         return role.replace('_', ' ');
     }

@@ -30,12 +30,14 @@ export class DispatchService {
   ) {}
 
   /**
-   * Retrieves all confirmed formulation orders awaiting courier dispatch
+   * Retrieves all confirmed & billed formulation orders awaiting courier dispatch
+   * STRICT INVARIANT: Order MUST have an issued tax invoice before appearing in the dispatch queue
    */
   async getReadyOrders() {
     return this.prisma.order.findMany({
       where: {
-        status: OrderStatus.CONFIRMED,
+        status: { in: [OrderStatus.PROCESSING, OrderStatus.CONFIRMED] },
+        invoice: { isNot: null },
         shipment: null,
       },
       orderBy: { updatedAt: 'desc' },
@@ -157,6 +159,16 @@ export class DispatchService {
 
     if (order.status === OrderStatus.CANCELLED) {
       throw new BadRequestException('Cannot dispatch a CANCELLED order');
+    }
+
+    // Invariant: Tax Invoice must be generated in Billing before dispatch
+    const orderInvoice = await this.prisma.invoice.findUnique({
+      where: { orderId: order.id },
+    });
+    if (!orderInvoice) {
+      throw new BadRequestException(
+        'Cannot dispatch order. Tax invoice must be generated in the Billing section before courier consignment.',
+      );
     }
 
     if (order.shipment) {

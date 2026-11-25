@@ -251,4 +251,121 @@ export class InvoicesService {
 
     return invoice;
   }
+
+  /**
+   * Retrieves confirmed orders awaiting billing (Approved, but no invoice yet)
+   */
+  async getBillingQueue(page = 1, limit = 50, search?: string) {
+    const skip = (page - 1) * limit;
+    const where: any = {
+      status: { in: [OrderStatus.CONFIRMED, OrderStatus.PROCESSING] },
+      invoice: null,
+    };
+
+    if (search && search.trim()) {
+      const q = search.trim();
+      where.OR = [
+        { orderNumber: { contains: q, mode: 'insensitive' } },
+        { customer: { fullName: { contains: q, mode: 'insensitive' } } },
+        { customer: { phoneNumber: { contains: q } } },
+      ];
+    }
+
+    const [total, orders] = await Promise.all([
+      this.prisma.order.count({ where }),
+      this.prisma.order.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { updatedAt: 'desc' },
+        include: {
+          customer: {
+            select: {
+              id: true,
+              customerCode: true,
+              fullName: true,
+              phoneNumber: true,
+              alternatePhone: true,
+              address: true,
+              city: true,
+              state: true,
+              pincode: true,
+            },
+          },
+          items: {
+            include: {
+              product: {
+                select: {
+                  id: true,
+                  name: true,
+                  sku: true,
+                  sellingPrice: true,
+                  mrpPrice: true,
+                  gstRate: true,
+                  targetDisease: true,
+                  dosageForm: true,
+                },
+              },
+            },
+          },
+          createdBy: {
+            select: {
+              id: true,
+              employeeCode: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    return {
+      data: orders,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  /**
+   * KPI metrics for the Billing Workspace
+   */
+  async getBillingStats() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const [awaitingBillingCount, billedTodayCount, totalInvoicedRevenue, lowStockAlerts] =
+      await Promise.all([
+        this.prisma.order.count({
+          where: {
+            status: { in: [OrderStatus.CONFIRMED, OrderStatus.PROCESSING] },
+            invoice: null,
+          },
+        }),
+        this.prisma.invoice.count({
+          where: {
+            issuedAt: { gte: today },
+          },
+        }),
+        this.prisma.invoice.aggregate({
+          _sum: { grandTotal: true },
+        }),
+        this.prisma.inventory.count({
+          where: {
+            availableQuantity: { lte: 20 },
+          },
+        }),
+      ]);
+
+    return {
+      awaitingBillingCount,
+      billedTodayCount,
+      totalInvoicedRevenue: Number(totalInvoicedRevenue._sum.grandTotal || 0),
+      lowStockAlerts,
+    };
+  }
 }

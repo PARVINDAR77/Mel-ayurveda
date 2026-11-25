@@ -376,6 +376,12 @@ export default function EmployeesAdminPage() {
             count: employees.filter((e) => e.role === 'MANAGEMENT').length,
           },
           {
+            key: 'BILLING_EXECUTIVE',
+            label: 'Billing & Stock Desk',
+            panel: 'Panel 07',
+            count: employees.filter((e) => e.role === 'BILLING_EXECUTIVE').length,
+          },
+          {
             key: 'SUPER_ADMIN',
             label: 'Super Admin',
             panel: 'Panel 01',
@@ -488,6 +494,7 @@ export default function EmployeesAdminPage() {
               <option value="FOLLOWUP_EXECUTIVE">Panel 06: Follow-Up Executive (Customer Care, Wellness & Refills • MEL-FLW-)</option>
               <option value="PENDING_REVIEWER">Panel 03: Pending Reviewer (Formulation & Dosage Verification)</option>
               <option value="APPROVAL_OFFICER">Panel 04: Approval Officer (Commercial & Medical Clearance)</option>
+              <option value="BILLING_EXECUTIVE">Panel 07: Billing & Stock Executive (Stock Inspection & GST Billing • MEL-BIL-)</option>
               <option value="MANAGEMENT">Panel 05: Management (GST Invoicing, Inventory & Dispatch)</option>
               <option value="SUPER_ADMIN">Panel 01: Super Admin (Executive Organization Control)</option>
             </select>
