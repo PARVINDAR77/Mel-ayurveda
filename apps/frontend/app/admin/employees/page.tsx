@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   Building2,
   Lock,
+  Trash2,
 } from 'lucide-react';
 
 export default function EmployeesAdminPage() {
@@ -46,6 +47,10 @@ export default function EmployeesAdminPage() {
   const [resetEmployee, setResetEmployee] = useState<any | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [isResetting, setIsResetting] = useState(false);
+
+  // Delete Employee Modal
+  const [deleteEmployee, setDeleteEmployee] = useState<any | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchEmployees = async () => {
     try {
@@ -153,6 +158,25 @@ export default function EmployeesAdminPage() {
     }
   };
 
+  const handleDeleteEmployee = async () => {
+    if (!deleteEmployee) return;
+
+    try {
+      setIsDeleting(true);
+      setError(null);
+      await apiClient.delete(`/employees/${deleteEmployee.id}`);
+      setEmployees((prev) => prev.filter((emp) => emp.id !== deleteEmployee.id));
+      setSuccessMsg(
+        `Staff member ${deleteEmployee.employeeCode} (${deleteEmployee.firstName} ${deleteEmployee.lastName}) has been permanently deleted.`,
+      );
+      setDeleteEmployee(null);
+    } catch (err: any) {
+      setError(getErrorMessage(err));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const filteredEmployees = React.useMemo(() => {
     if (selectedRoleFilter === 'ALL') return employees;
     return employees.filter((e) => e.role === selectedRoleFilter);
@@ -244,6 +268,14 @@ export default function EmployeesAdminPage() {
           >
             <Power className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">{item.isActive ? 'Suspend' : 'Activate'}</span>
+          </button>
+          <button
+            onClick={() => setDeleteEmployee(item)}
+            className="flex items-center gap-1 rounded-lg border border-red-200 bg-white px-2 py-1 text-xs text-red-600 hover:bg-red-50 hover:text-red-800 transition shadow-2xs"
+            title="Delete Employee Record"
+          >
+            <Trash2 className="h-3.5 w-3.5 text-red-600" />
+            <span className="hidden sm:inline">Delete</span>
           </button>
         </div>
       ),
@@ -512,6 +544,50 @@ export default function EmployeesAdminPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Delete Employee Confirmation Modal */}
+      <Modal
+        isOpen={!!deleteEmployee}
+        onClose={() => setDeleteEmployee(null)}
+        title="Delete Employee Record"
+        description="Permanently remove staff credentials and access privileges from Melayurveda CRM."
+      >
+        <div className="space-y-4 text-xs">
+          <div className="rounded-xl border border-red-200 bg-red-50/80 p-3.5 text-red-900">
+            <p className="font-bold text-sm">
+              Confirm deletion of {deleteEmployee?.firstName} {deleteEmployee?.lastName} ({deleteEmployee?.employeeCode})?
+            </p>
+            <p className="mt-1 text-xs text-red-700">
+              Role: <span className="font-semibold">{deleteEmployee?.role}</span> | Email: <span className="font-semibold">{deleteEmployee?.email}</span>
+            </p>
+            <p className="mt-2 text-[11px] text-red-600 font-medium">
+              ⚠️ Warning: This will permanently revoke all active login sessions, invalidate refresh tokens, and remove this employee from the system.
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setDeleteEmployee(null)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              size="sm"
+              onClick={handleDeleteEmployee}
+              isLoading={isDeleting}
+              className="bg-red-600 hover:bg-red-700 text-white font-semibold"
+            >
+              Yes, Delete Permanently
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

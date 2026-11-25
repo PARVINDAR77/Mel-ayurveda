@@ -6,7 +6,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { RoleType, User, NotificationType } from '@prisma/client';
+import { RoleType, User, NotificationType, LeadStatus } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
@@ -414,6 +414,120 @@ export class UsersService {
     return {
       success: true,
       message: `Password for employee ${existing.employeeCode} has been successfully reset. Active sessions revoked.`,
+    };
+  }
+
+  /**
+   * Permanently delete an employee record and cleanly unwind associated operational ties
+   */
+  async deleteEmployee(id: string, actorId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      throw new NotFoundException(`Employee with ID ${id} not found`);
+    }
+
+    if (user.id === actorId) {
+      throw new BadRequestException('Security violation: You cannot delete your own account.');
+    }
+
+    if (user.employeeCode === 'MEL-ADM-001') {
+      throw new BadRequestException('Root Super Admin account cannot be deleted.');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Unassign leads currently assigned to this user
+      await tx.lead.updateMany({
+        where: { assignedToId: id },
+        data: { assignedToId: null, status: LeadStatus.NEW },
+      });
+
+      // 2. Clear createdById on leads created by this user
+      await tx.lead.updateMany({
+        where: { createdById: id },
+        data: { createdById: null },
+      });
+
+      // 3. Remove lead assignments given or received
+      await tx.leadAssignment.deleteMany({
+        where: { OR: [{ assignedToId: id }, { assignedById: id }] },
+      });
+
+      // 4. Remove tele-consultation call logs
+      await tx.callLog.deleteMany({
+        where: { callerId: id },
+      });
+
+      // 5. Remove tele-sales follow-ups
+      await tx.followUp.deleteMany({
+        where: { assignedToId: id },
+      });
+
+      // 6. Unlink claimed reviewer on pending reviews
+      await tx.pendingReview.updateMany({
+        where: { claimedById: id },
+        data: { claimedById: null },
+      });
+      await tx.pendingReview.updateMany({
+        where: { submittedById: id },
+        data: { submittedById: actorId },
+      });
+
+      // 7. Unlink approval officer on approval requests
+      await tx.approvalRequest.updateMany({
+        where: { officerId: id },
+        data: { officerId: null },
+      });
+
+      // 8. Reassign orders booked by this user to the administering Super Admin
+      await tx.order.updateMany({
+        where: { createdById: id },
+        data: { createdById: actorId },
+      });
+
+      // 9. Remove customer follow up logs & follow-ups
+      await tx.customerFollowUpLog.deleteMany({
+        where: { callerId: id },
+      });
+      await tx.customerFollowUp.deleteMany({
+        where: { OR: [{ assignedToId: id }, { assignedById: id }] },
+      });
+
+      // 10. Unlink audit logs referencing this user to preserve immutable audit trail
+      await tx.auditLog.updateMany({
+        where: { userId: id },
+        data: { userId: null },
+      });
+
+      // 11. Remove active sessions, refresh tokens and notifications
+      await tx.userSession.deleteMany({ where: { userId: id } });
+      await tx.refreshToken.deleteMany({ where: { userId: id } });
+      await tx.notification.deleteMany({ where: { userId: id } });
+
+      // 12. Record deletion in AuditLog
+      await tx.auditLog.create({
+        data: {
+          userId: actorId,
+          action: 'EMPLOYEE_DELETED',
+          entityType: 'User',
+          entityId: id,
+          oldState: {
+            employeeCode: user.employeeCode,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role,
+          },
+        },
+      });
+
+      // 13. Permanently delete the user record
+      await tx.user.delete({ where: { id } });
+    });
+
+    this.logger.log(`Employee ${user.employeeCode} (${user.email}) permanently deleted by admin ${actorId}`);
+    return {
+      success: true,
+      message: `Employee ${user.employeeCode} (${user.firstName} ${user.lastName}) has been permanently deleted.`,
     };
   }
 }

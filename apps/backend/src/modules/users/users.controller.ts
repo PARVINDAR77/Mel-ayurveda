@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -110,6 +111,20 @@ export class UsersController {
       throw new BadRequestException('newPassword or password is required');
     }
     return this.usersService.resetPassword(id, pwd, actorId);
+  }
+
+  @Delete(':id')
+  @Roles(RoleType.SUPER_ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Permanently delete an employee record' })
+  @ApiResponse({ status: 200, description: 'Employee deleted successfully' })
+  @ApiResponse({ status: 400, description: 'Cannot delete self or root admin' })
+  @ApiResponse({ status: 404, description: 'Employee not found' })
+  async deleteEmployee(
+    @Param('id') id: string,
+    @CurrentUser('id') actorId: string,
+  ) {
+    return this.usersService.deleteEmployee(id, actorId);
   }
 
   @Patch(':id/reset-password')
