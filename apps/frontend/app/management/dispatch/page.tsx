@@ -34,6 +34,7 @@ import {
   ChevronRight,
   ArrowRight,
   CheckCircle,
+  X,
 } from 'lucide-react';
 
 export default function CourierDispatchPage() {
@@ -59,6 +60,7 @@ export default function CourierDispatchPage() {
   const [courierPartner, setCourierPartner] = useState('Delhivery');
   const [trackingAwb, setTrackingAwb] = useState('');
   const [trackingUrl, setTrackingUrl] = useState('');
+  const [manifestSearchQuery, setManifestSearchQuery] = useState('');
   const [isManifesting, setIsManifesting] = useState(false);
 
   // Update Status Modal state
@@ -268,6 +270,23 @@ export default function CourierDispatchPage() {
       );
     });
   }, [readyOrders, readySearchQuery]);
+
+  // Filtered Ready Orders for Manifest Modal Search
+  const filteredManifestOrders = useMemo(() => {
+    if (!manifestSearchQuery.trim()) return readyOrders;
+    const q = manifestSearchQuery.toLowerCase();
+    return readyOrders.filter((ord: any) => {
+      const orderNum = (ord.orderNumber || '').toLowerCase();
+      const name = (ord.customer?.fullName || '').toLowerCase();
+      const phone = (ord.customer?.phoneNumber || '').toLowerCase();
+      const city = (ord.customer?.city || '').toLowerCase();
+      return orderNum.includes(q) || name.includes(q) || phone.includes(q) || city.includes(q);
+    });
+  }, [readyOrders, manifestSearchQuery]);
+
+  const selectedManifestOrder = useMemo(() => {
+    return readyOrders.find((o) => o.id === selectedOrderId) || null;
+  }, [readyOrders, selectedOrderId]);
 
   // Filtered Dispatch History Shipments
   const filteredShipments = useMemo(() => {
@@ -1173,26 +1192,94 @@ export default function CourierDispatchPage() {
         maxWidth="md"
       >
         <form onSubmit={handleManifestSubmit} className="space-y-4 text-xs">
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">
-              Confirmed Order Reference *
-            </label>
+          {/* Enhanced Searchable Order Selector */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block font-semibold text-slate-700">
+                Search & Select Confirmed Order *
+              </label>
+              {manifestSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setManifestSearchQuery('')}
+                  className="text-[11px] text-forest-700 font-bold hover:underline"
+                >
+                  Clear Search
+                </button>
+              )}
+            </div>
+
+            {/* Live Search Input */}
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search by customer name, phone, or order #..."
+                value={manifestSearchQuery}
+                onChange={(e) => setManifestSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-8 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-forest-600 focus:ring-1 focus:ring-forest-600"
+              />
+              {manifestSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setManifestSearchQuery('')}
+                  className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
             <select
               required
               value={selectedOrderId}
               onChange={(e) => setSelectedOrderId(e.target.value)}
-              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-forest-600 focus:outline-none"
+              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-forest-600 focus:outline-none font-mono"
             >
-              {readyOrders.map((ord: any) => (
+              {filteredManifestOrders.map((ord: any) => (
                 <option key={ord.id} value={ord.id}>
                   {ord.orderNumber} - {ord.customer?.fullName} (₹{ord.totalAmount}) •{' '}
                   {ord.customer?.city || 'Gujarat'}
                 </option>
               ))}
-              {readyOrders.length === 0 && (
-                <option value="">No confirmed unmanifested orders available</option>
+              {filteredManifestOrders.length === 0 && (
+                <option value="">No confirmed orders match &quot;{manifestSearchQuery}&quot;</option>
               )}
             </select>
+
+            {/* Selected Order Summary Preview Card */}
+            {selectedManifestOrder && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 space-y-1.5 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono font-bold text-xs text-slate-900 bg-white px-2 py-0.5 rounded border border-emerald-300">
+                    {selectedManifestOrder.orderNumber}
+                  </span>
+                  <span className="font-mono font-bold text-forest-900 text-xs">
+                    ₹{Number(selectedManifestOrder.totalAmount).toFixed(2)} (
+                    {selectedManifestOrder.paymentMode === 'CASH_ON_DELIVERY' ? 'COD' : 'PREPAID'})
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-900">
+                    {selectedManifestOrder.customer?.fullName}
+                  </span>
+                  <span className="font-mono text-slate-600 text-[11px]">
+                    {selectedManifestOrder.customer?.phoneNumber}
+                  </span>
+                </div>
+
+                <div className="text-[11px] text-slate-500 line-clamp-1">
+                  {[
+                    selectedManifestOrder.customer?.address,
+                    selectedManifestOrder.customer?.city,
+                    selectedManifestOrder.customer?.state,
+                  ]
+                    .filter(Boolean)
+                    .join(', ') || 'Gujarat, India'}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">

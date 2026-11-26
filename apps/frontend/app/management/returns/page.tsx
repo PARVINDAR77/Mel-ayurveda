@@ -76,6 +76,7 @@ export default function ReturnOrdersPage() {
   const [selectedOrderId, setSelectedOrderId] = useState('');
   const [initiateReason, setInitiateReason] = useState('CUSTOMER_REFUSED');
   const [initiateRemarks, setInitiateRemarks] = useState('');
+  const [initiateSearchQuery, setInitiateSearchQuery] = useState('');
   const [isInitiating, setIsInitiating] = useState(false);
 
   const fetchStats = async () => {
@@ -313,6 +314,31 @@ export default function ReturnOrdersPage() {
       );
     });
   }, [queue, queueSearch]);
+
+  // Filtered Orders for Return Initiation
+  const filteredOrdersForReturn = useMemo(() => {
+    if (!initiateSearchQuery.trim()) return ordersForReturn;
+    const q = initiateSearchQuery.toLowerCase();
+    return ordersForReturn.filter((ord: any) => {
+      const orderNum = (ord.orderNumber || '').toLowerCase();
+      const name = (ord.customer?.fullName || '').toLowerCase();
+      const phone = (ord.customer?.phoneNumber || '').toLowerCase();
+      const city = (ord.customer?.city || '').toLowerCase();
+      const state = (ord.customer?.state || '').toLowerCase();
+      return (
+        orderNum.includes(q) ||
+        name.includes(q) ||
+        phone.includes(q) ||
+        city.includes(q) ||
+        state.includes(q)
+      );
+    });
+  }, [ordersForReturn, initiateSearchQuery]);
+
+  // Selected Order Details for Preview
+  const selectedOrderDetails = useMemo(() => {
+    return ordersForReturn.find((o) => o.id === selectedOrderId) || null;
+  }, [ordersForReturn, selectedOrderId]);
 
   // History Columns
   const historyColumns: Column<any>[] = [
@@ -1328,23 +1354,147 @@ export default function ReturnOrdersPage() {
         maxWidth="md"
       >
         <form onSubmit={handleInitiateSubmit} className="space-y-4 text-xs">
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Select Order *</label>
+          {/* Enhanced Searchable Order Selector */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block font-semibold text-slate-700">
+                Search & Select Order *
+              </label>
+              {initiateSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setInitiateSearchQuery('')}
+                  className="text-[11px] text-forest-700 font-bold hover:underline"
+                >
+                  Clear Search
+                </button>
+              )}
+            </div>
+
+            {/* Live Search Input */}
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Type customer name, phone, or order number to search..."
+                value={initiateSearchQuery}
+                onChange={(e) => setInitiateSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-8 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-forest-600 focus:ring-1 focus:ring-forest-600"
+              />
+              {initiateSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setInitiateSearchQuery('')}
+                  className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Quick Dropdown (Shows all or search-filtered orders) */}
             <select
               required
               value={selectedOrderId}
               onChange={(e) => setSelectedOrderId(e.target.value)}
-              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-forest-600 focus:outline-none"
+              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-forest-600 focus:outline-none font-mono"
             >
-              {ordersForReturn.map((ord: any) => (
+              {filteredOrdersForReturn.map((ord: any) => (
                 <option key={ord.id} value={ord.id}>
                   {ord.orderNumber} - {ord.customer?.fullName} (₹{ord.totalAmount}) • {ord.status}
                 </option>
               ))}
-              {ordersForReturn.length === 0 && (
-                <option value="">No eligible orders available</option>
+              {filteredOrdersForReturn.length === 0 && (
+                <option value="">No orders match &quot;{initiateSearchQuery}&quot;</option>
               )}
             </select>
+
+            {/* Interactive Matching Order Cards (Active when searching) */}
+            {initiateSearchQuery.trim() && filteredOrdersForReturn.length > 0 && (
+              <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50/80 divide-y divide-slate-100 p-1.5 shadow-2xs">
+                <div className="px-2 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+                  <span>Matching Orders ({filteredOrdersForReturn.length})</span>
+                  <span>Click to select</span>
+                </div>
+                {filteredOrdersForReturn.slice(0, 6).map((ord: any) => (
+                  <div
+                    key={ord.id}
+                    onClick={() => setSelectedOrderId(ord.id)}
+                    className={`p-2 rounded-lg cursor-pointer transition flex items-center justify-between text-xs ${
+                      selectedOrderId === ord.id
+                        ? 'bg-emerald-50 border border-emerald-300 font-bold text-emerald-950 shadow-2xs'
+                        : 'hover:bg-white text-slate-700'
+                    }`}
+                  >
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono font-bold text-slate-900">{ord.orderNumber}</span>
+                        <Badge
+                          variant={ord.status === 'SHIPPED' ? 'warning' : 'success'}
+                          className="text-[10px] py-0 px-1"
+                        >
+                          {ord.status}
+                        </Badge>
+                      </div>
+                      <div className="text-[11px] text-slate-500 flex items-center gap-2">
+                        <span className="font-semibold text-slate-800">{ord.customer?.fullName}</span>
+                        {ord.customer?.phoneNumber && <span>• {ord.customer.phoneNumber}</span>}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-mono font-bold text-forest-800">
+                        ₹{Number(ord.totalAmount).toFixed(2)}
+                      </span>
+                      {selectedOrderId === ord.id && (
+                        <span className="flex items-center gap-0.5 text-[10px] text-emerald-700 font-bold justify-end mt-0.5">
+                          <Check className="h-3 w-3" />
+                          <span>Selected</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Selected Order Summary Preview Card */}
+            {selectedOrderDetails && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 space-y-1.5 mt-1.5 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-xs text-slate-900 bg-white px-2 py-0.5 rounded border border-emerald-300">
+                      {selectedOrderDetails.orderNumber}
+                    </span>
+                    <Badge variant={selectedOrderDetails.status === 'SHIPPED' ? 'warning' : 'success'}>
+                      {selectedOrderDetails.status}
+                    </Badge>
+                  </div>
+                  <span className="font-mono font-bold text-forest-900 text-xs">
+                    ₹{Number(selectedOrderDetails.totalAmount).toFixed(2)} (
+                    {selectedOrderDetails.paymentMode === 'CASH_ON_DELIVERY' ? 'COD' : 'PREPAID'})
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-900">
+                    {selectedOrderDetails.customer?.fullName}
+                  </span>
+                  <span className="font-mono text-slate-600 text-[11px]">
+                    {selectedOrderDetails.customer?.phoneNumber}
+                  </span>
+                </div>
+
+                <div className="text-[11px] text-slate-500 line-clamp-1">
+                  {[
+                    selectedOrderDetails.customer?.address,
+                    selectedOrderDetails.customer?.city,
+                    selectedOrderDetails.customer?.state,
+                  ]
+                    .filter(Boolean)
+                    .join(', ') || 'Gujarat, India'}
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
