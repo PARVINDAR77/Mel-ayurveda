@@ -14,12 +14,26 @@ async function bootstrap() {
   app.use(cookieParser());
 
   // CORS configuration
-  const allowedOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
+  const corsOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+    : ['http://localhost:3010', 'http://127.0.0.1:3010', 'http://localhost:3000'];
+
   app.enableCors({
-    origin: allowedOrigin,
+    origin: (origin, callback) => {
+      if (
+        !origin ||
+        corsOrigins.includes(origin) ||
+        origin.startsWith('http://localhost:') ||
+        origin.startsWith('http://127.0.0.1:')
+      ) {
+        callback(null, true);
+      } else {
+        callback(null, true);
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   });
 
   // Global API prefix
@@ -47,7 +61,8 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   const port = process.env.PORT || 4000;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
+  logger.log(`Melayurveda API Server successfully listening on http://0.0.0.0:${port}${globalPrefix}`);
   logger.log(`Melayurveda CRM Core Backend running at: http://localhost:${port}/${globalPrefix.replace(/^\//, '')}`);
   logger.log(`Swagger OpenAPI Documentation available at: http://localhost:${port}/api/docs`);
 }
