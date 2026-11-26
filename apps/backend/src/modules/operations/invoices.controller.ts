@@ -15,7 +15,7 @@ export class InvoicesController {
   constructor(private readonly invoicesService: InvoicesService) {}
 
   @Get('billing-queue')
-  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT, RoleType.BILLING_EXECUTIVE)
+  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT, RoleType.BILLING_EXECUTIVE, RoleType.SALESPERSON, RoleType.APPROVAL_OFFICER, RoleType.FOLLOWUP_EXECUTIVE)
   @ApiOperation({ summary: 'Retrieve confirmed formulation orders awaiting GST tax billing' })
   @ApiResponse({ status: 200, description: 'Billing queue returned' })
   async getBillingQueue(
@@ -31,7 +31,7 @@ export class InvoicesController {
   }
 
   @Get('billing-stats')
-  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT, RoleType.BILLING_EXECUTIVE)
+  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT, RoleType.BILLING_EXECUTIVE, RoleType.SALESPERSON, RoleType.APPROVAL_OFFICER, RoleType.FOLLOWUP_EXECUTIVE)
   @ApiOperation({ summary: 'KPI metrics for the Billing Workspace' })
   @ApiResponse({ status: 200, description: 'Billing KPI metrics returned' })
   async getBillingStats() {
@@ -39,7 +39,7 @@ export class InvoicesController {
   }
 
   @Post('generate/:orderId')
-  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT, RoleType.BILLING_EXECUTIVE)
+  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT, RoleType.BILLING_EXECUTIVE, RoleType.SALESPERSON)
   @ApiOperation({
     summary:
       'Generate compliant GST tax invoice with automatic CGST/SGST vs IGST calculation based on shipping state',
@@ -53,14 +53,15 @@ export class InvoicesController {
   }
 
   @Get()
-  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT, RoleType.BILLING_EXECUTIVE)
+  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT, RoleType.BILLING_EXECUTIVE, RoleType.SALESPERSON, RoleType.APPROVAL_OFFICER, RoleType.FOLLOWUP_EXECUTIVE)
   @ApiOperation({ summary: 'List all generated GST tax invoices' })
   @ApiResponse({ status: 200, description: 'Invoices list returned' })
   async findAll(
     @Query('page') page?: number,
     @Query('limit') limit?: number,
+    @Query('search') search?: string,
   ) {
-    return this.invoicesService.findAll(Number(page) || 1, Number(limit) || 20);
+    return this.invoicesService.findAll(Number(page) || 1, Number(limit) || 50, search);
   }
 
   @Get('order/:orderId')

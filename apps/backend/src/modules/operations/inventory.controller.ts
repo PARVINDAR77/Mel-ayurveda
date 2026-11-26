@@ -47,7 +47,7 @@ export class InventoryController {
   }
 
   @Get('transactions')
-  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT, RoleType.BILLING_EXECUTIVE)
+  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT, RoleType.BILLING_EXECUTIVE, RoleType.SALESPERSON, RoleType.APPROVAL_OFFICER, RoleType.FOLLOWUP_EXECUTIVE)
   @ApiOperation({ summary: 'Query chronological warehouse inventory transaction history' })
   @ApiResponse({ status: 200, description: 'Transactions returned' })
   async getTransactions(

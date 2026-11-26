@@ -45,6 +45,8 @@ export default function BillingWorkspacePage() {
     billedTodayCount: 0,
     totalInvoicedRevenue: 0,
     lowStockAlerts: 0,
+    totalInvoicesCount: 0,
+    totalInventoryCount: 0,
   });
 
   // Billing Queue State
@@ -136,7 +138,7 @@ export default function BillingWorkspacePage() {
   const fetchInvoices = async () => {
     try {
       setIsLoadingInvoices(true);
-      const res = await apiClient.get('/invoices?limit=50');
+      const res = await apiClient.get('/invoices?limit=100');
       setInvoices(res.data?.data || res.data || []);
     } catch (err: any) {
       setError(getErrorMessage(err));
@@ -147,14 +149,16 @@ export default function BillingWorkspacePage() {
 
   const refreshAll = () => {
     fetchStats();
-    if (activeTab === 'QUEUE') fetchBillingQueue();
-    if (activeTab === 'STOCK') fetchStock();
-    if (activeTab === 'INVOICES') fetchInvoices();
+    fetchBillingQueue();
+    fetchInvoices();
+    fetchStock();
   };
 
   useEffect(() => {
     fetchStats();
     fetchBillingQueue();
+    fetchInvoices();
+    fetchStock();
   }, []);
 
   useEffect(() => {
@@ -176,12 +180,14 @@ export default function BillingWorkspacePage() {
       const createdInvoice = res.data;
 
       setSuccessMsg(
-        `GST Tax Bill ${createdInvoice?.invoiceNumber || ''} generated successfully! Order has been released to the Dispatch Section.`,
+        `GST Tax Bill ${createdInvoice?.invoiceNumber || ''} generated successfully! Order released to Dispatch. You can view the bill record in the "Issued GST Invoices & Bills" tab.`,
       );
 
       setSelectedOrderForBilling(null);
       fetchStats();
       fetchBillingQueue();
+      fetchInvoices();
+      fetchStock();
 
       // Automatically open the printed invoice drawer for inspection & printout
       if (createdInvoice?.id) {
@@ -519,17 +525,28 @@ export default function BillingWorkspacePage() {
   ];
 
   // -------------------------------------------------------------
-  // ISSUED INVOICES COLUMNS
+  // ISSUED INVOICES COLUMNS (WITH REAL-TIME INSTANT SEARCH)
   // -------------------------------------------------------------
-  const filteredInvoices = invoices.filter((inv) => {
-    if (!invoiceSearch.trim()) return true;
-    const q = invoiceSearch.toLowerCase();
-    return (
-      inv.invoiceNumber?.toLowerCase().includes(q) ||
-      inv.order?.orderNumber?.toLowerCase().includes(q) ||
-      inv.order?.customer?.fullName?.toLowerCase().includes(q)
-    );
-  });
+  const filteredInvoices = useMemo(() => {
+    if (!invoiceSearch.trim()) return invoices;
+    const q = invoiceSearch.toLowerCase().trim();
+    return invoices.filter((inv: any) => {
+      const invNum = (inv.invoiceNumber || '').toLowerCase();
+      const orderNum = (inv.order?.orderNumber || '').toLowerCase();
+      const patient = (inv.order?.customer?.fullName || '').toLowerCase();
+      const phone = (inv.order?.customer?.phoneNumber || '').toLowerCase();
+      const city = (inv.order?.customer?.city || '').toLowerCase();
+      const state = (inv.order?.customer?.state || '').toLowerCase();
+      return (
+        invNum.includes(q) ||
+        orderNum.includes(q) ||
+        patient.includes(q) ||
+        phone.includes(q) ||
+        city.includes(q) ||
+        state.includes(q)
+      );
+    });
+  }, [invoices, invoiceSearch]);
 
   const invoiceColumns: Column<any>[] = [
     {
@@ -539,7 +556,7 @@ export default function BillingWorkspacePage() {
         <div>
           <span className="font-mono text-xs font-bold text-slate-900 block">{inv.invoiceNumber}</span>
           <span className="text-[10px] text-slate-400 font-mono">
-            Issued: {new Date(inv.issuedAt).toLocaleDateString('en-IN')}
+            Issued: {new Date(inv.issuedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
           </span>
         </div>
       ),
@@ -547,7 +564,7 @@ export default function BillingWorkspacePage() {
     {
       key: 'orderNumber',
       header: 'Order Code',
-      render: (inv) => <span className="font-mono text-xs text-slate-700">{inv.order?.orderNumber || 'N/A'}</span>,
+      render: (inv) => <span className="font-mono text-xs font-bold text-slate-800">{inv.order?.orderNumber || 'N/A'}</span>,
     },
     {
       key: 'customer',
@@ -555,7 +572,11 @@ export default function BillingWorkspacePage() {
       render: (inv) => (
         <div>
           <span className="font-bold text-xs text-slate-900 block">{inv.order?.customer?.fullName || 'N/A'}</span>
-          <span className="text-[10px] text-slate-500 font-mono block">{inv.order?.customer?.state || 'Gujarat'}</span>
+          <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-mono">
+            {inv.order?.customer?.phoneNumber && <span>📞 {inv.order.customer.phoneNumber}</span>}
+            {inv.order?.customer?.city && <span>• {inv.order.customer.city}</span>}
+            {inv.order?.customer?.state && <span>({inv.order.customer.state})</span>}
+          </div>
         </div>
       ),
     },
@@ -734,7 +755,7 @@ export default function BillingWorkspacePage() {
               activeTab === 'QUEUE' ? 'bg-emerald-950 text-emerald-200' : 'bg-slate-100 text-slate-600'
             }`}
           >
-            {billingQueue.length}
+            {stats?.awaitingBillingCount ?? billingQueue.length}
           </span>
         </button>
 
@@ -753,7 +774,7 @@ export default function BillingWorkspacePage() {
               activeTab === 'STOCK' ? 'bg-emerald-950 text-emerald-200' : 'bg-slate-100 text-slate-600'
             }`}
           >
-            {inventoryList.length}
+            {stats?.totalInventoryCount ?? inventoryList.length}
           </span>
         </button>
 
@@ -772,7 +793,7 @@ export default function BillingWorkspacePage() {
               activeTab === 'INVOICES' ? 'bg-emerald-950 text-emerald-200' : 'bg-slate-100 text-slate-600'
             }`}
           >
-            {invoices.length}
+            {stats?.totalInvoicesCount ?? invoices.length}
           </span>
         </button>
       </div>
@@ -887,8 +908,18 @@ export default function BillingWorkspacePage() {
                   placeholder="Search invoice #, order #, patient..."
                   value={invoiceSearch}
                   onChange={(e) => setInvoiceSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-700"
+                  className="w-full pl-9 pr-8 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-700"
                 />
+                {invoiceSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setInvoiceSearch('')}
+                    className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    title="Clear Search"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
             </div>
 

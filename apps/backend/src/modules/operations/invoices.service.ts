@@ -164,12 +164,24 @@ export class InvoicesService {
   /**
    * Retrieves all invoices
    */
-  async findAll(page = 1, limit = 20) {
+  async findAll(page = 1, limit = 50, search?: string) {
     const skip = (page - 1) * limit;
+    const where: any = {};
+
+    if (search && search.trim()) {
+      const q = search.trim();
+      where.OR = [
+        { invoiceNumber: { contains: q, mode: 'insensitive' } },
+        { order: { orderNumber: { contains: q, mode: 'insensitive' } } },
+        { order: { customer: { fullName: { contains: q, mode: 'insensitive' } } } },
+        { order: { customer: { phoneNumber: { contains: q } } } },
+      ];
+    }
 
     const [total, invoices] = await Promise.all([
-      this.prisma.invoice.count(),
+      this.prisma.invoice.count({ where }),
       this.prisma.invoice.findMany({
+        where,
         skip,
         take: limit,
         orderBy: { issuedAt: 'desc' },
@@ -177,10 +189,13 @@ export class InvoicesService {
           order: {
             select: {
               orderNumber: true,
+              totalAmount: true,
+              paymentMode: true,
               customer: {
                 select: {
                   customerCode: true,
                   fullName: true,
+                  phoneNumber: true,
                   city: true,
                   state: true,
                 },
@@ -343,34 +358,44 @@ export class InvoicesService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const [awaitingBillingCount, billedTodayCount, totalInvoicedRevenue, lowStockAlerts] =
-      await Promise.all([
-        this.prisma.order.count({
-          where: {
-            status: { in: [OrderStatus.CONFIRMED, OrderStatus.PROCESSING] },
-            invoice: null,
-          },
-        }),
-        this.prisma.invoice.count({
-          where: {
-            issuedAt: { gte: today },
-          },
-        }),
-        this.prisma.invoice.aggregate({
-          _sum: { grandTotal: true },
-        }),
-        this.prisma.inventory.count({
-          where: {
-            availableQuantity: { lte: 20 },
-          },
-        }),
-      ]);
+    const [
+      awaitingBillingCount,
+      billedTodayCount,
+      totalInvoicedRevenue,
+      lowStockAlerts,
+      totalInvoicesCount,
+      totalInventoryCount,
+    ] = await Promise.all([
+      this.prisma.order.count({
+        where: {
+          status: { in: [OrderStatus.CONFIRMED, OrderStatus.PROCESSING] },
+          invoice: null,
+        },
+      }),
+      this.prisma.invoice.count({
+        where: {
+          issuedAt: { gte: today },
+        },
+      }),
+      this.prisma.invoice.aggregate({
+        _sum: { grandTotal: true },
+      }),
+      this.prisma.inventory.count({
+        where: {
+          availableQuantity: { lte: 20 },
+        },
+      }),
+      this.prisma.invoice.count(),
+      this.prisma.inventory.count(),
+    ]);
 
     return {
       awaitingBillingCount,
       billedTodayCount,
       totalInvoicedRevenue: Number(totalInvoicedRevenue._sum.grandTotal || 0),
       lowStockAlerts,
+      totalInvoicesCount,
+      totalInventoryCount,
     };
   }
 }
