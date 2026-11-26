@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import { apiClient, getErrorMessage } from '../../../lib/api-client';
 import { DataTable, Column } from '../../../components/ui/data-table';
 import { Badge } from '../../../components/ui/badge';
@@ -451,6 +452,19 @@ export default function CourierDispatchPage() {
               Update
             </Button>
           )}
+          {item.status === 'RTO' && (
+            <Link href="/management/returns">
+              <Button
+                variant="outline"
+                size="sm"
+                icon={<RotateCcw className="h-3 w-3" />}
+                className="border-red-300 text-red-700 hover:bg-red-50"
+                title="View in Returns & RTO Desk"
+              >
+                Return File
+              </Button>
+            </Link>
+          )}
         </div>
       ),
     },
@@ -476,6 +490,16 @@ export default function CourierDispatchPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <Link href="/management/returns">
+            <Button
+              variant="outline"
+              size="sm"
+              icon={<RotateCcw className="h-3.5 w-3.5" />}
+            >
+              Returns & RTO Desk
+            </Button>
+          </Link>
+
           <Button
             variant="outline"
             size="sm"

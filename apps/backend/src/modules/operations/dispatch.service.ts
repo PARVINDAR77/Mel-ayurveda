@@ -17,6 +17,8 @@ import {
   ShipmentStatus,
   NotificationType,
   RoleType,
+  ReturnStatus,
+  ReturnReason,
 } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -387,11 +389,36 @@ export class DispatchService {
           }
         }
       } else if (dto.status === ShipmentStatus.RTO) {
-        // Return-to-Origin: Return stock to available pool
+        // Return-to-Origin: Return stock to available pool & queue in Return Orders section
         await tx.order.update({
           where: { id: shipment.orderId },
           data: { status: OrderStatus.RETURNED },
         });
+
+        // Ensure OrderReturn record exists for investigation & customer calling
+        const existingReturn = await tx.orderReturn.findFirst({
+          where: { orderId: shipment.orderId },
+        });
+
+        if (!existingReturn) {
+          const year = new Date().getFullYear();
+          const count = await tx.orderReturn.count();
+          const returnCode = `MEL-RET-${year}-${String(count + 1).padStart(6, '0')}`;
+
+          await tx.orderReturn.create({
+            data: {
+              returnCode,
+              orderId: shipment.orderId,
+              shipmentId: shipment.id,
+              status: ReturnStatus.PENDING_CALL,
+              returnReason: ReturnReason.CUSTOMER_REFUSED,
+              customerRemarks: 'Courier reported RTO / Failed delivery attempt at destination.',
+              handledById: user.id,
+              isRestocked: true,
+              restockedAt: new Date(),
+            },
+          });
+        }
 
         for (const item of shipment.order.items) {
           const inv = await tx.inventory.findUnique({

@@ -22,6 +22,7 @@ import {
   CheckCircle2,
   Clock,
   Layers,
+  RotateCcw,
 } from 'lucide-react';
 
 export default function ManagementDashboardPage() {
@@ -166,7 +167,7 @@ export default function ManagementDashboardPage() {
       )}
 
       {/* Operational Modules Quick Links Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         <Link href="/management/customers" className="group">
           <div className="rounded-lg border border-slate-200 bg-white p-3.5 text-center shadow-sm hover:border-forest-600 hover:shadow-md transition">
             <Users className="mx-auto h-5 w-5 text-forest-700 group-hover:scale-110 transition" />
@@ -214,6 +215,14 @@ export default function ManagementDashboardPage() {
             <span className="text-[10px] text-slate-500">AWB Logistics</span>
           </div>
         </Link>
+
+        <Link href="/management/returns" className="group">
+          <div className="rounded-lg border border-slate-200 bg-white p-3.5 text-center shadow-sm hover:border-forest-600 hover:shadow-md transition">
+            <RotateCcw className="mx-auto h-5 w-5 text-forest-700 group-hover:scale-110 transition" />
+            <span className="mt-2 block text-xs font-bold text-slate-900">Return & RTO</span>
+            <span className="text-[10px] text-slate-500">Call & Restock</span>
+          </div>
+        </Link>
       </div>
 
       {/* Main Grid: Orders Lifecycle & Commercial GST Breakdown */}
@@ -236,7 +245,7 @@ export default function ManagementDashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-center">
                 <span className="block text-xs font-medium text-slate-500">Draft Orders</span>
                 <span className="mt-1 block text-xl font-black text-slate-800">
@@ -268,6 +277,16 @@ export default function ManagementDashboardPage() {
                 </span>
                 <span className="text-[10px] text-emerald-600 font-medium">Payment fulfilled</span>
               </div>
+
+              <Link href="/management/returns">
+                <div className="rounded-lg border border-red-200 bg-red-50/60 p-3 text-center hover:bg-red-50 hover:border-red-300 transition cursor-pointer">
+                  <span className="block text-xs font-medium text-red-700">Returned / RTO</span>
+                  <span className="mt-1 block text-xl font-black text-red-900">
+                    {data?.orders?.returnedOrders ?? 0}
+                  </span>
+                  <span className="text-[10px] text-red-600 font-medium">Investigate & restock</span>
+                </div>
+              </Link>
             </div>
 
             {/* Top Selling Ayurvedic Formulations */}

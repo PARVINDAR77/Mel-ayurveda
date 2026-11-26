@@ -29,6 +29,7 @@ import {
   HeartHandshake,
   ArchiveRestore,
   Clock,
+  RotateCcw,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { CreateLeadModal } from '../sales/create-lead-modal';
@@ -56,6 +57,7 @@ export function Sidebar({ onClose }: SidebarProps) {
         return [
           { href: '/admin', label: 'Master Dashboard', icon: LayoutDashboard },
           { href: '/admin/orders', label: 'Order Management', icon: Package },
+          { href: '/management/returns', label: 'Returns & RTO Desk', icon: RotateCcw },
           { href: '/billing', label: 'Billing & Stock Desk', icon: FileText },
           { href: '/admin/products', label: 'Products & Formulations', icon: Leaf },
           { href: '/admin/assignments', label: 'Lead Distribution', icon: UserCheck },
@@ -108,6 +110,7 @@ export function Sidebar({ onClose }: SidebarProps) {
           { href: '/management/invoices', label: 'GST Tax Invoicing', icon: FileText },
           { href: '/management/inventory', label: 'Warehouse Inventory', icon: Boxes },
           { href: '/management/dispatch', label: 'Courier Dispatch', icon: Truck },
+          { href: '/management/returns', label: 'Return & RTO Orders', icon: RotateCcw },
         ];
 
       case 'FOLLOWUP_EXECUTIVE':
