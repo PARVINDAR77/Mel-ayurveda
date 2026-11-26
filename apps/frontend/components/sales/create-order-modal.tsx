@@ -572,7 +572,13 @@ export function CreateOrderModal({ isOpen, onClose, lead, onOrderCreated }: Crea
             <div className="flex justify-between text-slate-600">
               <span>Payment Mode:</span>
               <span className="font-bold text-slate-900">
-                {paymentMode === 'CASH_ON_DELIVERY' ? 'Cash on Delivery (COD)' : paymentMode === 'FACE_TO_FACE' ? 'Face to Face' : 'Prepaid'}
+                {paymentMode === 'CASH_ON_DELIVERY'
+                  ? 'Cash on Delivery (COD)'
+                  : paymentMode === 'FACE_TO_FACE'
+                  ? 'Face to Face'
+                  : paymentMode === 'HOLD'
+                  ? 'Order on Hold (Pending Confirmation)'
+                  : 'Prepaid'}
               </span>
             </div>
             <div className="flex justify-between text-slate-600">
@@ -1085,17 +1091,29 @@ export function CreateOrderModal({ isOpen, onClose, lead, onOrderCreated }: Crea
                 <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                   <span>🚚</span> Payment Mode & Dispatch
                 </h5>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 border border-emerald-300">
-                  {paymentMode === 'CASH_ON_DELIVERY' ? 'COD Selected' : paymentMode === 'FACE_TO_FACE' ? 'Face to Face' : 'Prepaid'}
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                    paymentMode === 'HOLD'
+                      ? 'bg-amber-100 text-amber-900 border-amber-300'
+                      : 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                  }`}
+                >
+                  {paymentMode === 'CASH_ON_DELIVERY'
+                    ? 'COD Selected'
+                    : paymentMode === 'FACE_TO_FACE'
+                    ? 'Face to Face'
+                    : paymentMode === 'HOLD'
+                    ? 'Hold Order'
+                    : 'Prepaid'}
                 </span>
               </div>
 
-              {/* 3-Button Payment Method Selector */}
+              {/* 4-Button Payment Method Selector */}
               <div>
                 <label className="text-[11px] font-bold text-slate-700 block mb-1.5">
                   Payment Method <span className="text-red-500">*</span>
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <button
                     type="button"
                     onClick={() => setPaymentMode('CASH_ON_DELIVERY')}
@@ -1133,6 +1151,19 @@ export function CreateOrderModal({ isOpen, onClose, lead, onOrderCreated }: Crea
                   >
                     <span className="text-sm">💳</span>
                     <span className="leading-tight">Prepaid</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMode('HOLD')}
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition-all text-center border flex items-center justify-center gap-1.5 shadow-xs ${
+                      paymentMode === 'HOLD'
+                        ? 'bg-amber-700 text-white border-amber-800 ring-2 ring-amber-500/40 shadow-amber-900/20'
+                        : 'bg-white text-slate-800 border-slate-300 hover:bg-slate-100 hover:text-slate-900'
+                    }`}
+                  >
+                    <span className="text-sm">⏸️</span>
+                    <span className="leading-tight">Hold</span>
                   </button>
                 </div>
               </div>

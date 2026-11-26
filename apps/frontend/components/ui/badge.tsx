@@ -64,7 +64,7 @@ export function Badge({ children, variant = 'default', status, className }: Badg
     colorClasses = 'bg-emerald-50 text-emerald-800 border-emerald-300 font-semibold';
   } else if (['NEW', 'ASSIGNED', 'CONTACTED'].includes(upperStatus)) {
     colorClasses = 'bg-blue-50 text-blue-800 border-blue-200';
-  } else if (['PENDING_REVIEW', 'UNDER_REVIEW', 'FOLLOW_UP_REQUIRED', 'PROCESSING', 'SCHEDULED'].includes(upperStatus)) {
+  } else if (['PENDING_REVIEW', 'UNDER_REVIEW', 'FOLLOW_UP_REQUIRED', 'PROCESSING', 'SCHEDULED', 'HOLD', 'ON_HOLD'].includes(upperStatus)) {
     colorClasses = 'bg-amber-50 text-amber-800 border-amber-200';
   } else if (['REJECTED', 'CANCELLED', 'INVALID_NUMBER', 'FAILED', 'OVERDUE', 'URGENT'].includes(upperStatus)) {
     colorClasses = 'bg-red-50 text-red-800 border-red-200';

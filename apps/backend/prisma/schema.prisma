@@ -430,6 +430,7 @@ enum PaymentMode {
   CASH_ON_DELIVERY
   FACE_TO_FACE
   PREPAID
+  HOLD
   UPI
   NET_BANKING
   CARD

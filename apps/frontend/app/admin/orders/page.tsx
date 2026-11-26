@@ -391,7 +391,7 @@ export default function SuperAdminOrdersPage() {
               </div>
             )}
             <span className="block text-[10px] uppercase font-semibold text-slate-500 mt-0.5">
-              {item.paymentMode === 'FACE_TO_FACE' ? 'Face to Face' : item.paymentMode === 'PREPAID' ? 'Prepaid' : item.paymentMode === 'CASH_ON_DELIVERY' ? 'COD' : item.paymentMode?.replace(/_/g, ' ') || 'COD'}
+              {item.paymentMode === 'FACE_TO_FACE' ? 'Face to Face' : item.paymentMode === 'PREPAID' ? 'Prepaid' : item.paymentMode === 'HOLD' ? 'Hold' : item.paymentMode === 'CASH_ON_DELIVERY' ? 'COD' : item.paymentMode?.replace(/_/g, ' ') || 'COD'}
             </span>
           </div>
         );
@@ -706,7 +706,7 @@ export default function SuperAdminOrdersPage() {
                 <div>
                   <span className="text-[10px] uppercase font-bold text-slate-400">Payment Mode</span>
                   <p className="font-bold text-slate-900 mt-0.5">
-                    {orderDetail.paymentMode === 'FACE_TO_FACE' ? 'Face to Face' : orderDetail.paymentMode === 'PREPAID' ? 'Prepaid' : orderDetail.paymentMode === 'CASH_ON_DELIVERY' ? 'Cash on Delivery (COD)' : orderDetail.paymentMode?.replace(/_/g, ' ')}
+                    {orderDetail.paymentMode === 'FACE_TO_FACE' ? 'Face to Face' : orderDetail.paymentMode === 'PREPAID' ? 'Prepaid' : orderDetail.paymentMode === 'HOLD' ? 'Hold' : orderDetail.paymentMode === 'CASH_ON_DELIVERY' ? 'Cash on Delivery (COD)' : orderDetail.paymentMode?.replace(/_/g, ' ')}
                   </p>
                 </div>
                 <div>
@@ -970,6 +970,7 @@ export default function SuperAdminOrdersPage() {
                 <option value="CASH_ON_DELIVERY" style={{ color: '#0f172a', backgroundColor: '#ffffff', fontWeight: 600 }}>Cash on Delivery (COD)</option>
                 <option value="FACE_TO_FACE" style={{ color: '#0f172a', backgroundColor: '#ffffff', fontWeight: 600 }}>Face to Face</option>
                 <option value="PREPAID" style={{ color: '#0f172a', backgroundColor: '#ffffff', fontWeight: 600 }}>Prepaid</option>
+                <option value="HOLD" style={{ color: '#0f172a', backgroundColor: '#ffffff', fontWeight: 600 }}>Hold</option>
               </select>
             </div>
 

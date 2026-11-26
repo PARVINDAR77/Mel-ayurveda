@@ -382,7 +382,7 @@ export default function CourierDispatchPage() {
           )}
           <span className="text-[11px] font-semibold text-slate-600 block">
             ₹{Number(item.order?.totalAmount || 0).toFixed(2)} •{' '}
-            {item.order?.paymentMode === 'CASH_ON_DELIVERY' ? 'COD' : 'PREPAID'}
+            {item.order?.paymentMode === 'CASH_ON_DELIVERY' ? 'COD' : item.order?.paymentMode === 'HOLD' ? 'HOLD' : item.order?.paymentMode === 'FACE_TO_FACE' ? 'Face to Face' : 'PREPAID'}
           </span>
         </div>
       ),
@@ -829,7 +829,7 @@ export default function CourierDispatchPage() {
                           </span>
                         )}
                         <span className="text-[11px] font-bold text-forest-800 bg-forest-50 px-2 py-0.5 rounded">
-                          {ord.paymentMode === 'CASH_ON_DELIVERY' ? 'COD' : 'PREPAID'} • ₹
+                          {ord.paymentMode === 'CASH_ON_DELIVERY' ? 'COD' : ord.paymentMode === 'HOLD' ? 'HOLD' : ord.paymentMode === 'FACE_TO_FACE' ? 'Face to Face' : 'PREPAID'} • ₹
                           {Number(ord.totalAmount).toFixed(2)}
                         </span>
                       </div>
@@ -1097,7 +1097,7 @@ export default function CourierDispatchPage() {
                 <div>
                   <span className="text-[10px] text-slate-400 block">Payment Method</span>
                   <span className="font-bold text-slate-800 text-xs">
-                    {inspectingShipment.order?.paymentMode === 'CASH_ON_DELIVERY' ? 'Cash on Delivery (COD)' : 'Prepaid Online'}
+                    {inspectingShipment.order?.paymentMode === 'CASH_ON_DELIVERY' ? 'Cash on Delivery (COD)' : inspectingShipment.order?.paymentMode === 'HOLD' ? 'On Hold' : inspectingShipment.order?.paymentMode === 'FACE_TO_FACE' ? 'Face to Face' : 'Prepaid Online'}
                   </span>
                 </div>
                 <div>
@@ -1221,7 +1221,7 @@ export default function CourierDispatchPage() {
                     </span>
                     <span className="font-mono font-bold text-forest-900 text-xs">
                       ₹{Number(selectedManifestOrder.totalAmount).toFixed(2)} (
-                      {selectedManifestOrder.paymentMode === 'CASH_ON_DELIVERY' ? 'COD' : 'PREPAID'})
+                      {selectedManifestOrder.paymentMode === 'CASH_ON_DELIVERY' ? 'COD' : selectedManifestOrder.paymentMode === 'HOLD' ? 'HOLD' : selectedManifestOrder.paymentMode === 'FACE_TO_FACE' ? 'Face to Face' : 'PREPAID'})
                     </span>
                   </div>
 
