@@ -264,10 +264,15 @@ export class InvoicesService {
 
     if (search && search.trim()) {
       const q = search.trim();
+      const phoneDigits = q.replace(/\D/g, '').slice(-10);
       where.OR = [
         { orderNumber: { contains: q, mode: 'insensitive' } },
         { customer: { fullName: { contains: q, mode: 'insensitive' } } },
         { customer: { phoneNumber: { contains: q } } },
+        { customer: { alternatePhone: { contains: q } } },
+        { customer: { customerCode: { contains: q, mode: 'insensitive' } } },
+        { notes: { contains: q, mode: 'insensitive' } },
+        ...(phoneDigits ? [{ customer: { phoneNumber: { contains: phoneDigits } } }] : []),
       ];
     }
 

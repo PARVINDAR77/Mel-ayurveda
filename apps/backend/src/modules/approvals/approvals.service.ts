@@ -360,27 +360,55 @@ export class ApprovalsService {
       });
 
       // 3. Connect Approval to Billing: Advance associated draft orders to CONFIRMED
-      const customer = await tx.customer.findFirst({
+      const rawLeadPhone = request.lead.phoneNumber || '';
+      const leadDigits = rawLeadPhone.replace(/\D/g, '').slice(-10);
+
+      // Find all draft orders associated with this lead directly, via customer, or via notes
+      const draftOrders = await tx.order.findMany({
         where: {
+          status: OrderStatus.DRAFT,
           OR: [
-            { convertedFromId: request.leadId },
-            { phoneNumber: request.lead.phoneNumber },
+            { customer: { convertedFromId: request.leadId } },
+            ...(rawLeadPhone ? [{ customer: { phoneNumber: rawLeadPhone } }] : []),
+            ...(leadDigits
+              ? [
+                  { customer: { phoneNumber: leadDigits } },
+                  { customer: { phoneNumber: `+91${leadDigits}` } },
+                  { customer: { phoneNumber: { contains: leadDigits } } },
+                ]
+              : []),
+            { notes: { contains: request.leadId } },
+            { notes: { contains: request.lead.leadCode } },
           ],
         },
         include: {
-          orders: {
-            where: { status: OrderStatus.DRAFT },
-          },
+          customer: true,
         },
       });
 
-      if (customer && customer.orders.length > 0) {
-        for (const draftOrder of customer.orders) {
+      if (draftOrders.length > 0) {
+        for (const draftOrder of draftOrders) {
           if (dto.decision === ApprovalDecision.APPROVE) {
             await tx.order.update({
               where: { id: draftOrder.id },
               data: { status: OrderStatus.CONFIRMED },
             });
+
+            // Ensure customer fullName is synchronized with lead customerName
+            if (
+              draftOrder.customer &&
+              request.lead.customerName &&
+              draftOrder.customer.fullName !== request.lead.customerName
+            ) {
+              await tx.customer.update({
+                where: { id: draftOrder.customerId },
+                data: {
+                  fullName: request.lead.customerName,
+                  convertedFromId: request.leadId,
+                },
+              });
+            }
+
             this.logger.log(
               `Order ${draftOrder.orderNumber} successfully advanced to CONFIRMED upon approval of lead ${request.lead.leadCode}. Now awaiting GST billing.`,
             );

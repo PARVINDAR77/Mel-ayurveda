@@ -45,9 +45,11 @@ describe('ApprovalsService Unit Tests', () => {
       },
       customer: {
         findFirst: jest.fn().mockResolvedValue(null),
+        update: jest.fn().mockResolvedValue({}),
       },
       order: {
-        update: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
+        update: jest.fn().mockResolvedValue({}),
       },
       approvalRequest: {
         findUnique: jest.fn(),

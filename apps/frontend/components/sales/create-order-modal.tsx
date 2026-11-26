@@ -678,9 +678,11 @@ export function CreateOrderModal({ isOpen, onClose, lead, onOrderCreated }: Crea
                 <span>📋</span> Client Contact Details & Delivery Destination
               </span>
               {lead && (
-                <span className="text-emerald-800 bg-emerald-100/90 font-bold px-2.5 py-0.5 rounded-full text-[11px] border border-emerald-300/60">
-                  Pre-filled from Lead {lead.leadCode || `#LEAD-${lead.id?.slice(0, 6)}`}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-emerald-900 bg-emerald-100 font-extrabold px-2.5 py-0.5 rounded-lg text-[11px] border border-emerald-300 shadow-2xs">
+                    Linked Lead: {lead.customerName} ({lead.leadCode || `#LEAD-${lead.id?.slice(0, 6)}`})
+                  </span>
+                </div>
               )}
             </div>
 
@@ -717,11 +719,19 @@ export function CreateOrderModal({ isOpen, onClose, lead, onOrderCreated }: Crea
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1 mb-1">
-                  👤 Client Full Name <span className="text-red-500">*</span>
+                <label className="text-[11px] font-bold text-slate-700 flex items-center justify-between mb-1">
+                  <span className="flex items-center gap-1">👤 Client Full Name <span className="text-red-500">*</span></span>
+                  {lead?.customerName && (
+                    <span className="text-[10px] text-emerald-800 font-bold bg-emerald-50 px-1 rounded border border-emerald-200">
+                      Lead: {lead.customerName}
+                    </span>
+                  )}
                 </label>
                 <input
                   type="text"
+                  name="patient_full_name"
+                  autoComplete="off"
+                  data-lpignore="true"
                   required
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
@@ -742,6 +752,9 @@ export function CreateOrderModal({ isOpen, onClose, lead, onOrderCreated }: Crea
                   <span className="absolute left-3 top-1.5 text-xs font-bold text-slate-600 select-none">+91</span>
                   <input
                     type="tel"
+                    name="patient_primary_phone"
+                    autoComplete="off"
+                    data-lpignore="true"
                     required
                     maxLength={10}
                     value={phoneNumber}

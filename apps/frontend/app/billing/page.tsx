@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { apiClient, getErrorMessage } from '../../lib/api-client';
 import { DataTable, Column } from '../../components/ui/data-table';
 import { Badge } from '../../components/ui/badge';
@@ -14,6 +14,7 @@ import {
   PackageCheck,
   RefreshCw,
   Search,
+  X,
   Eye,
   Printer,
   CheckCircle2,
@@ -380,6 +381,32 @@ export default function BillingWorkspacePage() {
       ),
     },
   ];
+
+  // -------------------------------------------------------------
+  // BILLING QUEUE FILTER (REAL-TIME INSTANT SEARCH)
+  // -------------------------------------------------------------
+  const filteredBillingQueue = useMemo(() => {
+    if (!queueSearch.trim()) return billingQueue;
+    const q = queueSearch.toLowerCase().trim();
+    return billingQueue.filter((ord: any) => {
+      const orderNum = (ord.orderNumber || '').toLowerCase();
+      const patientName = (ord.customer?.fullName || '').toLowerCase();
+      const phone = (ord.customer?.phoneNumber || '').toLowerCase();
+      const altPhone = (ord.customer?.alternatePhone || '').toLowerCase();
+      const city = (ord.customer?.city || '').toLowerCase();
+      const notes = (ord.notes || '').toLowerCase();
+      const items = (ord.items || []).map((it: any) => (it.product?.name || '').toLowerCase()).join(' ');
+      return (
+        orderNum.includes(q) ||
+        patientName.includes(q) ||
+        phone.includes(q) ||
+        altPhone.includes(q) ||
+        city.includes(q) ||
+        notes.includes(q) ||
+        items.includes(q)
+      );
+    });
+  }, [billingQueue, queueSearch]);
 
   // -------------------------------------------------------------
   // STOCK INVENTORY COLUMNS WITH ACTIONS (ADD / REMOVE / HISTORY)
@@ -770,14 +797,27 @@ export default function BillingWorkspacePage() {
                   value={queueSearch}
                   onChange={(e) => setQueueSearch(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && fetchBillingQueue()}
-                  className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-700"
+                  className="w-full pl-9 pr-8 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-700"
                 />
+                {queueSearch && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQueueSearch('');
+                      fetchBillingQueue();
+                    }}
+                    className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    title="Clear Search"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
             </div>
 
             <DataTable
               columns={queueColumns}
-              data={billingQueue}
+              data={filteredBillingQueue}
               isLoading={isLoadingQueue}
               emptyMessage="No approved orders currently awaiting billing. All caught up!"
             />

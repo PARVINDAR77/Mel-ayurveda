@@ -75,97 +75,98 @@ export class OrdersService {
       });
     }
 
-    if (!customer && (dto.phoneNumber || dto.leadId)) {
-      const phoneDigits = dto.phoneNumber
-        ? dto.phoneNumber.replace(/\D/g, '').slice(-10)
-        : null;
+    let leadRecord: any = null;
+    if (dto.leadId) {
+      leadRecord = await this.prisma.lead.findUnique({
+        where: { id: dto.leadId },
+      });
+    }
+
+    // Determine target customer name safely, preventing agent profile autofill from overriding lead patient name
+    const agentFullName = `${user.firstName || ''} ${user.lastName || ''}`.trim().toLowerCase();
+    const enteredName = dto.customerName?.trim() || '';
+    let targetCustomerName = leadRecord?.customerName || enteredName || 'Valued Patient';
+
+    if (enteredName) {
+      if (agentFullName && enteredName.toLowerCase() === agentFullName && leadRecord?.customerName) {
+        // Form autofill erroneously populated the logged-in agent's name. Revert to lead's real patient name!
+        targetCustomerName = leadRecord.customerName;
+      } else {
+        targetCustomerName = enteredName;
+      }
+    }
+
+    if (!customer && (dto.phoneNumber || dto.leadId || leadRecord)) {
+      const rawPhone = dto.phoneNumber || leadRecord?.phoneNumber;
+      const phoneDigits = rawPhone ? rawPhone.replace(/\D/g, '').slice(-10) : null;
 
       if (phoneDigits) {
         customer = await this.prisma.customer.findFirst({
           where: {
             OR: [
-              { phoneNumber: dto.phoneNumber },
+              ...(rawPhone ? [{ phoneNumber: rawPhone }] : []),
               { phoneNumber: phoneDigits },
               { phoneNumber: `+91${phoneDigits}` },
+              ...(dto.leadId ? [{ convertedFromId: dto.leadId }] : []),
             ],
           },
         });
       }
 
-      if (!customer && dto.leadId) {
-        const lead = await this.prisma.lead.findUnique({
-          where: { id: dto.leadId },
+      if (customer) {
+        // Sync customer record with latest order / lead details so billing queue shows correct patient details
+        customer = await this.prisma.customer.update({
+          where: { id: customer.id },
+          data: {
+            fullName: targetCustomerName,
+            convertedFromId: dto.leadId || customer.convertedFromId,
+            alternatePhone: dto.alternatePhone?.trim() || leadRecord?.alternatePhone || customer.alternatePhone,
+            address: dto.shippingAddress?.trim() || leadRecord?.address || customer.address,
+            city: dto.city?.trim() || leadRecord?.city || customer.city,
+            state: dto.state?.trim() || leadRecord?.state || customer.state,
+            pincode: dto.pincode?.trim() || customer.pincode,
+          },
         });
-        if (lead) {
-          const leadDigits = lead.phoneNumber.replace(/\D/g, '').slice(-10);
+      } else {
+        // Create new customer record
+        const count = await this.prisma.customer.count();
+        const timestamp = Date.now().toString().slice(-4);
+        const customerCode = `MEL-CUST-${String(count + 1).padStart(4, '0')}-${timestamp}`;
+        const phoneToSave = phoneDigits || rawPhone || '0000000000';
+
+        try {
+          customer = await this.prisma.customer.create({
+            data: {
+              customerCode,
+              fullName: targetCustomerName,
+              phoneNumber: phoneToSave,
+              alternatePhone: dto.alternatePhone?.trim() || leadRecord?.alternatePhone,
+              address: dto.shippingAddress?.trim() || leadRecord?.address,
+              city: dto.city?.trim() || leadRecord?.city || 'Gujarat',
+              state: dto.state?.trim() || leadRecord?.state || 'Gujarat',
+              pincode: dto.pincode?.trim(),
+              convertedFromId: dto.leadId || undefined,
+            },
+          });
+        } catch (createErr) {
           customer = await this.prisma.customer.findFirst({
             where: {
               OR: [
-                { phoneNumber: lead.phoneNumber },
-                { phoneNumber: leadDigits },
-                { phoneNumber: `+91${leadDigits}` },
+                { phoneNumber: phoneToSave },
+                ...(phoneDigits ? [{ phoneNumber: phoneDigits }, { phoneNumber: `+91${phoneDigits}` }] : []),
               ],
             },
           });
-
-          if (!customer) {
-            const count = await this.prisma.customer.count();
-            const customerCode = `MEL-CUST-${String(count + 1).padStart(5, '0')}`;
-            customer = await this.prisma.customer.create({
+          if (customer) {
+            customer = await this.prisma.customer.update({
+              where: { id: customer.id },
               data: {
-                customerCode,
-                fullName: dto.customerName?.trim() || lead.customerName,
-                phoneNumber: lead.phoneNumber,
-                alternatePhone: dto.alternatePhone?.trim() || lead.alternatePhone,
-                address: dto.shippingAddress?.trim() || lead.address,
-                city: dto.city?.trim() || lead.city,
-                state: dto.state?.trim() || lead.state,
-                pincode: dto.pincode?.trim(),
-                convertedFromId: lead.id,
+                fullName: targetCustomerName,
+                convertedFromId: dto.leadId || customer.convertedFromId,
               },
             });
-          }
-        }
-      } else if (!customer && dto.customerName && dto.phoneNumber) {
-        const phoneDigits = dto.phoneNumber.replace(/\D/g, '').slice(-10);
-        customer = await this.prisma.customer.findFirst({
-          where: {
-            OR: [
-              { phoneNumber: dto.phoneNumber.trim() },
-              { phoneNumber: phoneDigits },
-              { phoneNumber: `+91${phoneDigits}` },
-            ],
-          },
-        });
-
-        if (!customer) {
-          const count = await this.prisma.customer.count();
-          const timestamp = Date.now().toString().slice(-4);
-          const customerCode = `MEL-CUST-${String(count + 1).padStart(4, '0')}-${timestamp}`;
-          try {
-            customer = await this.prisma.customer.create({
-              data: {
-                customerCode,
-                fullName: dto.customerName.trim(),
-                phoneNumber: phoneDigits || dto.phoneNumber.trim(),
-                alternatePhone: dto.alternatePhone?.trim(),
-                address: dto.shippingAddress?.trim(),
-                city: dto.city?.trim() || 'Gujarat',
-                state: dto.state?.trim() || 'Gujarat',
-                pincode: dto.pincode?.trim(),
-              },
-            });
-          } catch (createErr) {
-            // If duplicate phone or customerCode happened concurrently, fetch existing
-            customer = await this.prisma.customer.findFirst({
-              where: {
-                OR: [
-                  { phoneNumber: dto.phoneNumber.trim() },
-                  { phoneNumber: phoneDigits },
-                ],
-              },
-            });
-            if (!customer) throw createErr;
+          } else {
+            throw createErr;
           }
         }
       }
@@ -235,7 +236,10 @@ export class OrdersService {
           totalAmount: Number(totalAmount.toFixed(2)),
           paymentMode: dto.paymentMode || PaymentMode.CASH_ON_DELIVERY,
           paymentStatus: PaymentStatus.PENDING,
-          notes: dto.notes?.trim(),
+          notes: [
+            dto.notes?.trim(),
+            dto.leadId ? `[LEAD:${dto.leadId}] [LEAD_CUSTOMER:${targetCustomerName}]` : null,
+          ].filter(Boolean).join(' | '),
           items: {
             create: orderItemsData,
           },
@@ -284,11 +288,19 @@ export class OrdersService {
           const existingApproval = await tx.approvalRequest.findFirst({
             where: { leadId: dto.leadId, decision: null },
           });
+          const noteText = `Prescription Order ${orderNumber} created with ${dto.items.length} formulation kit(s). Total: ₹${order.totalAmount}. Patient: ${targetCustomerName}. Awaiting clinical sign-off.`;
           if (!existingApproval) {
             await tx.approvalRequest.create({
               data: {
                 leadId: dto.leadId,
-                officerNotes: `Prescription Order ${orderNumber} created with ${dto.items.length} formulation kit(s). Total: ₹${order.totalAmount}. Awaiting clinical sign-off.`,
+                officerNotes: noteText,
+              },
+            });
+          } else {
+            await tx.approvalRequest.update({
+              where: { id: existingApproval.id },
+              data: {
+                officerNotes: noteText,
               },
             });
           }

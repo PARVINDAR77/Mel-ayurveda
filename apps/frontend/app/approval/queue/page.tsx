@@ -222,7 +222,12 @@ export default function ApprovalQueuePage() {
           <span className="font-medium text-slate-800 text-xs block">
             {item.lead?.productInterest || 'Ayurvedic Treatment'}
           </span>
-          {item.lead?.pendingReviews?.[0] && (
+          {item.officerNotes && (
+            <span className="text-[11px] font-semibold text-emerald-900 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block mt-1">
+              💊 {item.officerNotes}
+            </span>
+          )}
+          {item.lead?.pendingReviews?.[0] && !item.officerNotes && (
             <span className="text-[11px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 inline-block mt-0.5">
               Panel 03: {item.lead.pendingReviews[0].reason}
             </span>
