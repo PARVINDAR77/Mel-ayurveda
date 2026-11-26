@@ -261,22 +261,38 @@ export class OrdersService {
         },
       });
 
-      // If associated with a Lead, update status to CONVERTED or PENDING_REVIEW
+      // If associated with a Lead, advance status to APPROVAL_REQUESTED and route directly to Approval Officer queue
       if (dto.leadId) {
-        await tx.lead.update({
-          where: { id: dto.leadId },
-          data: { status: LeadStatus.CONVERTED },
-        }).catch(() => null);
+        const lead = await tx.lead.findUnique({ where: { id: dto.leadId } });
+        if (lead) {
+          await tx.lead.update({
+            where: { id: dto.leadId },
+            data: { status: LeadStatus.APPROVAL_REQUESTED },
+          });
 
-        await tx.leadStatusHistory.create({
-          data: {
-            leadId: dto.leadId,
-            fromStatus: LeadStatus.INTERESTED,
-            toStatus: LeadStatus.CONVERTED,
-            changedById: user.id,
-            reason: `Order ${orderNumber} created with negotiated deal by ${user.employeeCode}`,
-          },
-        }).catch(() => null);
+          await tx.leadStatusHistory.create({
+            data: {
+              leadId: dto.leadId,
+              fromStatus: lead.status,
+              toStatus: LeadStatus.APPROVAL_REQUESTED,
+              changedById: user.id,
+              reason: `Prescription Order ${orderNumber} (₹${order.totalAmount}) created by ${user.employeeCode} - Submitted for doctor clinical approval`,
+            },
+          });
+
+          // Create or link ApprovalRequest for this lead
+          const existingApproval = await tx.approvalRequest.findFirst({
+            where: { leadId: dto.leadId, decision: null },
+          });
+          if (!existingApproval) {
+            await tx.approvalRequest.create({
+              data: {
+                leadId: dto.leadId,
+                officerNotes: `Prescription Order ${orderNumber} created with ${dto.items.length} formulation kit(s). Total: ₹${order.totalAmount}. Awaiting clinical sign-off.`,
+              },
+            });
+          }
+        }
       }
 
       await tx.auditLog.create({
@@ -303,19 +319,31 @@ export class OrdersService {
       return order;
     });
 
-    // Dispatch real-time live notification for new draft formulation order
+    // Dispatch real-time live notification
     try {
-      await this.notificationsService.dispatchToRole(
-        [RoleType.MANAGEMENT, RoleType.SUPER_ADMIN],
-        {
-          title: 'New Formulation Order Drafted',
-          message: `Order ${createdOrder.orderNumber} created for ${customer.fullName || customer.customerCode}. Total: ₹${createdOrder.totalAmount.toFixed(2)}.`,
-          type: NotificationType.INFO,
-          link: '/management/orders',
-        },
-      );
+      if (dto.leadId) {
+        await this.notificationsService.dispatchToRole(
+          [RoleType.APPROVAL_OFFICER, RoleType.SUPER_ADMIN],
+          {
+            title: 'New Order Awaiting Clinical Approval',
+            message: `Prescription Order ${createdOrder.orderNumber} created for ${customer.fullName || customer.customerCode} (Total: ₹${createdOrder.totalAmount.toFixed(2)}) is awaiting doctor verification.`,
+            type: NotificationType.REVIEW_REQUESTED,
+            link: '/approval/queue',
+          },
+        );
+      } else {
+        await this.notificationsService.dispatchToRole(
+          [RoleType.MANAGEMENT, RoleType.SUPER_ADMIN],
+          {
+            title: 'New Formulation Order Drafted',
+            message: `Order ${createdOrder.orderNumber} created for ${customer.fullName || customer.customerCode}. Total: ₹${createdOrder.totalAmount.toFixed(2)}.`,
+            type: NotificationType.INFO,
+            link: '/management/orders',
+          },
+        );
+      }
     } catch (notifErr) {
-      this.logger.warn(`Failed to dispatch order draft notification: ${notifErr}`);
+      this.logger.warn(`Failed to dispatch order notification: ${notifErr}`);
     }
 
     return createdOrder;

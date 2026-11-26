@@ -154,10 +154,10 @@ function CallingWorkspaceContent() {
       }
 
       setSuccessMsg(
-        isApprovalOutcome
-          ? `Call recorded! Deal Confirmed: Lead ${selectedLead.leadCode} successfully forwarded to Panel 04 Approval Officer queue.`
-          : ['PENDING_REVIEW', 'FOLLOW_UP_REQUIRED', 'BUSY_CALL_LATER', 'NO_ANSWER'].includes(outcome)
-            ? `Call recorded! Lead ${selectedLead.leadCode} marked as pending and routed to Panel 03 Pending Review queue.`
+        outcome === 'DEAL_CONFIRMED'
+          ? `Call recorded! Deal Confirmed: Click 'Create Customer Order' to prescribe formulations and submit for doctor approval.`
+          : scheduleFollowUp
+            ? `Call recorded! Follow-up callback scheduled. You will receive an in-app reminder on the scheduled date.`
             : `Call log recorded with outcome: ${outcome}`,
       );
       setNotes('');
@@ -168,43 +168,6 @@ function CallingWorkspaceContent() {
       // Refresh call history and lead list
       const histRes = await apiClient.get(`/calling/logs/lead/${selectedLead.id}`);
       setCallHistory(histRes.data || []);
-      fetchLeads();
-    } catch (err: any) {
-      setError(getErrorMessage(err));
-    } finally {
-      setIsSubmittingCall(false);
-    }
-  };
-
-  const handleDirectApprove = async () => {
-    if (!selectedLead) return;
-    try {
-      setIsSubmittingCall(true);
-      setError(null);
-      await apiClient.post('/approvals/submit', {
-        leadId: selectedLead.id,
-        notes: notes || 'Deal confirmed by sales consultant - ready for clearance',
-      });
-      setSuccessMsg(`Lead ${selectedLead.leadCode} successfully approved and forwarded to Panel 04 Approval Officer queue!`);
-      fetchLeads();
-    } catch (err: any) {
-      setError(getErrorMessage(err));
-    } finally {
-      setIsSubmittingCall(false);
-    }
-  };
-
-  const handleDirectPending = async () => {
-    if (!selectedLead) return;
-    try {
-      setIsSubmittingCall(true);
-      setError(null);
-      await apiClient.post('/pending-reviews/submit', {
-        leadId: selectedLead.id,
-        reason: 'Customer requires follow-up consultation / dosage review',
-        salesNotes: notes || 'Submitted to pending queue from sales calling workspace',
-      });
-      setSuccessMsg(`Lead ${selectedLead.leadCode} successfully forwarded to Panel 03 Pending Review queue!`);
       fetchLeads();
     } catch (err: any) {
       setError(getErrorMessage(err));
@@ -427,15 +390,21 @@ function CallingWorkspaceContent() {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => setIsCreateOrderOpen(true)}
-                      className="bg-emerald-800 hover:bg-emerald-900 text-white font-bold shadow-sm"
-                      icon={<ShoppingBag className="h-3.5 w-3.5 text-amber-300" />}
-                    >
-                      Create Customer Order
-                    </Button>
+                    {selectedLead.status !== 'APPROVAL_REQUESTED' && selectedLead.status !== 'APPROVED' && selectedLead.status !== 'CONVERTED' ? (
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => setIsCreateOrderOpen(true)}
+                        className="bg-emerald-800 hover:bg-emerald-900 text-white font-bold shadow-sm"
+                        icon={<ShoppingBag className="h-3.5 w-3.5 text-amber-300" />}
+                      >
+                        Create Order for Approval
+                      </Button>
+                    ) : (
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded border border-emerald-200">
+                        {selectedLead.status === 'APPROVAL_REQUESTED' ? 'In Approval Queue' : 'Deal Cleared'}
+                      </span>
+                    )}
                     <a
                       href={`tel:${selectedLead.phoneNumber}`}
                       className="inline-flex items-center gap-1.5 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-bold text-white hover:bg-slate-900 shadow-sm transition"
@@ -443,30 +412,6 @@ function CallingWorkspaceContent() {
                       <PhoneCall className="h-3.5 w-3.5" />
                       Call Customer
                     </a>
-                    {selectedLead.status !== 'APPROVAL_REQUESTED' && selectedLead.status !== 'APPROVED' && selectedLead.status !== 'CONVERTED' && (
-                      <>
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          onClick={handleDirectApprove}
-                          isLoading={isSubmittingCall}
-                          className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold shadow-xs"
-                          icon={<CheckCircle2 className="h-3.5 w-3.5" />}
-                        >
-                          Approve Deal (To Approvals)
-                        </Button>
-                        <Button
-                          variant="gold"
-                          size="sm"
-                          onClick={handleDirectPending}
-                          isLoading={isSubmittingCall}
-                          className="bg-amber-100 text-amber-900 hover:bg-amber-200 border border-amber-300 font-semibold"
-                          icon={<Clock className="h-3.5 w-3.5" />}
-                        >
-                          Send to Pending
-                        </Button>
-                      </>
-                    )}
                   </div>
                 </div>
 
@@ -506,23 +451,26 @@ function CallingWorkspaceContent() {
                         </label>
                         <select
                           value={outcome}
-                          onChange={(e) => setOutcome(e.target.value)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setOutcome(val);
+                            if (['FOLLOW_UP_REQUIRED', 'BUSY_CALL_LATER', 'NO_ANSWER'].includes(val)) {
+                              setScheduleFollowUp(true);
+                            }
+                          }}
                           className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-700"
                         >
                           <option value="DEAL_CONFIRMED" className="font-bold text-emerald-800 bg-emerald-50">
-                            ✅ DEAL CONFIRMED - Approve & Forward to Approval Section
+                            ✅ DEAL CONFIRMED - Client Convinced (Create Order for Approval)
                           </option>
-                          <option value="PENDING_REVIEW" className="font-semibold text-amber-800 bg-amber-50">
-                            ⏳ PENDING REVIEW - Forward to Pending Review Section
-                          </option>
-                          <option value="FOLLOW_UP_REQUIRED">
-                            📞 FOLLOW_UP_REQUIRED - Needs Callback (Moves to Pending Section)
+                          <option value="FOLLOW_UP_REQUIRED" className="font-semibold text-amber-800">
+                            📞 FOLLOW_UP_REQUIRED - Needs Callback (Set Callback Date)
                           </option>
                           <option value="BUSY_CALL_LATER">
-                            ⏰ BUSY_CALL_LATER - Customer Busy (Moves to Pending Section)
+                            ⏰ BUSY_CALL_LATER - Customer Busy (Set Callback Date)
                           </option>
                           <option value="NO_ANSWER">
-                            📵 NO_ANSWER - Did Not Pick Up (Moves to Pending Section)
+                            📵 NO_ANSWER - Did Not Pick Up
                           </option>
                           <option value="INTERESTED">
                             👍 INTERESTED - Qualified for Product Kit
@@ -542,13 +490,13 @@ function CallingWorkspaceContent() {
                         {outcome === 'DEAL_CONFIRMED' && (
                           <div className="p-2 mt-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-800 font-medium flex items-center gap-1.5">
                             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700 shrink-0" />
-                            <span>Deal will be submitted directly to Panel 04 Approval Officer for final commercial & medical clearance.</span>
+                            <span>Client is convinced! Click &quot;Create Order for Approval&quot; above to prescribe formulations and submit for doctor sign-off.</span>
                           </div>
                         )}
-                        {['PENDING_REVIEW', 'FOLLOW_UP_REQUIRED', 'BUSY_CALL_LATER', 'NO_ANSWER'].includes(outcome) && (
+                        {['FOLLOW_UP_REQUIRED', 'BUSY_CALL_LATER', 'NO_ANSWER'].includes(outcome) && (
                           <div className="p-2 mt-1.5 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-800 font-medium flex items-center gap-1.5">
                             <Clock className="h-3.5 w-3.5 text-amber-700 shrink-0" />
-                            <span>Lead will be routed directly to Panel 03 Pending Review queue for follow-up and cross-checking.</span>
+                            <span>Client needs callback. Set the follow-up date and time below to receive your reminder notification.</span>
                           </div>
                         )}
                       </div>

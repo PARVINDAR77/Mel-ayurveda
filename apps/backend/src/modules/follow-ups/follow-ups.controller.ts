@@ -51,6 +51,17 @@ export class FollowUpsController {
     return this.followUpsService.getMyFollowUps(query, user);
   }
 
+  @Get('all')
+  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT)
+  @ApiOperation({ summary: 'List all scheduled sales callbacks across all consultants for management oversight' })
+  @ApiResponse({ status: 200, description: 'All scheduled sales callbacks returned' })
+  async getAllFollowUps(
+    @Query() query: FollowUpQueryDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.followUpsService.getMyFollowUps(query, user);
+  }
+
   @Get('lead/:leadId')
   @Roles(
     RoleType.SUPER_ADMIN,

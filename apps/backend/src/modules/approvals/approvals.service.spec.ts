@@ -43,6 +43,12 @@ describe('ApprovalsService Unit Tests', () => {
       lead: {
         update: jest.fn(),
       },
+      customer: {
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
+      order: {
+        update: jest.fn(),
+      },
       approvalRequest: {
         findUnique: jest.fn(),
         findMany: jest.fn(),

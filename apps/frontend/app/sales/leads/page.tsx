@@ -8,6 +8,7 @@ import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { CreateLeadModal } from '../../../components/sales/create-lead-modal';
 import { CreateOrderModal } from '../../../components/sales/create-order-modal';
+import { ScheduleFollowUpModal } from '../../../components/sales/schedule-follow-up-modal';
 import {
   UserPlus,
   RefreshCw,
@@ -17,12 +18,12 @@ import {
   CheckCircle2,
   Clock,
   ShoppingBag,
+  CalendarClock,
 } from 'lucide-react';
 
 export default function MyAssignedLeadsPage() {
   const [leads, setLeads] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -30,6 +31,8 @@ export default function MyAssignedLeadsPage() {
   const [isCreateLeadOpen, setIsCreateLeadOpen] = useState(false);
   const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false);
   const [selectedLeadForOrder, setSelectedLeadForOrder] = useState<any | null>(null);
+  const [isScheduleFollowUpOpen, setIsScheduleFollowUpOpen] = useState(false);
+  const [selectedLeadForFollowUp, setSelectedLeadForFollowUp] = useState<any | null>(null);
 
   const fetchLeads = async () => {
     try {
@@ -49,48 +52,16 @@ export default function MyAssignedLeadsPage() {
 
     const onLeadCreated = () => fetchLeads();
     const onOrderCreated = () => fetchLeads();
+    const onFollowUpScheduled = () => fetchLeads();
     window.addEventListener('lead-created', onLeadCreated);
     window.addEventListener('order-created', onOrderCreated);
+    window.addEventListener('followup-scheduled', onFollowUpScheduled);
     return () => {
       window.removeEventListener('lead-created', onLeadCreated);
       window.removeEventListener('order-created', onOrderCreated);
+      window.removeEventListener('followup-scheduled', onFollowUpScheduled);
     };
   }, []);
-
-  const handleApproveLead = async (lead: any) => {
-    try {
-      setActionLoadingId(lead.id);
-      setError(null);
-      await apiClient.post('/approvals/submit', {
-        leadId: lead.id,
-        notes: 'Deal approved from assigned leads list',
-      });
-      setSuccessMsg(`Lead ${lead.leadCode} successfully approved and forwarded to Panel 04 Approval Officer queue!`);
-      fetchLeads();
-    } catch (err: any) {
-      setError(getErrorMessage(err));
-    } finally {
-      setActionLoadingId(null);
-    }
-  };
-
-  const handlePendingLead = async (lead: any) => {
-    try {
-      setActionLoadingId(lead.id);
-      setError(null);
-      await apiClient.post('/pending-reviews/submit', {
-        leadId: lead.id,
-        reason: 'Customer requires follow-up consultation / dosage review',
-        salesNotes: 'Routed to pending queue from assigned leads table',
-      });
-      setSuccessMsg(`Lead ${lead.leadCode} successfully forwarded to Panel 03 Pending Review queue!`);
-      fetchLeads();
-    } catch (err: any) {
-      setError(getErrorMessage(err));
-    } finally {
-      setActionLoadingId(null);
-    }
-  };
 
   const handleLeadCreated = (newLead: any) => {
     setSuccessMsg(`New Lead ${newLead.leadCode} registered successfully and assigned to your desk!`);
@@ -98,7 +69,16 @@ export default function MyAssignedLeadsPage() {
   };
 
   const handleOrderCreated = (order: any) => {
-    setSuccessMsg(`Customer Order ${order.orderNumber} successfully booked and dispatched to verification queue!`);
+    setSuccessMsg(`Prescription Order ${order.orderNumber} successfully booked and forwarded to Approval Officer queue!`);
+    fetchLeads();
+  };
+
+  const handleFollowUpScheduled = (followUp: any) => {
+    const timeFormatted = new Date(followUp.scheduledTime).toLocaleString('en-IN', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+    setSuccessMsg(`Follow-up callback scheduled for ${timeFormatted}. You will receive a reminder notification on that date!`);
     fetchLeads();
   };
 
@@ -166,47 +146,52 @@ export default function MyAssignedLeadsPage() {
       className: 'text-right',
       render: (item) => (
         <div className="flex items-center justify-end gap-1.5">
-          {/* Quick Create Order Button for Deal Closing */}
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => {
-              setSelectedLeadForOrder(item);
-              setIsCreateOrderOpen(true);
-            }}
-            className="bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-[11px] px-2.5 py-1 h-7 shadow-sm"
-            icon={<ShoppingBag className="h-3 w-3 text-amber-300" />}
-          >
-            Create Order
-          </Button>
-
-          {item.status !== 'APPROVAL_REQUESTED' && item.status !== 'APPROVED' && item.status !== 'CONVERTED' && (
+          {item.status !== 'APPROVAL_REQUESTED' && item.status !== 'APPROVED' && item.status !== 'CONVERTED' ? (
             <>
+              {/* Send for Approval: Opens Order Builder to prescribe formulation deal */}
               <Button
-                variant="outline"
+                variant="primary"
                 size="sm"
-                onClick={() => handleApproveLead(item)}
-                isLoading={actionLoadingId === item.id}
-                className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300 font-medium text-[11px] px-2 py-1 h-7"
-                icon={<CheckCircle2 className="h-3 w-3" />}
+                onClick={() => {
+                  setSelectedLeadForOrder(item);
+                  setIsCreateOrderOpen(true);
+                }}
+                className="bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-[11px] px-2.5 py-1 h-7 shadow-sm"
+                icon={<ShoppingBag className="h-3 w-3 text-amber-300" />}
+                title="Convinced Customer - Prescribe Formulations & Send for Approval"
               >
-                Approve
+                Send for Approval
               </Button>
+
+              {/* Schedule Follow-up Callback */}
               <Button
                 variant="gold"
                 size="sm"
-                onClick={() => handlePendingLead(item)}
-                isLoading={actionLoadingId === item.id}
+                onClick={() => {
+                  setSelectedLeadForFollowUp(item);
+                  setIsScheduleFollowUpOpen(true);
+                }}
                 className="bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-medium text-[11px] px-2 py-1 h-7"
-                icon={<Clock className="h-3 w-3" />}
+                icon={<CalendarClock className="h-3 w-3 text-amber-700" />}
+                title="Customer Needs Time - Schedule Callback Date & Time"
               >
-                Pending
+                Follow Up
               </Button>
             </>
+          ) : (
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2 py-1 rounded border border-emerald-200">
+              {item.status === 'APPROVAL_REQUESTED' ? 'In Approval Queue' : 'Deal Cleared'}
+            </span>
           )}
 
           <Link href={`/sales/calling?leadId=${item.id}`}>
-            <Button variant="outline" size="sm" icon={<PhoneCall className="h-3 w-3" />} className="text-[11px] px-2.5 py-1 h-7">
+            <Button
+              variant="outline"
+              size="sm"
+              icon={<PhoneCall className="h-3 w-3 text-blue-600" />}
+              className="text-[11px] px-2.5 py-1 h-7"
+              title="Open Telephonic Calling Console"
+            >
               Call
             </Button>
           </Link>
@@ -307,6 +292,17 @@ export default function MyAssignedLeadsPage() {
         }}
         lead={selectedLeadForOrder}
         onOrderCreated={handleOrderCreated}
+      />
+
+      {/* Manual Callback / Follow-Up Scheduler Modal */}
+      <ScheduleFollowUpModal
+        isOpen={isScheduleFollowUpOpen}
+        onClose={() => {
+          setIsScheduleFollowUpOpen(false);
+          setSelectedLeadForFollowUp(null);
+        }}
+        lead={selectedLeadForFollowUp}
+        onScheduled={handleFollowUpScheduled}
       />
     </div>
   );

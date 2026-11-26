@@ -127,9 +127,12 @@ export class FollowUpsService {
     });
 
     // 2. Build where clause
-    const where: any = {
-      assignedToId: user.id,
-    };
+    const where: any = {};
+    if (user.role === RoleType.SALESPERSON) {
+      where.assignedToId = user.id;
+    } else if (query.assignedToId) {
+      where.assignedToId = query.assignedToId;
+    }
 
     if (query.status && query.status !== FollowUpFilterStatus.ALL) {
       where.status = query.status as FollowUpStatus;
@@ -173,20 +176,20 @@ export class FollowUpsService {
         }),
         this.prisma.followUp.count({
           where: {
-            assignedToId: user.id,
+            ...(user.role === RoleType.SALESPERSON ? { assignedToId: user.id } : query.assignedToId ? { assignedToId: query.assignedToId } : {}),
             status: { in: [FollowUpStatus.SCHEDULED, FollowUpStatus.OVERDUE] },
             scheduledTime: { gte: startOfToday, lte: endOfToday },
           },
         }),
         this.prisma.followUp.count({
           where: {
-            assignedToId: user.id,
+            ...(user.role === RoleType.SALESPERSON ? { assignedToId: user.id } : query.assignedToId ? { assignedToId: query.assignedToId } : {}),
             status: FollowUpStatus.OVERDUE,
           },
         }),
         this.prisma.followUp.count({
           where: {
-            assignedToId: user.id,
+            ...(user.role === RoleType.SALESPERSON ? { assignedToId: user.id } : query.assignedToId ? { assignedToId: query.assignedToId } : {}),
             status: FollowUpStatus.COMPLETED,
             completedAt: { gte: startOfToday, lte: endOfToday },
           },

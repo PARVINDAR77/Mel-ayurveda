@@ -35,6 +35,11 @@ export class FollowUpQueryDto {
   @IsEnum(FollowUpDateRange)
   range?: FollowUpDateRange;
 
+  @ApiPropertyOptional({ description: 'Filter by assigned salesperson ID (Super Admin / Management only)' })
+  @IsOptional()
+  @IsString()
+  assignedToId?: string;
+
   @ApiPropertyOptional({ description: 'Page number for pagination', default: 1 })
   @IsOptional()
   page?: number;

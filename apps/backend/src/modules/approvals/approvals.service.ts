@@ -11,7 +11,7 @@ import { DecideApprovalDto, SendBackTarget } from './dto/decide-approval.dto';
 import { ApprovalQueueQueryDto, ApprovalQueueFilter } from './dto/approval-queue-query.dto';
 import { SubmitApprovalDto } from './dto/submit-approval.dto';
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
-import { ApprovalDecision, LeadStatus, RoleType, PendingDecision, NotificationType } from '@prisma/client';
+import { ApprovalDecision, LeadStatus, RoleType, PendingDecision, NotificationType, OrderStatus } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
@@ -315,11 +315,8 @@ export class ApprovalsService {
     } else if (dto.decision === ApprovalDecision.REJECT) {
       nextLeadStatus = LeadStatus.REJECTED;
     } else {
-      // SEND_BACK
-      nextLeadStatus =
-        dto.sendBackTarget === SendBackTarget.SALESPERSON
-          ? LeadStatus.CONTACTED
-          : LeadStatus.PENDING_REVIEW;
+      // SEND_BACK: returns directly to Salesperson (Pending Review is decommissioned)
+      nextLeadStatus = LeadStatus.CONTACTED;
     }
 
     const result = await this.prisma.$transaction(async (tx) => {
@@ -331,7 +328,7 @@ export class ApprovalsService {
           decisionReason:
             dto.decisionReason ||
             (dto.decision === ApprovalDecision.APPROVE
-              ? 'MEDICAL_AND_COMMERCIAL_VERIFIED'
+              ? 'CLINICAL_VERIFIED_PRICING_CLEARED'
               : 'REJECTED_BY_OFFICER'),
           officerNotes: dto.officerNotes.trim(),
           decidedAt: new Date(),
@@ -362,7 +359,41 @@ export class ApprovalsService {
         data: { status: nextLeadStatus },
       });
 
-      // 3. Log lead status transition
+      // 3. Connect Approval to Billing: Advance associated draft orders to CONFIRMED
+      const customer = await tx.customer.findFirst({
+        where: {
+          OR: [
+            { convertedFromId: request.leadId },
+            { phoneNumber: request.lead.phoneNumber },
+          ],
+        },
+        include: {
+          orders: {
+            where: { status: OrderStatus.DRAFT },
+          },
+        },
+      });
+
+      if (customer && customer.orders.length > 0) {
+        for (const draftOrder of customer.orders) {
+          if (dto.decision === ApprovalDecision.APPROVE) {
+            await tx.order.update({
+              where: { id: draftOrder.id },
+              data: { status: OrderStatus.CONFIRMED },
+            });
+            this.logger.log(
+              `Order ${draftOrder.orderNumber} successfully advanced to CONFIRMED upon approval of lead ${request.lead.leadCode}. Now awaiting GST billing.`,
+            );
+          } else if (dto.decision === ApprovalDecision.REJECT) {
+            await tx.order.update({
+              where: { id: draftOrder.id },
+              data: { status: OrderStatus.CANCELLED },
+            });
+          }
+        }
+      }
+
+      // 4. Log lead status transition
       await tx.leadStatusHistory.create({
         data: {
           leadId: request.leadId,
@@ -373,7 +404,7 @@ export class ApprovalsService {
         },
       });
 
-      // 4. Record audit log
+      // 5. Record audit log
       await tx.auditLog.create({
         data: {
           userId: user.id,
@@ -406,14 +437,14 @@ export class ApprovalsService {
     // Dispatch real-time live notifications based on approval outcome
     try {
       if (dto.decision === ApprovalDecision.APPROVE) {
-        // 1. Notify Management and Super Admin that lead is cleared for customer conversion & orders
+        // 1. Notify Billing and Super Admin that order is approved and ready for invoicing
         await this.notificationsService.dispatchToRole(
-          [RoleType.MANAGEMENT, RoleType.SUPER_ADMIN],
+          [RoleType.BILLING_EXECUTIVE, RoleType.SUPER_ADMIN, RoleType.MANAGEMENT],
           {
-            title: 'Lead Approved for Customer Fulfillment',
-            message: `Lead ${request.lead.leadCode} (${request.lead.customerName}) received final sign-off and is cleared for order formulation.`,
+            title: 'Order Approved - Ready for GST Billing',
+            message: `Lead ${request.lead.leadCode} (${request.lead.customerName}) has been medically cleared. Order is confirmed and ready for GST invoicing.`,
             type: NotificationType.APPROVAL_GRANTED,
-            link: '/management/customers',
+            link: '/billing',
           },
         );
 
@@ -422,7 +453,7 @@ export class ApprovalsService {
           await this.notificationsService.createNotification({
             userId: request.lead.assignedToId,
             title: 'Deal Approved! Final Sign-Off Granted',
-            message: `Congratulations! Lead ${request.lead.leadCode} (${request.lead.customerName}) has received final clearance.`,
+            message: `Congratulations! Lead ${request.lead.leadCode} (${request.lead.customerName}) has received doctor clearance and moved to billing.`,
             type: NotificationType.SUCCESS,
             link: '/sales/leads',
           });
@@ -431,28 +462,21 @@ export class ApprovalsService {
         if (request.lead.assignedToId) {
           await this.notificationsService.createNotification({
             userId: request.lead.assignedToId,
-            title: 'Lead Disqualified by Approval Authority',
+            title: 'Deal Disqualified by Approval Doctor',
             message: `Lead ${request.lead.leadCode} was disqualified: ${dto.officerNotes}`,
             type: NotificationType.WARNING,
             link: '/sales/leads',
           });
         }
       } else {
-        // SEND_BACK
-        if (dto.sendBackTarget === SendBackTarget.SALESPERSON && request.lead.assignedToId) {
+        // SEND_BACK: notify assigned salesperson
+        if (request.lead.assignedToId) {
           await this.notificationsService.createNotification({
             userId: request.lead.assignedToId,
-            title: 'Lead Sent Back from Approvals',
-            message: `Lead ${request.lead.leadCode} returned to your calling queue: ${dto.officerNotes}`,
+            title: 'Deal Sent Back from Approvals for Clarification',
+            message: `Lead ${request.lead.leadCode} returned with doctor feedback: ${dto.officerNotes}`,
             type: NotificationType.WARNING,
             link: '/sales/leads',
-          });
-        } else {
-          await this.notificationsService.dispatchToRole([RoleType.PENDING_REVIEWER], {
-            title: 'Lead Returned to Review Queue',
-            message: `Lead ${request.lead.leadCode} returned by approval officer for clinical review.`,
-            type: NotificationType.REVIEW_REQUESTED,
-            link: '/pending/queue',
           });
         }
       }

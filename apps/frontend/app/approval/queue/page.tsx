@@ -133,7 +133,7 @@ export default function ApprovalQueuePage() {
     setDecision('APPROVE');
     setDecisionReason('CLINICAL_VERIFIED_PRICING_CLEARED');
     setOfficerNotes('');
-    setSendBackTarget('PENDING_PANEL');
+    setSendBackTarget('SALESPERSON');
   };
 
   const handleQuickApprove = async (item: any) => {
@@ -864,11 +864,8 @@ export default function ApprovalQueuePage() {
                 onChange={(e: any) => setSendBackTarget(e.target.value)}
                 className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-forest-600 focus:outline-none"
               >
-                <option value="PENDING_PANEL">
-                  Panel 03: Product Review Queue (Re-verify product verification dossier)
-                </option>
                 <option value="SALESPERSON">
-                  Panel 02: Tele-Salesperson (Re-contact customer for clarification)
+                  Panel 02: Tele-Sales Consultant (Re-contact customer for clarification / dosage adjustment)
                 </option>
               </select>
             </div>
@@ -883,7 +880,7 @@ export default function ApprovalQueuePage() {
               rows={3}
               required
               minLength={5}
-              placeholder="e.g. Verified 45-day therapeutic regimen and contraindication screening. Cleared for customer conversion and GST invoice generation."
+              placeholder="e.g. Verified therapeutic formulation kit and pricing. Cleared for customer conversion and GST invoice generation."
               value={officerNotes}
               onChange={(e) => setOfficerNotes(e.target.value)}
               className="w-full rounded-md border border-slate-300 bg-white p-2.5 text-xs text-slate-900 placeholder-slate-400 focus:border-forest-600 focus:outline-none"
@@ -902,22 +899,21 @@ export default function ApprovalQueuePage() {
           >
             {decision === 'APPROVE' && (
               <p>
-                <strong>Unlocks Customer Conversion:</strong> This lead will transition to APPROVED
-                status, allowing Panel 05 Management to generate formal customer records, dispatch formulations,
-                and issue GST tax invoices.
+                <strong>Cleared for Billing:</strong> This order will transition to <strong>CONFIRMED</strong>{' '}
+                status, allowing Panel 06 Billing Desk to generate the official GST invoice, reserve warehouse stock,
+                and route the parcel to courier dispatch.
               </p>
             )}
             {decision === 'REJECT' && (
               <p>
-                <strong>Permanent Disqualification:</strong> This lead will transition to REJECTED
-                status. Tele-sales cannot dial without re-activation by Super Admin.
+                <strong>Permanent Disqualification:</strong> This order will transition to REJECTED / CANCELLED
+                status. Tele-sales cannot re-submit without corrective guidance.
               </p>
             )}
             {decision === 'SEND_BACK' && (
               <p>
-                <strong>Return for Rectification:</strong> The lead will be routed back to{' '}
-                {sendBackTarget === 'SALESPERSON' ? 'Panel 02 Tele-Sales' : 'Panel 03 Pending Review'}{' '}
-                along with your notes.
+                <strong>Return for Rectification:</strong> The order will be routed back to the Sales Consultant
+                along with your clinical feedback.
               </p>
             )}
           </div>

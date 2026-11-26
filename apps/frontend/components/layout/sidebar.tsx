@@ -63,7 +63,6 @@ export function Sidebar({ onClose }: SidebarProps) {
           { href: '/admin/assignments', label: 'Lead Distribution', icon: UserCheck },
           { href: '/admin/customer-followups', label: 'Follow-Up Allocation', icon: HeartHandshake },
           { href: '/sales/leads', label: 'Sales Leads', icon: PhoneCall },
-          { href: '/pending/queue', label: 'Pending Review Queue', icon: FileCheck2 },
           { href: '/approval/queue', label: 'Final Approval Queue', icon: CheckCircle2 },
           { href: '/management/customers', label: 'Customer CRM', icon: Users },
           { href: '/admin/employees', label: 'Employees & Roles', icon: Users },
@@ -82,7 +81,6 @@ export function Sidebar({ onClose }: SidebarProps) {
           { href: '/sales/orders', label: 'My Booked Orders', icon: Package },
           { href: '/sales/customer-care', label: 'Follow-Up Care Desk', icon: HeartHandshake },
           { href: '/sales/follow-ups', label: 'Follow-up Agenda', icon: CalendarClock },
-          { href: '/sales/pending', label: 'Pending Submissions', icon: Send },
         ];
 
       case 'PENDING_REVIEWER':
