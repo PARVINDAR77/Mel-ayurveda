@@ -90,7 +90,7 @@ export function Badge({ children, variant = 'default', status, className }: Badg
     <span
       className={twMerge(
         clsx(
-          'inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium tracking-wide uppercase',
+          'inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium tracking-wide uppercase whitespace-nowrap shrink-0',
           colorClasses,
           className,
         ),

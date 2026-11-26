@@ -89,8 +89,9 @@ export default function MyAssignedLeadsPage() {
     {
       key: 'leadCode',
       header: 'Lead Code',
+      className: 'whitespace-nowrap min-w-[130px]',
       render: (item) => (
-        <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+        <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 whitespace-nowrap inline-block">
           {item.leadCode}
         </span>
       ),
@@ -98,10 +99,11 @@ export default function MyAssignedLeadsPage() {
     {
       key: 'customerName',
       header: 'Customer Name',
+      className: 'min-w-[180px]',
       render: (item) => (
         <div>
           <span className="font-semibold text-slate-900">{item.customerName}</span>
-          <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono mt-0.5">
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono mt-0.5 whitespace-nowrap">
             <span>{item.phoneNumber}</span>
             {item.alternatePhone && (
               <span className="text-slate-400">/ {item.alternatePhone}</span>
@@ -113,6 +115,7 @@ export default function MyAssignedLeadsPage() {
     {
       key: 'productInterest',
       header: 'Clinical Concern / Notes',
+      className: 'min-w-[180px] max-w-[240px]',
       render: (item) => (
         <div>
           <span className="font-medium text-slate-800 text-xs">{item.productInterest || 'Ayurvedic Consultation'}</span>
@@ -125,9 +128,10 @@ export default function MyAssignedLeadsPage() {
     {
       key: 'location',
       header: 'Location',
+      className: 'whitespace-nowrap min-w-[140px]',
       render: (item) => (
-        <div className="flex items-center gap-1 text-xs text-slate-500">
-          <MapPin className="h-3 w-3 text-slate-400" />
+        <div className="flex items-center gap-1 text-xs text-slate-500 whitespace-nowrap shrink-0">
+          <MapPin className="h-3 w-3 text-slate-400 shrink-0" />
           <span>{item.city ? `${item.city}, ${item.state || ''}` : 'Location N/A'}</span>
         </div>
       ),
@@ -135,19 +139,21 @@ export default function MyAssignedLeadsPage() {
     {
       key: 'priority',
       header: 'Priority',
+      className: 'whitespace-nowrap min-w-[90px]',
       render: (item) => <Badge variant="priority">{item.priority}</Badge>,
     },
     {
       key: 'status',
       header: 'Status',
+      className: 'whitespace-nowrap min-w-[130px]',
       render: (item) => <Badge variant="leadStatus">{item.status}</Badge>,
     },
     {
       key: 'actions',
       header: 'Actions',
-      className: 'text-right',
+      className: 'text-right whitespace-nowrap min-w-[310px]',
       render: (item) => (
-        <div className="flex items-center justify-end gap-1.5">
+        <div className="flex items-center justify-end gap-1.5 whitespace-nowrap shrink-0">
           {item.status !== 'APPROVAL_REQUESTED' && item.status !== 'APPROVED' && item.status !== 'CONVERTED' ? (
             <>
               {/* Send for Approval: Opens Order Builder to prescribe formulation deal */}
@@ -158,7 +164,7 @@ export default function MyAssignedLeadsPage() {
                   setSelectedLeadForOrder(item);
                   setIsCreateOrderOpen(true);
                 }}
-                className="bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-[11px] px-2.5 py-1 h-7 shadow-sm"
+                className="bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-[11px] px-2.5 py-1 h-7 shadow-sm whitespace-nowrap shrink-0"
                 icon={<ShoppingBag className="h-3 w-3 text-amber-300" />}
                 title="Convinced Customer - Prescribe Formulations & Send for Approval"
               >
@@ -173,7 +179,7 @@ export default function MyAssignedLeadsPage() {
                   setSelectedLeadForFollowUp(item);
                   setIsScheduleFollowUpOpen(true);
                 }}
-                className="bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-medium text-[11px] px-2 py-1 h-7"
+                className="bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-medium text-[11px] px-2 py-1 h-7 whitespace-nowrap shrink-0"
                 icon={<CalendarClock className="h-3 w-3 text-amber-700" />}
                 title="Customer Needs Time - Schedule Callback Date & Time"
               >
@@ -181,17 +187,17 @@ export default function MyAssignedLeadsPage() {
               </Button>
             </>
           ) : (
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2 py-1 rounded border border-emerald-200">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2 py-1 rounded border border-emerald-200 whitespace-nowrap shrink-0">
               {item.status === 'APPROVAL_REQUESTED' ? 'In Approval Queue' : 'Deal Cleared'}
             </span>
           )}
 
-          <Link href={`/sales/calling?leadId=${item.id}`}>
+          <Link href={`/sales/calling?leadId=${item.id}`} className="shrink-0">
             <Button
               variant="outline"
               size="sm"
               icon={<PhoneCall className="h-3 w-3 text-blue-600" />}
-              className="text-[11px] px-2.5 py-1 h-7"
+              className="text-[11px] px-2.5 py-1 h-7 whitespace-nowrap shrink-0"
               title="Open Telephonic Calling Console"
             >
               Call
