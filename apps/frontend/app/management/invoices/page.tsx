@@ -7,6 +7,8 @@ import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Drawer } from '../../../components/ui/drawer';
 import { Modal } from '../../../components/ui/modal';
+import { ExportButton } from '../../../components/ui/export-button';
+import { ExcelColumnDef } from '../../../lib/export-excel';
 import {
   FileText,
   RefreshCw,
@@ -203,6 +205,24 @@ export default function GSTInvoicingPage() {
     },
   ];
 
+  const invoicesExportColumns: ExcelColumnDef[] = [
+    { header: 'GST Invoice #', accessor: 'invoiceNumber' },
+    { header: 'Issued Date', accessor: (inv: any) => inv.issuedAt ? new Date(inv.issuedAt).toLocaleDateString('en-IN') : '' },
+    { header: 'Order Reference', accessor: 'order.orderNumber' },
+    { header: 'Patient Name', accessor: 'order.customer.fullName' },
+    { header: 'Contact Phone', accessor: 'order.customer.phoneNumber' },
+    { header: 'City', accessor: 'order.customer.city' },
+    { header: 'State', accessor: 'order.customer.state' },
+    { header: 'Subtotal (₹)', accessor: (inv: any) => Number(inv.subtotal || 0) },
+    { header: 'CGST (₹)', accessor: (inv: any) => Number(inv.cgstAmount || 0) },
+    { header: 'SGST (₹)', accessor: (inv: any) => Number(inv.sgstAmount || 0) },
+    { header: 'IGST (₹)', accessor: (inv: any) => Number(inv.igstAmount || 0) },
+    { header: 'Total Tax (₹)', accessor: (inv: any) => Number(inv.totalTax || 0) },
+    { header: 'Grand Total (₹)', accessor: (inv: any) => Number(inv.grandTotal || 0) },
+    { header: 'Payment Mode', accessor: (inv: any) => inv.order?.paymentMode || 'COD' },
+    { header: 'Status', accessor: 'status' },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -223,6 +243,13 @@ export default function GSTInvoicingPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <ExportButton
+            data={invoices}
+            columns={invoicesExportColumns}
+            fileName="Melayurveda_GST_Invoices"
+            sheetName="Tax Invoices"
+          />
+
           <Button
             variant="outline"
             size="sm"
@@ -288,6 +315,11 @@ export default function GSTInvoicingPage() {
         data={invoices}
         isLoading={isLoading}
         emptyMessage="No GST tax invoices issued yet."
+        exportConfig={{
+          fileName: 'Melayurveda_GST_Invoices',
+          sheetName: 'Tax Invoices',
+          columns: invoicesExportColumns,
+        }}
       />
 
       {/* Professional Tax Invoice View Drawer */}

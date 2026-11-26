@@ -7,6 +7,8 @@ import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Modal } from '../../../components/ui/modal';
+import { ExportButton } from '../../../components/ui/export-button';
+import { ExcelColumnDef } from '../../../lib/export-excel';
 import {
   UserCheck,
   RefreshCw,
@@ -273,6 +275,17 @@ export default function LeadAssignmentsAdminPage() {
     },
   ];
 
+  const unassignedLeadsExportColumns: ExcelColumnDef[] = [
+    { header: 'Lead Code', accessor: 'leadCode' },
+    { header: 'Customer Name', accessor: 'customerName' },
+    { header: 'Phone Number', accessor: 'phoneNumber' },
+    { header: 'Location', accessor: (it: any) => [it.city, it.state].filter(Boolean).join(', ') || 'N/A' },
+    { header: 'Ailment / Concern', accessor: 'productInterest' },
+    { header: 'Lead Source', accessor: (it: any) => it.source?.name || 'Inbound Direct' },
+    { header: 'Priority', accessor: 'priority' },
+    { header: 'Ingestion Date', accessor: (it: any) => it.createdAt ? new Date(it.createdAt).toLocaleDateString('en-IN') : '' },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -292,6 +305,13 @@ export default function LeadAssignmentsAdminPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <ExportButton
+            data={unassignedLeads}
+            columns={unassignedLeadsExportColumns}
+            fileName="Melayurveda_Unassigned_Leads_Pool"
+            sheetName="Unassigned Leads"
+          />
+
           <Button
             variant="outline"
             size="sm"
@@ -417,6 +437,11 @@ export default function LeadAssignmentsAdminPage() {
           searchPlaceholder="Search unassigned leads by customer name..."
           isLoading={isLoading}
           emptyMessage="All leads are currently assigned! Queue is 100% clear."
+          exportConfig={{
+            fileName: 'Melayurveda_Unassigned_Leads_Pool',
+            sheetName: 'Unassigned Leads',
+            columns: unassignedLeadsExportColumns,
+          }}
         />
       </div>
 

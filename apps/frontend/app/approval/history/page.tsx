@@ -6,6 +6,8 @@ import { DataTable, Column } from '../../../components/ui/data-table';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Drawer } from '../../../components/ui/drawer';
+import { ExportButton } from '../../../components/ui/export-button';
+import { ExcelColumnDef } from '../../../lib/export-excel';
 import {
   History,
   RefreshCw,
@@ -186,6 +188,21 @@ export default function ApprovalHistoryPage() {
     },
   ];
 
+  const approvalHistoryExportColumns: ExcelColumnDef[] = [
+    { header: 'Order Reference', accessor: 'order.orderNumber' },
+    { header: 'Patient Name', accessor: (it: any) => it.order?.customer?.fullName || it.lead?.customerName || '' },
+    { header: 'Contact Phone', accessor: (it: any) => it.order?.customer?.phoneNumber || it.lead?.phoneNumber || '' },
+    { header: 'City', accessor: (it: any) => it.order?.customer?.city || it.lead?.city || '' },
+    { header: 'State', accessor: (it: any) => it.order?.customer?.state || it.lead?.state || '' },
+    { header: 'Order Amount (₹)', accessor: (it: any) => Number(it.order?.grandTotal || it.order?.totalAmount || 0) },
+    { header: 'Payment Method', accessor: (it: any) => it.order?.paymentMethod || it.order?.paymentMode || 'COD' },
+    { header: 'Approval Decision', accessor: 'decision' },
+    { header: 'Decision Reason', accessor: 'decisionReason' },
+    { header: 'Officer Notes', accessor: 'officerNotes' },
+    { header: 'Decided By', accessor: (it: any) => `${it.officer?.firstName || ''} ${it.officer?.lastName || ''}`.trim() || 'System' },
+    { header: 'Decided Timestamp', accessor: (it: any) => (it.decidedAt || it.updatedAt) ? new Date(it.decidedAt || it.updatedAt).toLocaleString('en-IN') : '' },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -206,6 +223,12 @@ export default function ApprovalHistoryPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <ExportButton
+            data={history}
+            columns={approvalHistoryExportColumns}
+            fileName="Melayurveda_Approval_Decision_History"
+            sheetName="Approval History"
+          />
           <Button
             variant="outline"
             size="sm"
@@ -252,6 +275,11 @@ export default function ApprovalHistoryPage() {
         data={history}
         isLoading={isLoading}
         emptyMessage="No historical approval decisions found matching current criteria."
+        exportConfig={{
+          fileName: 'Melayurveda_Approval_Decision_History',
+          sheetName: 'Approval History',
+          columns: approvalHistoryExportColumns,
+        }}
       />
 
       {/* Product & Commercial Dossier Inspection Drawer */}

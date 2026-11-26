@@ -9,6 +9,8 @@ import { Button } from '../../../components/ui/button';
 import { CreateLeadModal } from '../../../components/sales/create-lead-modal';
 import { CreateOrderModal } from '../../../components/sales/create-order-modal';
 import { ScheduleFollowUpModal } from '../../../components/sales/schedule-follow-up-modal';
+import { ExportButton } from '../../../components/ui/export-button';
+import { ExcelColumnDef } from '../../../lib/export-excel';
 import {
   UserPlus,
   RefreshCw,
@@ -200,6 +202,19 @@ export default function MyAssignedLeadsPage() {
     },
   ];
 
+  const leadsExportColumns: ExcelColumnDef[] = [
+    { header: 'Lead Reference', accessor: 'leadNumber' },
+    { header: 'Patient Name', accessor: 'customerName' },
+    { header: 'Contact Phone', accessor: 'primaryPhone' },
+    { header: 'Alternate Phone', accessor: 'alternatePhone' },
+    { header: 'City', accessor: 'city' },
+    { header: 'State', accessor: 'state' },
+    { header: 'Primary Ailment', accessor: 'primaryAilment' },
+    { header: 'Status / Stage', accessor: 'stage' },
+    { header: 'Lead Source', accessor: (l: any) => l.source?.name || 'Inbound Direct' },
+    { header: 'Assigned Date', accessor: (l: any) => l.createdAt ? new Date(l.createdAt).toLocaleDateString('en-IN') : '' },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -213,7 +228,13 @@ export default function MyAssignedLeadsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <ExportButton
+            data={leads}
+            columns={leadsExportColumns}
+            fileName="Melayurveda_Sales_Leads"
+            sheetName="Assigned Leads"
+          />
           <Button
             variant="outline"
             size="sm"
@@ -274,6 +295,11 @@ export default function MyAssignedLeadsPage() {
         searchPlaceholder="Search assigned customer leads by name or phone..."
         isLoading={isLoading}
         emptyMessage="No assigned leads in your portfolio."
+        exportConfig={{
+          fileName: 'Melayurveda_Sales_Leads',
+          sheetName: 'Assigned Leads',
+          columns: leadsExportColumns,
+        }}
       />
 
       {/* 6-Field Lead Ingestion Modal */}

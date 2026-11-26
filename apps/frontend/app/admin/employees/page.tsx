@@ -26,6 +26,8 @@ import {
   Activity,
 } from 'lucide-react';
 import { EmployeeActivityDrawer } from './employee-activity-drawer';
+import { ExportButton } from '../../../components/ui/export-button';
+import { ExcelColumnDef } from '../../../lib/export-excel';
 
 export default function EmployeesAdminPage() {
   const [employees, setEmployees] = useState<any[]>([]);
@@ -358,6 +360,18 @@ export default function EmployeesAdminPage() {
     },
   ];
 
+  const employeesExportColumns: ExcelColumnDef[] = [
+    { header: 'Employee Code', accessor: 'employeeCode' },
+    { header: 'Full Name', accessor: (it: any) => `${it.firstName || ''} ${it.lastName || ''}`.trim() },
+    { header: 'Corporate Email', accessor: 'email' },
+    { header: 'Phone Number', accessor: 'phoneNumber' },
+    { header: 'RBAC Role', accessor: 'role' },
+    { header: 'Account Status', accessor: (it: any) => (it.isActive ? 'ACTIVE' : 'SUSPENDED') },
+    { header: 'Lockout State', accessor: (it: any) => (it.lockoutUntil && new Date(it.lockoutUntil) > new Date() ? 'LOCKED_OUT' : 'CLEARED') },
+    { header: 'Failed Attempts', accessor: (it: any) => Number(it.failedLoginAttempts || 0) },
+    { header: 'Created Date', accessor: (it: any) => it.createdAt ? new Date(it.createdAt).toLocaleDateString('en-IN') : '' },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -377,6 +391,12 @@ export default function EmployeesAdminPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <ExportButton
+            data={filteredEmployees}
+            columns={employeesExportColumns}
+            fileName="Melayurveda_Employees_Directory"
+            sheetName="Employees Directory"
+          />
           <Button
             variant="outline"
             size="sm"
@@ -504,6 +524,11 @@ export default function EmployeesAdminPage() {
           searchPlaceholder="Search employees by email, name or ID..."
           isLoading={isLoading}
           emptyMessage="No employees found matching filter criteria."
+          exportConfig={{
+            fileName: 'Melayurveda_Employees_Directory',
+            sheetName: 'Employees Directory',
+            columns: employeesExportColumns,
+          }}
         />
       </div>
 

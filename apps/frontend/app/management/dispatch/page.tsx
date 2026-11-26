@@ -8,6 +8,8 @@ import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Modal } from '../../../components/ui/modal';
 import { Drawer } from '../../../components/ui/drawer';
+import { ExportButton } from '../../../components/ui/export-button';
+import { ExcelColumnDef } from '../../../lib/export-excel';
 import {
   Truck,
   PlusCircle,
@@ -490,6 +492,38 @@ export default function CourierDispatchPage() {
     },
   ];
 
+  const readyDispatchExportColumns: ExcelColumnDef[] = [
+    { header: 'Order Reference', accessor: 'orderNumber' },
+    { header: 'Order Date', accessor: (o: any) => o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-IN') : '' },
+    { header: 'Patient Name', accessor: 'customer.fullName' },
+    { header: 'Contact Phone', accessor: 'customer.phoneNumber' },
+    { header: 'Shipping Address', accessor: 'shippingAddress' },
+    { header: 'City', accessor: 'customer.city' },
+    { header: 'State', accessor: 'customer.state' },
+    { header: 'Pincode', accessor: 'customer.pincode' },
+    { header: 'Prescribed Items', accessor: (o: any) => o.items?.map((it: any) => `${it.product?.name || it.productName || 'Item'} (x${it.quantity})`).join(', ') || '' },
+    { header: 'Total Value (₹)', accessor: (o: any) => Number(o.grandTotal || o.totalAmount || 0) },
+    { header: 'Payment Mode', accessor: 'paymentMode' },
+    { header: 'Invoice Reference', accessor: (o: any) => o.invoice?.invoiceNumber || 'Standard' },
+  ];
+
+  const dispatchHistoryExportColumns: ExcelColumnDef[] = [
+    { header: 'Consignment AWB', accessor: 'trackingNumber' },
+    { header: 'Courier Partner', accessor: 'courierPartner' },
+    { header: 'Order Reference', accessor: 'order.orderNumber' },
+    { header: 'Tax Invoice Number', accessor: (s: any) => s.order?.invoice?.invoiceNumber || '' },
+    { header: 'Patient Name', accessor: 'order.customer.fullName' },
+    { header: 'Contact Phone', accessor: 'order.customer.phoneNumber' },
+    { header: 'City', accessor: 'order.customer.city' },
+    { header: 'State', accessor: 'order.customer.state' },
+    { header: 'Pincode', accessor: 'order.customer.pincode' },
+    { header: 'Consignment Value (₹)', accessor: (s: any) => Number(s.order?.totalAmount || 0) },
+    { header: 'Payment Mode', accessor: (s: any) => s.order?.paymentMode || 'COD' },
+    { header: 'Dispatch Status', accessor: 'status' },
+    { header: 'Dispatched Date', accessor: (s: any) => s.dispatchedAt ? new Date(s.dispatchedAt).toLocaleString('en-IN') : '' },
+    { header: 'Delivered Date', accessor: (s: any) => s.deliveredAt ? new Date(s.deliveredAt).toLocaleString('en-IN') : '' },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -510,6 +544,14 @@ export default function CourierDispatchPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <ExportButton
+            data={activeViewTab === 'READY' ? readyOrders : shipments}
+            columns={activeViewTab === 'READY' ? readyDispatchExportColumns : dispatchHistoryExportColumns}
+            fileName={activeViewTab === 'READY' ? 'Melayurveda_Dispatch_Ready_Queue' : 'Melayurveda_Dispatch_Consignments_History'}
+            sheetName={activeViewTab === 'READY' ? 'Awaiting Dispatch' : 'Dispatch History'}
+            label={activeViewTab === 'READY' ? 'Export Ready Queue' : 'Export Consignments'}
+          />
+
           <Link href="/management/returns">
             <Button
               variant="outline"
@@ -974,6 +1016,11 @@ export default function CourierDispatchPage() {
                   ? 'No historical consignments match your search query.'
                   : 'No courier consignments manifested yet.'
               }
+              exportConfig={{
+                fileName: 'Melayurveda_Dispatch_Consignments_History',
+                sheetName: 'Dispatch History',
+                columns: dispatchHistoryExportColumns,
+              }}
             />
           </div>
         </div>

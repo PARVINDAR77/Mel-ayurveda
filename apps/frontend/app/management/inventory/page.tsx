@@ -6,6 +6,8 @@ import { DataTable, Column } from '../../../components/ui/data-table';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Modal } from '../../../components/ui/modal';
+import { ExportButton } from '../../../components/ui/export-button';
+import { ExcelColumnDef } from '../../../lib/export-excel';
 import {
   Boxes,
   PlusCircle,
@@ -278,6 +280,26 @@ export default function WarehouseInventoryPage() {
     },
   ];
 
+  const inventoryExportColumns: ExcelColumnDef[] = [
+    { header: 'SKU Code', accessor: 'skuCode' },
+    { header: 'Product Name', accessor: 'productName' },
+    { header: 'Dosage Form', accessor: (it: any) => it.product?.dosageForm || 'Formulation' },
+    { header: 'Available Units', accessor: (it: any) => Number(it.availableQuantity || 0) },
+    { header: 'Reserved Units', accessor: (it: any) => Number(it.reservedQuantity || 0) },
+    { header: 'Total Quantity', accessor: (it: any) => Number(it.quantity || (Number(it.availableQuantity || 0) + Number(it.reservedQuantity || 0))) },
+    { header: 'Low Stock Threshold', accessor: (it: any) => Number(it.lowStockThreshold || 20) },
+    { header: 'Unit Price (₹)', accessor: (it: any) => Number(it.product?.price || it.product?.sellingPrice || 0) },
+  ];
+
+  const ledgerExportColumns: ExcelColumnDef[] = [
+    { header: 'Timestamp', accessor: (it: any) => it.createdAt ? new Date(it.createdAt).toLocaleString('en-IN') : '' },
+    { header: 'Product SKU', accessor: (it: any) => it.inventory?.product?.sku || '' },
+    { header: 'Transaction Type', accessor: 'type' },
+    { header: 'Quantity Delta', accessor: (it: any) => Number(it.quantity || 0) },
+    { header: 'Remaining Available', accessor: (it: any) => Number(it.resultingAvailable || 0) },
+    { header: 'Reason / Reference', accessor: 'notes' },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -298,6 +320,14 @@ export default function WarehouseInventoryPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <ExportButton
+            data={activeTab === 'STOCK' ? inventoryList : transactions}
+            columns={activeTab === 'STOCK' ? inventoryExportColumns : ledgerExportColumns}
+            fileName={activeTab === 'STOCK' ? 'Melayurveda_Warehouse_Inventory' : 'Melayurveda_Warehouse_Ledger_Transactions'}
+            sheetName={activeTab === 'STOCK' ? 'Live Inventory' : 'Stock Ledger'}
+            label={activeTab === 'STOCK' ? 'Export Stock' : 'Export Ledger'}
+          />
+
           <Button
             variant="outline"
             size="sm"
@@ -380,6 +410,11 @@ export default function WarehouseInventoryPage() {
           searchKey="productName"
           searchPlaceholder="Search formulation or SKU..."
           emptyMessage="No inventory records found in warehouse."
+          exportConfig={{
+            fileName: 'Melayurveda_Warehouse_Inventory',
+            sheetName: 'Live Inventory',
+            columns: inventoryExportColumns,
+          }}
         />
       ) : (
         <DataTable
@@ -390,6 +425,11 @@ export default function WarehouseInventoryPage() {
           searchKey="productName"
           searchPlaceholder="Search transaction ledger..."
           emptyMessage="No ledger transactions recorded yet."
+          exportConfig={{
+            fileName: 'Melayurveda_Warehouse_Ledger_Transactions',
+            sheetName: 'Stock Ledger',
+            columns: ledgerExportColumns,
+          }}
         />
       )}
 

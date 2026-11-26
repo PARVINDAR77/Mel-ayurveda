@@ -7,6 +7,8 @@ import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Modal } from '../../../components/ui/modal';
 import { Drawer } from '../../../components/ui/drawer';
+import { ExportButton } from '../../../components/ui/export-button';
+import { ExcelColumnDef } from '../../../lib/export-excel';
 import {
   RotateCcw,
   PhoneCall,
@@ -466,6 +468,37 @@ export default function ReturnOrdersPage() {
     },
   ];
 
+  const returnsQueueExportColumns: ExcelColumnDef[] = [
+    { header: 'Return Ref', accessor: 'returnCode' },
+    { header: 'Order Number', accessor: 'order.orderNumber' },
+    { header: 'Patient Name', accessor: 'order.customer.fullName' },
+    { header: 'Contact Phone', accessor: 'order.customer.phoneNumber' },
+    { header: 'City', accessor: 'order.customer.city' },
+    { header: 'State', accessor: 'order.customer.state' },
+    { header: 'AWB Tracking', accessor: (it: any) => it.shipment?.trackingAwb || '' },
+    { header: 'Courier Partner', accessor: (it: any) => it.shipment?.courierPartner || '' },
+    { header: 'Order Amount (₹)', accessor: (it: any) => Number(it.order?.totalAmount || 0) },
+    { header: 'Payment Mode', accessor: (it: any) => it.order?.paymentMode || 'COD' },
+    { header: 'Return Status', accessor: 'status' },
+    { header: 'Customer Remarks', accessor: 'customerRemarks' },
+    { header: 'Call Attempts', accessor: (it: any) => Number(it.callAttemptCount || 1) },
+  ];
+
+  const returnsHistoryExportColumns: ExcelColumnDef[] = [
+    { header: 'Return Ref', accessor: 'returnCode' },
+    { header: 'Order Reference', accessor: 'order.orderNumber' },
+    { header: 'Patient Name', accessor: 'order.customer.fullName' },
+    { header: 'Contact Phone', accessor: 'order.customer.phoneNumber' },
+    { header: 'Return Reason', accessor: 'reason' },
+    { header: 'Call Outcome', accessor: 'callOutcome' },
+    { header: 'Call Notes', accessor: 'callNotes' },
+    { header: 'Fee Charged (₹)', accessor: (it: any) => Number(it.returnFeeCharged || 0) },
+    { header: 'Fee Payment Mode', accessor: 'feePaymentMode' },
+    { header: 'Inventory Restocked', accessor: (it: any) => (it.restocked ? 'YES' : 'NO') },
+    { header: 'Workflow Stage', accessor: 'status' },
+    { header: 'Resolved Date', accessor: (it: any) => it.resolvedAt ? new Date(it.resolvedAt).toLocaleDateString('en-IN') : '' },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -486,6 +519,14 @@ export default function ReturnOrdersPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <ExportButton
+            data={activeTab === 'QUEUE' ? queue : history}
+            columns={activeTab === 'QUEUE' ? returnsQueueExportColumns : returnsHistoryExportColumns}
+            fileName={activeTab === 'QUEUE' ? 'Melayurveda_Active_Returns_Queue' : 'Melayurveda_Returns_RTO_History'}
+            sheetName={activeTab === 'QUEUE' ? 'Active Returns' : 'RTO History'}
+            label={activeTab === 'QUEUE' ? 'Export Returns Queue' : 'Export RTO History'}
+          />
+
           <Button
             variant="outline"
             size="sm"
@@ -928,6 +969,11 @@ export default function ReturnOrdersPage() {
                   ? 'No historical returns match your search filter.'
                   : 'No historical returns recorded yet.'
               }
+              exportConfig={{
+                fileName: 'Melayurveda_Returns_RTO_History',
+                sheetName: 'RTO History',
+                columns: returnsHistoryExportColumns,
+              }}
             />
           </div>
         </div>

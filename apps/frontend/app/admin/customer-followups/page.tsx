@@ -7,6 +7,8 @@ import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { StatCard } from '../../../components/ui/stat-card';
 import { BatchAssignModal } from '../../../components/admin/batch-assign-modal';
+import { ExportButton } from '../../../components/ui/export-button';
+import { ExcelColumnDef } from '../../../lib/export-excel';
 import {
   Users,
   UserCheck,
@@ -118,6 +120,22 @@ export default function SuperAdminCustomerFollowupsPage() {
     fetchData();
   };
 
+  const adminFollowupsExportColumns: ExcelColumnDef[] = [
+    { header: 'Client Code', accessor: 'customerCode' },
+    { header: 'Full Name', accessor: 'fullName' },
+    { header: 'Phone Number', accessor: 'phoneNumber' },
+    { header: 'Location', accessor: (c: any) => [c.city, c.state].filter(Boolean).join(', ') || 'N/A' },
+    { header: 'Lifetime Orders', accessor: (c: any) => Number(c.orders?.length || 0) },
+    { header: 'Follow-Up Status', accessor: (c: any) => {
+      const f = followUps.find((item: any) => item.customerId === c.id);
+      return f ? f.status : 'UNASSIGNED';
+    }},
+    { header: 'Assigned Executive', accessor: (c: any) => {
+      const f = followUps.find((item: any) => item.customerId === c.id);
+      return f?.assignedUser ? `${f.assignedUser.firstName || ''} ${f.assignedUser.lastName || ''}`.trim() : 'Unassigned';
+    }},
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header Banner */}
@@ -138,6 +156,13 @@ export default function SuperAdminCustomerFollowupsPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <ExportButton
+            data={filteredCustomers}
+            columns={adminFollowupsExportColumns}
+            fileName="Melayurveda_SuperAdmin_Client_Followups"
+            sheetName="Follow-Up Allocation"
+          />
+
           <Button
             variant="outline"
             size="sm"

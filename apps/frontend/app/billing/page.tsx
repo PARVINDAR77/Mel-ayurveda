@@ -9,6 +9,8 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Drawer } from '../../components/ui/drawer';
 import { Modal } from '../../components/ui/modal';
+import { ExportButton } from '../../components/ui/export-button';
+import { ExcelColumnDef } from '../../lib/export-excel';
 import {
   FileText,
   Boxes,
@@ -655,6 +657,53 @@ function BillingWorkspaceContent() {
     },
   ];
 
+  const billingQueueExportColumns: ExcelColumnDef[] = [
+    { header: 'Order Reference', accessor: 'orderNumber' },
+    { header: 'Order Date', accessor: (o: any) => o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-IN') : '' },
+    { header: 'Patient Name', accessor: 'customer.fullName' },
+    { header: 'Contact Phone', accessor: 'customer.phoneNumber' },
+    { header: 'City', accessor: 'customer.city' },
+    { header: 'State', accessor: 'customer.state' },
+    { header: 'Prescription Formulations', accessor: (o: any) => (o.items || []).map((it: any) => `${it.product?.name || 'Item'} (x${it.quantity})`).join(', ') },
+    { header: 'Subtotal (₹)', accessor: (o: any) => Number(o.subtotal || 0) },
+    { header: 'Tax Amount (₹)', accessor: (o: any) => Number(o.taxAmount || 0) },
+    { header: 'Grand Total (₹)', accessor: (o: any) => Number(o.totalAmount || 0) },
+    { header: 'Payment Mode', accessor: 'paymentMode' },
+    { header: 'Approval Status', accessor: 'approvalStatus' },
+  ];
+
+  const stockExportColumns: ExcelColumnDef[] = [
+    { header: 'Formulation SKU', accessor: 'skuCode' },
+    { header: 'Product Name', accessor: 'productName' },
+    { header: 'Dosage Form', accessor: (inv: any) => inv.product?.dosageForm || 'Formulation' },
+    { header: 'Target Ailment', accessor: (inv: any) => inv.product?.category?.name || 'General Ayurvedic' },
+    { header: 'Current Physical Stock', accessor: (inv: any) => Number(inv.currentStock || 0) },
+    { header: 'Allocated in Transit', accessor: (inv: any) => Number(inv.allocatedStock || 0) },
+    { header: 'Net Available Stock', accessor: (inv: any) => Number(inv.availableStock || 0) },
+    { header: 'Safety Threshold', accessor: (inv: any) => Number(inv.minimumStockThreshold || 20) },
+    { header: 'Latest Batch #', accessor: 'batchNumber' },
+    { header: 'Batch Expiry', accessor: (inv: any) => inv.expiryDate ? new Date(inv.expiryDate).toLocaleDateString('en-IN') : '' },
+    { header: 'Unit Price (₹)', accessor: (inv: any) => Number(inv.product?.sellingPrice || inv.product?.mrp || 0) },
+  ];
+
+  const billingInvoicesExportColumns: ExcelColumnDef[] = [
+    { header: 'GST Invoice #', accessor: 'invoiceNumber' },
+    { header: 'Invoice Date', accessor: (inv: any) => inv.issuedAt ? new Date(inv.issuedAt).toLocaleString('en-IN') : '' },
+    { header: 'Order Reference', accessor: 'order.orderNumber' },
+    { header: 'Patient Name', accessor: 'order.customer.fullName' },
+    { header: 'Contact Phone', accessor: 'order.customer.phoneNumber' },
+    { header: 'City', accessor: 'order.customer.city' },
+    { header: 'State', accessor: 'order.customer.state' },
+    { header: 'Subtotal (₹)', accessor: (inv: any) => Number(inv.subtotal || 0) },
+    { header: 'CGST (₹)', accessor: (inv: any) => Number(inv.cgstAmount || 0) },
+    { header: 'SGST (₹)', accessor: (inv: any) => Number(inv.sgstAmount || 0) },
+    { header: 'IGST (₹)', accessor: (inv: any) => Number(inv.igstAmount || 0) },
+    { header: 'Total GST (₹)', accessor: (inv: any) => Number(inv.totalTax || 0) },
+    { header: 'Grand Total (₹)', accessor: (inv: any) => Number(inv.grandTotal || 0) },
+    { header: 'Payment Mode', accessor: (inv: any) => inv.order?.paymentMode || 'COD' },
+    { header: 'Status', accessor: 'status' },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -677,6 +726,44 @@ function BillingWorkspaceContent() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <ExportButton
+            data={
+              activeTab === 'QUEUE'
+                ? filteredBillingQueue
+                : activeTab === 'STOCK'
+                ? filteredStock
+                : filteredInvoices
+            }
+            columns={
+              activeTab === 'QUEUE'
+                ? billingQueueExportColumns
+                : activeTab === 'STOCK'
+                ? stockExportColumns
+                : billingInvoicesExportColumns
+            }
+            fileName={
+              activeTab === 'QUEUE'
+                ? 'Melayurveda_Billing_Queue'
+                : activeTab === 'STOCK'
+                ? 'Melayurveda_Warehouse_Stock'
+                : 'Melayurveda_Billing_History_Invoices'
+            }
+            sheetName={
+              activeTab === 'QUEUE'
+                ? 'Awaiting Invoicing'
+                : activeTab === 'STOCK'
+                ? 'Warehouse Inventory'
+                : 'Issued GST Invoices'
+            }
+            label={
+              activeTab === 'QUEUE'
+                ? 'Export Billing Queue'
+                : activeTab === 'STOCK'
+                ? 'Export Stock List'
+                : 'Export Billing History'
+            }
+          />
+
           <Button
             variant={activeTab === 'INVOICES' ? 'primary' : 'outline'}
             size="sm"
@@ -881,6 +968,11 @@ function BillingWorkspaceContent() {
               data={filteredBillingQueue}
               isLoading={isLoadingQueue}
               emptyMessage="No approved orders currently awaiting billing. All caught up!"
+              exportConfig={{
+                fileName: 'Melayurveda_Billing_Queue',
+                sheetName: 'Awaiting Invoicing',
+                columns: billingQueueExportColumns,
+              }}
             />
           </div>
         </div>
@@ -924,6 +1016,11 @@ function BillingWorkspaceContent() {
               data={filteredStock}
               isLoading={isLoadingStock}
               emptyMessage="No inventory records found."
+              exportConfig={{
+                fileName: 'Melayurveda_Warehouse_Stock',
+                sheetName: 'Warehouse Inventory',
+                columns: stockExportColumns,
+              }}
             />
           </div>
         </div>
@@ -971,6 +1068,11 @@ function BillingWorkspaceContent() {
               data={filteredInvoices}
               isLoading={isLoadingInvoices}
               emptyMessage="No GST tax invoices issued yet in billing history."
+              exportConfig={{
+                fileName: 'Melayurveda_Billing_History_Invoices',
+                sheetName: 'Issued GST Invoices',
+                columns: billingInvoicesExportColumns,
+              }}
             />
           </div>
         </div>

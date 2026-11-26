@@ -9,6 +9,8 @@ import { Drawer } from '../../../components/ui/drawer';
 import { StatCard } from '../../../components/ui/stat-card';
 import { EditOrderModal } from '../../../components/orders/edit-order-modal';
 import { DecideOrderModal } from '../../../components/orders/decide-order-modal';
+import { ExportButton } from '../../../components/ui/export-button';
+import { ExcelColumnDef } from '../../../lib/export-excel';
 import {
   Package,
   RefreshCw,
@@ -260,6 +262,22 @@ export default function ApprovalOrdersPage() {
     },
   ];
 
+  const approvalOrdersExportColumns: ExcelColumnDef[] = [
+    { header: 'Order Reference', accessor: 'orderNumber' },
+    { header: 'Order Date', accessor: (o: any) => o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-IN') : '' },
+    { header: 'Patient Name', accessor: 'customer.fullName' },
+    { header: 'Contact Phone', accessor: 'customer.phoneNumber' },
+    { header: 'City', accessor: 'customer.city' },
+    { header: 'State', accessor: 'customer.state' },
+    { header: 'Prescribed Items', accessor: (o: any) => o.items?.map((it: any) => `${it.product?.name || it.productName || 'Item'} (x${it.quantity})`).join(', ') || '' },
+    { header: 'Subtotal (₹)', accessor: (o: any) => Number(o.subtotal || 0) },
+    { header: 'Tax (₹)', accessor: (o: any) => Number(o.taxAmount || 0) },
+    { header: 'Grand Total (₹)', accessor: (o: any) => Number(o.grandTotal || 0) },
+    { header: 'Payment Method', accessor: 'paymentMethod' },
+    { header: 'Approval Status', accessor: 'approvalStatus' },
+    { header: 'Workflow Stage', accessor: 'status' },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -280,6 +298,12 @@ export default function ApprovalOrdersPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <ExportButton
+            data={orders}
+            columns={approvalOrdersExportColumns}
+            fileName="Melayurveda_Approval_Orders"
+            sheetName="Approval Orders"
+          />
           <Button
             variant="outline"
             size="sm"
@@ -416,6 +440,11 @@ export default function ApprovalOrdersPage() {
         data={orders}
         isLoading={isLoading}
         emptyMessage="No formulation orders found matching current filter."
+        exportConfig={{
+          fileName: 'Melayurveda_Approval_Orders',
+          sheetName: 'Approval Orders',
+          columns: approvalOrdersExportColumns,
+        }}
       />
 
       {/* Full Order Inspection Drawer */}

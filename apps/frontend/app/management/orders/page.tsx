@@ -10,6 +10,8 @@ import { Modal } from '../../../components/ui/modal';
 import { Drawer } from '../../../components/ui/drawer';
 import { StatCard } from '../../../components/ui/stat-card';
 import { EditOrderModal } from '../../../components/orders/edit-order-modal';
+import { ExportButton } from '../../../components/ui/export-button';
+import { ExcelColumnDef } from '../../../lib/export-excel';
 import {
   Package,
   PlusCircle,
@@ -411,6 +413,22 @@ export default function FormulationOrdersPage() {
     },
   ];
 
+  const mgtOrdersExportColumns: ExcelColumnDef[] = [
+    { header: 'Order Reference', accessor: 'orderNumber' },
+    { header: 'Order Date', accessor: (o: any) => o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-IN') : '' },
+    { header: 'Patient Name', accessor: 'customer.fullName' },
+    { header: 'Contact Phone', accessor: 'customer.phoneNumber' },
+    { header: 'City', accessor: 'customer.city' },
+    { header: 'State', accessor: 'customer.state' },
+    { header: 'Prescribed Items', accessor: (o: any) => o.items?.map((it: any) => `${it.product?.name || it.productName || 'Item'} (x${it.quantity})`).join(', ') || '' },
+    { header: 'Subtotal (₹)', accessor: (o: any) => Number(o.subtotal || 0) },
+    { header: 'Tax (₹)', accessor: (o: any) => Number(o.taxAmount || 0) },
+    { header: 'Grand Total (₹)', accessor: (o: any) => Number(o.grandTotal || 0) },
+    { header: 'Payment Mode', accessor: 'paymentMethod' },
+    { header: 'Approval Status', accessor: 'approvalStatus' },
+    { header: 'Workflow Stage', accessor: 'status' },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -431,6 +449,12 @@ export default function FormulationOrdersPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <ExportButton
+            data={orders}
+            columns={mgtOrdersExportColumns}
+            fileName="Melayurveda_Management_Orders"
+            sheetName="Formulation Orders"
+          />
           <Button
             variant="outline"
             size="sm"
@@ -550,6 +574,11 @@ export default function FormulationOrdersPage() {
         data={orders}
         isLoading={isLoading}
         emptyMessage="No formulation orders found matching current criteria."
+        exportConfig={{
+          fileName: 'Melayurveda_Management_Orders',
+          sheetName: 'Formulation Orders',
+          columns: mgtOrdersExportColumns,
+        }}
       />
 
       {/* Order Details Drawer */}

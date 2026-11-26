@@ -28,6 +28,8 @@ import {
 } from 'lucide-react';
 import { RouteToSalesModal } from '../../../components/management/route-to-sales-modal';
 import { BatchAssignModal } from '../../../components/admin/batch-assign-modal';
+import { ExportButton } from '../../../components/ui/export-button';
+import { ExcelColumnDef } from '../../../lib/export-excel';
 
 export default function CustomerCRMPage() {
   const [customers, setCustomers] = useState<any[]>([]);
@@ -323,6 +325,21 @@ export default function CustomerCRMPage() {
     },
   ];
 
+  const customersExportColumns: ExcelColumnDef[] = [
+    { header: 'Customer Code', accessor: 'customerCode' },
+    { header: 'Full Name', accessor: 'fullName' },
+    { header: 'Primary Phone', accessor: 'phoneNumber' },
+    { header: 'Alternate Phone', accessor: 'alternatePhone' },
+    { header: 'Email Address', accessor: 'email' },
+    { header: 'Address', accessor: 'address' },
+    { header: 'City', accessor: 'city' },
+    { header: 'State', accessor: 'state' },
+    { header: 'Pincode', accessor: 'pincode' },
+    { header: 'Lifetime Orders', accessor: (c: any) => Number(c._count?.orders ?? c.orders?.length ?? 0) },
+    { header: 'Lifetime Spend (₹)', accessor: (c: any) => Number(c.totalSpend || 0) },
+    { header: 'Registered Date', accessor: (c: any) => c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-IN') : '' },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -343,6 +360,13 @@ export default function CustomerCRMPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <ExportButton
+            data={customers}
+            columns={customersExportColumns}
+            fileName="Melayurveda_Customer_Profiles"
+            sheetName="Customers CRM"
+          />
+
           <Button
             variant="outline"
             size="sm"
@@ -446,6 +470,11 @@ export default function CustomerCRMPage() {
         data={customers}
         isLoading={isLoading}
         emptyMessage="No customer profiles found."
+        exportConfig={{
+          fileName: 'Melayurveda_Customer_Profiles',
+          sheetName: 'Customers CRM',
+          columns: customersExportColumns,
+        }}
       />
 
       {/* Customer Profile & Order History Drawer */}

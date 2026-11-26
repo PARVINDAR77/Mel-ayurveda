@@ -6,6 +6,8 @@ import { DataTable, Column } from '../../../components/ui/data-table';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Modal } from '../../../components/ui/modal';
+import { ExportButton } from '../../../components/ui/export-button';
+import { ExcelColumnDef } from '../../../lib/export-excel';
 import {
   History,
   RefreshCw,
@@ -160,6 +162,15 @@ export default function AuditAdminPage() {
     },
   ];
 
+  const auditExportColumns: ExcelColumnDef[] = [
+    { header: 'Action Name', accessor: 'action' },
+    { header: 'Target Entity', accessor: 'entityType' },
+    { header: 'Entity ID', accessor: 'entityId' },
+    { header: 'Performed By', accessor: (it: any) => it.user?.fullName || it.user?.email || 'System Operation' },
+    { header: 'IP Address', accessor: 'ipAddress' },
+    { header: 'Timestamp', accessor: (it: any) => it.createdAt ? new Date(it.createdAt).toLocaleString('en-IN') : '' },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -183,6 +194,12 @@ export default function AuditAdminPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <ExportButton
+            data={filteredLogs}
+            columns={auditExportColumns}
+            fileName="Melayurveda_Enterprise_Audit_Ledger"
+            sheetName="Audit Trail"
+          />
           <Button
             variant="outline"
             size="sm"
@@ -284,6 +301,11 @@ export default function AuditAdminPage() {
           searchPlaceholder="Filter by action name (e.g. CONVERT, LEAD, CALL)..."
           isLoading={isLoading}
           emptyMessage="No audit logs found matching criteria."
+          exportConfig={{
+            fileName: 'Melayurveda_Enterprise_Audit_Ledger',
+            sheetName: 'Audit Trail',
+            columns: auditExportColumns,
+          }}
         />
       </div>
 

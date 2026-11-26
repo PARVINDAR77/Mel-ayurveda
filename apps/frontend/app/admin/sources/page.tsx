@@ -7,6 +7,8 @@ import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Modal } from '../../../components/ui/modal';
+import { ExportButton } from '../../../components/ui/export-button';
+import { ExcelColumnDef } from '../../../lib/export-excel';
 import {
   Radio,
   Plus,
@@ -201,6 +203,14 @@ export default function LeadSourcesAdminPage() {
     },
   ];
 
+  const sourcesExportColumns: ExcelColumnDef[] = [
+    { header: 'Channel / Source Name', accessor: 'name' },
+    { header: 'Platform Type', accessor: 'sourceType' },
+    { header: 'Attributed Leads Count', accessor: (it: any) => Number(it._count?.leads || it.leadsCount || 0) },
+    { header: 'Status', accessor: (it: any) => (it.isActive ? 'ACTIVE' : 'INACTIVE') },
+    { header: 'Created On', accessor: (it: any) => it.createdAt ? new Date(it.createdAt).toLocaleDateString('en-IN') : '' },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -220,6 +230,13 @@ export default function LeadSourcesAdminPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <ExportButton
+            data={sources}
+            columns={sourcesExportColumns}
+            fileName="Melayurveda_Lead_Attribution_Sources"
+            sheetName="Marketing Sources"
+          />
+
           <Button
             variant="outline"
             size="sm"
@@ -313,6 +330,11 @@ export default function LeadSourcesAdminPage() {
           searchPlaceholder="Search lead channels..."
           isLoading={isLoading}
           emptyMessage="No lead sources registered"
+          exportConfig={{
+            fileName: 'Melayurveda_Lead_Attribution_Sources',
+            sheetName: 'Marketing Sources',
+            columns: sourcesExportColumns,
+          }}
         />
       </div>
 

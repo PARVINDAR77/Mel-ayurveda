@@ -5,6 +5,8 @@ import { Search, ChevronLeft, ChevronRight, Inbox } from 'lucide-react';
 import { clsx } from 'clsx';
 import { Input } from './input';
 import { Button } from './button';
+import { ExcelColumnDef } from '../../lib/export-excel';
+import { ExportButton } from './export-button';
 
 export interface Column<T> {
   key: string;
@@ -12,6 +14,13 @@ export interface Column<T> {
   render?: (item: T) => React.ReactNode;
   sortable?: boolean;
   className?: string;
+}
+
+export interface DataTableExportConfig<T = any> {
+  fileName: string;
+  sheetName?: string;
+  columns?: ExcelColumnDef<T>[];
+  label?: string;
 }
 
 interface DataTableProps<T> {
@@ -24,6 +33,8 @@ interface DataTableProps<T> {
   onRowClick?: (item: T) => void;
   pageSize?: number;
   totalRecords?: number;
+  exportConfig?: DataTableExportConfig<T>;
+  actions?: React.ReactNode;
 }
 
 export function DataTable<T extends Record<string, any>>({
@@ -35,6 +46,8 @@ export function DataTable<T extends Record<string, any>>({
   emptyMessage = 'No records found',
   onRowClick,
   pageSize = 10,
+  exportConfig,
+  actions,
 }: DataTableProps<T>) {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -59,21 +72,42 @@ export function DataTable<T extends Record<string, any>>({
 
   return (
     <div className="w-full space-y-3">
-      {searchKey && (
-        <div className="flex items-center justify-between gap-4">
-          <div className="w-full max-w-sm">
-            <Input
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
-              placeholder={searchPlaceholder}
-              leftIcon={<Search className="h-4 w-4" />}
-            />
+      {(searchKey || exportConfig || actions) && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex-1 max-w-sm">
+            {searchKey && (
+              <Input
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+                placeholder={searchPlaceholder}
+                leftIcon={<Search className="h-4 w-4" />}
+              />
+            )}
           </div>
-          <div className="text-xs text-slate-500">
-            Showing {filteredData.length} entries
+
+          <div className="flex items-center gap-2">
+            {actions}
+            {exportConfig && (
+              <ExportButton
+                data={filteredData}
+                fileName={exportConfig.fileName}
+                sheetName={exportConfig.sheetName}
+                label={exportConfig.label || 'Export to Excel'}
+                columns={
+                  exportConfig.columns ||
+                  columns.map((c) => ({
+                    header: c.header,
+                    accessor: c.key,
+                  }))
+                }
+              />
+            )}
+            <div className="text-xs text-slate-500 font-medium">
+              Showing {filteredData.length} entries
+            </div>
           </div>
         </div>
       )}

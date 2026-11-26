@@ -8,6 +8,8 @@ import { Button } from '../../../components/ui/button';
 import { Modal } from '../../../components/ui/modal';
 import { Drawer } from '../../../components/ui/drawer';
 import { StatCard } from '../../../components/ui/stat-card';
+import { ExportButton } from '../../../components/ui/export-button';
+import { ExcelColumnDef } from '../../../lib/export-excel';
 import {
   Trash2,
   RefreshCw,
@@ -276,6 +278,15 @@ export default function RecycleBinVaultPage() {
     },
   ];
 
+  const recycleBinExportColumns: ExcelColumnDef[] = [
+    { header: 'Entity Type', accessor: 'entityType' },
+    { header: 'Item Identifier', accessor: 'itemIdentifier' },
+    { header: 'Display Name', accessor: 'displayName' },
+    { header: 'Deleted By', accessor: 'deletedByCode' },
+    { header: 'Deletion Timestamp', accessor: (it: any) => it.deletedAt ? new Date(it.deletedAt).toLocaleString('en-IN') : '' },
+    { header: 'Auto-Purge Expiration', accessor: (it: any) => it.expiresAt ? new Date(it.expiresAt).toLocaleDateString('en-IN') : '' },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -298,6 +309,12 @@ export default function RecycleBinVaultPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <ExportButton
+            data={items}
+            columns={recycleBinExportColumns}
+            fileName="Melayurveda_Recycle_Bin_Vault"
+            sheetName="Deleted Records"
+          />
           <Button
             variant="outline"
             size="sm"
@@ -437,6 +454,11 @@ export default function RecycleBinVaultPage() {
         isLoading={isLoading}
         searchKey="displayName"
         searchPlaceholder="Filter listed records..."
+        exportConfig={{
+          fileName: 'Melayurveda_Recycle_Bin_Vault',
+          sheetName: 'Deleted Records',
+          columns: recycleBinExportColumns,
+        }}
       />
 
       {/* Snapshot Inspection Drawer */}

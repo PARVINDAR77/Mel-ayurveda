@@ -33,7 +33,7 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
     private readonly recycleBinService: RecycleBinService,
-  ) {}
+  ) { }
 
   /**
    * Generates the next sequential unique employee identifier for a role.

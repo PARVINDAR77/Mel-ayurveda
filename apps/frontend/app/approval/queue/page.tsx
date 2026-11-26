@@ -9,6 +9,8 @@ import { Modal } from '../../../components/ui/modal';
 import { Drawer } from '../../../components/ui/drawer';
 import { EditOrderModal } from '../../../components/orders/edit-order-modal';
 import { DecideOrderModal } from '../../../components/orders/decide-order-modal';
+import { ExportButton } from '../../../components/ui/export-button';
+import { ExcelColumnDef } from '../../../lib/export-excel';
 import {
   FileCheck,
   RefreshCw,
@@ -331,6 +333,20 @@ export default function ApprovalQueuePage() {
     },
   ];
 
+  const approvalQueueExportColumns: ExcelColumnDef[] = [
+    { header: 'Order Reference', accessor: (it: any) => it.order?.orderNumber || 'PENDING' },
+    { header: 'Patient Name', accessor: (it: any) => it.order?.customer?.fullName || it.lead?.customerName || '' },
+    { header: 'Contact Phone', accessor: (it: any) => it.order?.customer?.phoneNumber || it.lead?.phoneNumber || '' },
+    { header: 'City', accessor: (it: any) => it.order?.customer?.city || it.lead?.city || '' },
+    { header: 'State', accessor: (it: any) => it.order?.customer?.state || it.lead?.state || '' },
+    { header: 'Prescribed Items', accessor: (it: any) => it.order?.items?.map((p: any) => `${p.product?.name || 'Item'} (x${p.quantity})`).join(', ') || it.lead?.productInterest || '' },
+    { header: 'Order Value (₹)', accessor: (it: any) => Number(it.order?.grandTotal || it.order?.totalAmount || 0) },
+    { header: 'Payment Method', accessor: (it: any) => it.order?.paymentMethod || it.order?.paymentMode || 'COD' },
+    { header: 'Queue Status', accessor: 'status' },
+    { header: 'Claimed By', accessor: (it: any) => it.claimedByUser?.fullName || 'Unclaimed FIFO' },
+    { header: 'Submitted Date', accessor: (it: any) => it.createdAt ? new Date(it.createdAt).toLocaleString('en-IN') : '' },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -351,6 +367,12 @@ export default function ApprovalQueuePage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <ExportButton
+            data={queue}
+            columns={approvalQueueExportColumns}
+            fileName="Melayurveda_Approval_Queue"
+            sheetName="Verification Queue"
+          />
           <Button
             variant="outline"
             size="sm"
@@ -436,6 +458,11 @@ export default function ApprovalQueuePage() {
         data={queue}
         isLoading={isLoading}
         emptyMessage="No pending verification requests in this queue view."
+        exportConfig={{
+          fileName: 'Melayurveda_Approval_Queue',
+          sheetName: 'Verification Queue',
+          columns: approvalQueueExportColumns,
+        }}
       />
 
       {/* Medical & Commercial Dossier Inspection Drawer */}

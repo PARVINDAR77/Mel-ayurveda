@@ -6,6 +6,8 @@ import { apiClient, getErrorMessage } from '../../../lib/api-client';
 import { DataTable, Column } from '../../../components/ui/data-table';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
+import { ExportButton } from '../../../components/ui/export-button';
+import { ExcelColumnDef } from '../../../lib/export-excel';
 import {
   CalendarClock,
   RefreshCw,
@@ -129,6 +131,15 @@ export default function FollowUpsAgendaPage() {
     },
   ];
 
+  const followUpsExportColumns: ExcelColumnDef[] = [
+    { header: 'Status', accessor: 'status' },
+    { header: 'Customer Name', accessor: (it: any) => it.lead?.customerName || '' },
+    { header: 'Contact Phone', accessor: (it: any) => it.lead?.phoneNumber || '' },
+    { header: 'Scheduled Date & Time', accessor: (it: any) => it.scheduledTime ? new Date(it.scheduledTime).toLocaleString('en-IN') : '' },
+    { header: 'Consultation Agenda Notes', accessor: 'reminderNotes' },
+    { header: 'Created Date', accessor: (it: any) => it.createdAt ? new Date(it.createdAt).toLocaleDateString('en-IN') : '' },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -143,6 +154,12 @@ export default function FollowUpsAgendaPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <ExportButton
+            data={followUps}
+            columns={followUpsExportColumns}
+            fileName="Melayurveda_Sales_FollowUps"
+            sheetName="Follow-Up Agenda"
+          />
           <Button
             variant="outline"
             size="sm"
@@ -182,6 +199,11 @@ export default function FollowUpsAgendaPage() {
         searchPlaceholder="Filter follow-up notes..."
         isLoading={isLoading}
         emptyMessage="No pending follow-ups in your schedule! All caught up."
+        exportConfig={{
+          fileName: 'Melayurveda_Sales_FollowUps',
+          sheetName: 'Follow-Up Agenda',
+          columns: followUpsExportColumns,
+        }}
       />
     </div>
   );

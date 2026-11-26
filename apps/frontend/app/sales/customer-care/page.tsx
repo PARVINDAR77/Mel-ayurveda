@@ -8,6 +8,8 @@ import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../../components/ui/card';
 import { CreateOrderModal } from '../../../components/sales/create-order-modal';
+import { ExportButton } from '../../../components/ui/export-button';
+import { ExcelColumnDef } from '../../../lib/export-excel';
 import {
   PhoneCall,
   Calendar,
@@ -127,6 +129,23 @@ export default function CustomerCareFollowUpPage() {
   const orders = customer?.orders || [];
   const latestOrder = orders[0];
 
+  const customerCareExportColumns: ExcelColumnDef[] = [
+    { header: 'Client Code', accessor: (it: any) => it.customer?.customerCode || 'N/A' },
+    { header: 'Client Name', accessor: (it: any) => it.customer?.fullName || '' },
+    { header: 'Contact Phone', accessor: (it: any) => it.customer?.phoneNumber || '' },
+    { header: 'City', accessor: (it: any) => it.customer?.city || '' },
+    { header: 'State', accessor: (it: any) => it.customer?.state || '' },
+    { header: 'Scheduled Care Date', accessor: (it: any) => it.scheduledDate ? new Date(it.scheduledDate).toLocaleDateString('en-IN') : '' },
+    { header: 'Care Status', accessor: 'status' },
+    { header: 'Call Disposition', accessor: 'disposition' },
+    { header: 'Health Rating', accessor: 'healthRating' },
+    { header: 'Consultation Notes', accessor: 'consultationNotes' },
+    { header: 'Patient Feedback', accessor: 'patientFeedback' },
+    { header: 'Refill Probability', accessor: 'refillProbability' },
+    { header: 'Refill Requested', accessor: (it: any) => (it.refillRequested ? 'YES' : 'NO') },
+    { header: 'Next Callback Date', accessor: (it: any) => it.nextFollowUpDate ? new Date(it.nextFollowUpDate).toLocaleDateString('en-IN') : '' },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Top Banner */}
@@ -147,6 +166,12 @@ export default function CustomerCareFollowUpPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <ExportButton
+            data={followUps}
+            columns={customerCareExportColumns}
+            fileName="Melayurveda_Customer_Care_Followups"
+            sheetName="Wellness Refills"
+          />
           <Button
             variant="outline"
             size="sm"
