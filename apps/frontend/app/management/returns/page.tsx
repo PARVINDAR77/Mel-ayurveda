@@ -1352,7 +1352,7 @@ export default function ReturnOrdersPage() {
         onClose={() => setIsInitiateModalOpen(false)}
         title="Initiate Return / RTO Investigation"
         description="Queue a shipped or delivered order for return investigation and customer outreach."
-        maxWidth="md"
+        maxWidth="lg"
       >
         <form onSubmit={handleInitiateSubmit} className="space-y-4 text-xs">
           {/* Sleek Single Searchable Order Selector */}

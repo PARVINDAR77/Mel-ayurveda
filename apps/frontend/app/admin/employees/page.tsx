@@ -387,22 +387,16 @@ export default function EmployeesAdminPage() {
             count: employees.filter((e) => e.role === 'SALESPERSON').length,
           },
           {
-            key: 'FOLLOWUP_EXECUTIVE',
-            label: 'Follow-Up Care',
-            panel: 'Panel 06',
-            count: employees.filter((e) => e.role === 'FOLLOWUP_EXECUTIVE').length,
-          },
-          {
-            key: 'PENDING_REVIEWER',
-            label: 'Clinical Triage',
-            panel: 'Panel 03',
-            count: employees.filter((e) => e.role === 'PENDING_REVIEWER').length,
-          },
-          {
             key: 'APPROVAL_OFFICER',
-            label: 'Medical Approvals',
-            panel: 'Panel 04',
+            label: 'Doctor Approvals',
+            panel: 'Panel 03',
             count: employees.filter((e) => e.role === 'APPROVAL_OFFICER').length,
+          },
+          {
+            key: 'BILLING_EXECUTIVE',
+            label: 'Billing & Stock Desk',
+            panel: 'Panel 04',
+            count: employees.filter((e) => e.role === 'BILLING_EXECUTIVE').length,
           },
           {
             key: 'MANAGEMENT',
@@ -411,10 +405,10 @@ export default function EmployeesAdminPage() {
             count: employees.filter((e) => e.role === 'MANAGEMENT').length,
           },
           {
-            key: 'BILLING_EXECUTIVE',
-            label: 'Billing & Stock Desk',
-            panel: 'Panel 07',
-            count: employees.filter((e) => e.role === 'BILLING_EXECUTIVE').length,
+            key: 'FOLLOWUP_EXECUTIVE',
+            label: 'Follow-Up Care',
+            panel: 'Panel 06',
+            count: employees.filter((e) => e.role === 'FOLLOWUP_EXECUTIVE').length,
           },
           {
             key: 'SUPER_ADMIN',
@@ -525,12 +519,11 @@ export default function EmployeesAdminPage() {
               onChange={(e) => setFormData({ ...formData, role: e.target.value })}
               className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-700"
             >
-              <option value="SALESPERSON">Panel 02: Salesperson (Tele-Consultant • 0% Source Exposure)</option>
+              <option value="SALESPERSON">Panel 02: Salesperson (Ayurvedic Tele-Sales • 0% Source Leak)</option>
+              <option value="APPROVAL_OFFICER">Panel 03: Approval Officer (Doctor Clinical Review & Clearance)</option>
+              <option value="BILLING_EXECUTIVE">Panel 04: Billing & Stock Executive (GST Tax Invoices & Stock • MEL-BIL-)</option>
+              <option value="MANAGEMENT">Panel 05: Management & Operations (Courier Handover & Dispatch)</option>
               <option value="FOLLOWUP_EXECUTIVE">Panel 06: Follow-Up Executive (Customer Care, Wellness & Refills • MEL-FLW-)</option>
-              <option value="PENDING_REVIEWER">Panel 03: Pending Reviewer (Formulation & Dosage Verification)</option>
-              <option value="APPROVAL_OFFICER">Panel 04: Approval Officer (Commercial & Medical Clearance)</option>
-              <option value="BILLING_EXECUTIVE">Panel 07: Billing & Stock Executive (Stock Inspection & GST Billing • MEL-BIL-)</option>
-              <option value="MANAGEMENT">Panel 05: Management (GST Invoicing, Inventory & Dispatch)</option>
               <option value="SUPER_ADMIN">Panel 01: Super Admin (Executive Organization Control)</option>
             </select>
           </div>

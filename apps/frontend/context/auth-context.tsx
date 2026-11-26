@@ -44,7 +44,7 @@ export function getPanelRoute(role?: RoleType): string {
     case 'SALESPERSON':
       return '/sales';
     case 'PENDING_REVIEWER':
-      return '/pending';
+      return '/approval';
     case 'APPROVAL_OFFICER':
       return '/approval';
     case 'MANAGEMENT':

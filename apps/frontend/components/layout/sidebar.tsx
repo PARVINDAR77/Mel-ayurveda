@@ -85,9 +85,8 @@ export function Sidebar({ onClose }: SidebarProps) {
 
       case 'PENDING_REVIEWER':
         return [
-          { href: '/pending', label: 'Review Dashboard', icon: LayoutDashboard },
-          { href: '/pending/queue', label: 'Triage Queue', icon: FileCheck2 },
-          { href: '/pending/history', label: 'Decision History', icon: History },
+          { href: '/approval', label: 'Approval Dashboard', icon: LayoutDashboard },
+          { href: '/approval/queue', label: 'Verification Queue', icon: CheckCircle2 },
         ];
 
       case 'APPROVAL_OFFICER':
@@ -139,7 +138,7 @@ export function Sidebar({ onClose }: SidebarProps) {
       case 'SALESPERSON':
         return 'Ayurvedic Consultant';
       case 'PENDING_REVIEWER':
-        return 'Clinical Triage Reviewer';
+        return 'Clinical Reviewer';
       case 'APPROVAL_OFFICER':
         return 'Final Sign-off Officer';
       case 'MANAGEMENT':

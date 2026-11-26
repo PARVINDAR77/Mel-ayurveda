@@ -337,7 +337,7 @@ export default function ApprovalHistoryPage() {
             <div>
               <h5 className="font-bold text-slate-900 mb-2 flex items-center gap-1.5">
                 <ClipboardList className="h-4 w-4 text-forest-700" />
-                Panel 03 Clinical Triage History
+                Prior Clinical Review History
               </h5>
               {!dossierData.lead?.pendingReviews || dossierData.lead.pendingReviews.length === 0 ? (
                 <div className="rounded border border-dashed border-slate-200 p-3 text-center text-slate-400">

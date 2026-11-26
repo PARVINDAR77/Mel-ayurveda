@@ -8,12 +8,13 @@ test.describe('Authentication & Persona Switching (Bundle 01)', () => {
     await expect(page.locator('text=MELAYURVEDA')).toBeVisible();
     await expect(page.locator('text=Enterprise Ayurvedic CRM')).toBeVisible();
 
-    // Verify 5 seeded persona buttons exist
+    // Verify 6 seeded persona buttons exist
     await expect(page.locator('text=Super Admin')).toBeVisible();
-    await expect(page.locator('text=Sales Rep')).toBeVisible();
-    await expect(page.locator('text=Pending Reviewer')).toBeVisible();
+    await expect(page.locator('text=Sales Consultant')).toBeVisible();
     await expect(page.locator('text=Approval Officer')).toBeVisible();
-    await expect(page.locator('text=Management')).toBeVisible();
+    await expect(page.locator('text=Billing Desk')).toBeVisible();
+    await expect(page.locator('text=Operations Head')).toBeVisible();
+    await expect(page.locator('text=Follow-Up Care')).toBeVisible();
   });
 
   test('clicking persona card auto-populates employee email and credentials', async ({ page }) => {

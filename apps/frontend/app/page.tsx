@@ -18,6 +18,8 @@ import {
   FileCheck2,
   CheckCircle2,
   Package,
+  FileText,
+  HeartHandshake,
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -108,15 +110,15 @@ export default function HomePage() {
           </a>
         </div>
 
-        {/* 5 Panels Architecture Cards */}
-        <div className="mt-16 w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 text-left">
+        {/* 6 Panels Architecture Cards */}
+        <div className="mt-16 w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5 text-left">
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-forest-400 transition">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-mono font-bold text-forest-800">MEL-ADM-XXX</span>
               <ShieldCheck className="h-4 w-4 text-forest-700" />
             </div>
             <h4 className="mt-2 text-sm font-bold text-slate-900">Panel 01: Super Admin</h4>
-            <p className="mt-1 text-xs text-slate-500">Employee administration, round-robin lead allocation, and source ROI.</p>
+            <p className="mt-1 text-xs text-slate-500">Master executive control, staff management, lead distribution, and source ROI.</p>
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-sky-400 transition">
@@ -128,22 +130,22 @@ export default function HomePage() {
             <p className="mt-1 text-xs text-slate-500">Calling drawer, follow-ups. Strictly 100% lead source data isolation.</p>
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-amber-400 transition">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-purple-400 transition">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono font-bold text-amber-800">MEL-PND-XXX</span>
-              <FileCheck2 className="h-4 w-4 text-amber-700" />
+              <span className="text-[10px] font-mono font-bold text-purple-800">MEL-APR-XXX</span>
+              <CheckCircle2 className="h-4 w-4 text-purple-700" />
             </div>
-            <h4 className="mt-2 text-sm font-bold text-slate-900">Panel 03: Pending Review</h4>
-            <p className="mt-1 text-xs text-slate-500">FIFO triage queue, reviewer claim collision lock, and 4-way decision engine.</p>
+            <h4 className="mt-2 text-sm font-bold text-slate-900">Panel 03: Approval Officer</h4>
+            <p className="mt-1 text-xs text-slate-500">Doctor clinical audit, order clearance, dosage validation, and conversion.</p>
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-indigo-400 transition">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono font-bold text-indigo-800">MEL-APR-XXX</span>
-              <CheckCircle2 className="h-4 w-4 text-indigo-700" />
+              <span className="text-[10px] font-mono font-bold text-indigo-800">MEL-BIL-XXX</span>
+              <FileText className="h-4 w-4 text-indigo-700" />
             </div>
-            <h4 className="mt-2 text-sm font-bold text-slate-900">Panel 04: Approval Officer</h4>
-            <p className="mt-1 text-xs text-slate-500">Medical formulation audit, commercial validation, and conversion authorization.</p>
+            <h4 className="mt-2 text-sm font-bold text-slate-900">Panel 04: Billing Desk</h4>
+            <p className="mt-1 text-xs text-slate-500">Gujarat GST tax invoicing, HSN codes, and warehouse stock deduction.</p>
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-teal-400 transition">
@@ -152,7 +154,16 @@ export default function HomePage() {
               <Package className="h-4 w-4 text-teal-700" />
             </div>
             <h4 className="mt-2 text-sm font-bold text-slate-900">Panel 05: Management</h4>
-            <p className="mt-1 text-xs text-slate-500">Customer CRM, GST billing, inventory restock ledger, and courier dispatch.</p>
+            <p className="mt-1 text-xs text-slate-500">Courier AWB dispatch, logistics fulfillment, and customer return investigations.</p>
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-rose-400 transition">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono font-bold text-rose-800">MEL-FLW-XXX</span>
+              <HeartHandshake className="h-4 w-4 text-rose-700" />
+            </div>
+            <h4 className="mt-2 text-sm font-bold text-slate-900">Panel 06: Follow-Up Care</h4>
+            <p className="mt-1 text-xs text-slate-500">Post-purchase patient care, formulation refill scheduling, and wellness outreach.</p>
           </div>
         </div>
       </section>

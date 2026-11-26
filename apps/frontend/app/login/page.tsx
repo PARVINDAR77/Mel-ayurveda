@@ -16,6 +16,7 @@ import {
   PhoneCall,
   ClipboardCheck,
   FileCheck2,
+  FileText,
   Boxes,
   KeyRound,
   Clock,
@@ -73,23 +74,8 @@ const SEEDED_PERSONAS: SeededPersona[] = [
     icon: <PhoneCall className="h-4 w-4" />,
   },
   {
-    role: 'PENDING_REVIEWER',
-    panelLabel: 'Panel 03',
-    roleDisplayName: 'Clinical Triage',
-    name: 'Priya Sharma',
-    code: 'MEL-PND-001',
-    email: 'priya.sharma@melayurveda.com',
-    pass: 'PendingPassword2026!',
-    badgeBg: 'bg-amber-100/80',
-    badgeText: 'text-amber-800',
-    iconBg: 'bg-amber-50',
-    iconColor: 'text-amber-700',
-    iconBorder: 'border-amber-200/80',
-    icon: <ClipboardCheck className="h-4 w-4" />,
-  },
-  {
     role: 'APPROVAL_OFFICER',
-    panelLabel: 'Panel 04',
+    panelLabel: 'Panel 03',
     roleDisplayName: 'Approval Officer',
     name: 'Amit Desai',
     code: 'MEL-APR-001',
@@ -101,6 +87,21 @@ const SEEDED_PERSONAS: SeededPersona[] = [
     iconColor: 'text-purple-700',
     iconBorder: 'border-purple-200/80',
     icon: <FileCheck2 className="h-4 w-4" />,
+  },
+  {
+    role: 'BILLING_EXECUTIVE',
+    panelLabel: 'Panel 04',
+    roleDisplayName: 'Billing Desk',
+    name: 'Ram Patel',
+    code: 'MEL-BIL-001',
+    email: 'billing@melayurveda.com',
+    pass: 'Melayurveda@Admin2026!',
+    badgeBg: 'bg-indigo-100/80',
+    badgeText: 'text-indigo-800',
+    iconBg: 'bg-indigo-50',
+    iconColor: 'text-indigo-700',
+    iconBorder: 'border-indigo-200/80',
+    icon: <FileText className="h-4 w-4" />,
   },
   {
     role: 'MANAGEMENT',
@@ -235,7 +236,7 @@ function LoginContent() {
                 </div>
                 <div className="flex-1 flex items-center justify-between min-w-0">
                   <span className="font-semibold text-white truncate">Panel 01: Super Admin</span>
-                  <span className="text-[11px] text-slate-400 truncate ml-2">Lead Allocation & Ingestion</span>
+                  <span className="text-[11px] text-slate-400 truncate ml-2">Executive Control & Ingestion</span>
                 </div>
               </div>
 
@@ -249,23 +250,23 @@ function LoginContent() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2 text-xs backdrop-blur-xs transition hover:bg-white/[0.07] hover:border-amber-500/30">
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-amber-500/20 text-amber-300 font-bold text-[10px] border border-amber-500/30">
+              <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2 text-xs backdrop-blur-xs transition hover:bg-white/[0.07] hover:border-purple-500/30">
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-purple-500/20 text-purple-300 font-bold text-[10px] border border-purple-500/30">
                   03
                 </div>
                 <div className="flex-1 flex items-center justify-between min-w-0">
-                  <span className="font-semibold text-white truncate">Panel 03: Clinical Triage</span>
-                  <span className="text-[11px] text-slate-400 truncate ml-2">Dosage Verification & Triage Queue</span>
+                  <span className="font-semibold text-white truncate">Panel 03: Approval Officer</span>
+                  <span className="text-[11px] text-slate-400 truncate ml-2">Doctor Clinical Review & Clearance</span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2 text-xs backdrop-blur-xs transition hover:bg-white/[0.07] hover:border-purple-500/30">
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-purple-500/20 text-purple-300 font-bold text-[10px] border border-purple-500/30">
+              <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2 text-xs backdrop-blur-xs transition hover:bg-white/[0.07] hover:border-indigo-500/30">
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-300 font-bold text-[10px] border border-indigo-500/30">
                   04
                 </div>
                 <div className="flex-1 flex items-center justify-between min-w-0">
-                  <span className="font-semibold text-white truncate">Panel 04: Approval Officer</span>
-                  <span className="text-[11px] text-slate-400 truncate ml-2">Cross-Verification & Order Clearance</span>
+                  <span className="font-semibold text-white truncate">Panel 04: Billing Desk</span>
+                  <span className="text-[11px] text-slate-400 truncate ml-2">Gujarat GST Tax Invoicing & Stock</span>
                 </div>
               </div>
 
@@ -275,7 +276,7 @@ function LoginContent() {
                 </div>
                 <div className="flex-1 flex items-center justify-between min-w-0">
                   <span className="font-semibold text-white truncate">Panel 05: Management & Operations</span>
-                  <span className="text-[11px] text-slate-400 truncate ml-2">Customer CRM, GST & Dispatch</span>
+                  <span className="text-[11px] text-slate-400 truncate ml-2">Dispatch Logistics & Return Orders</span>
                 </div>
               </div>
 

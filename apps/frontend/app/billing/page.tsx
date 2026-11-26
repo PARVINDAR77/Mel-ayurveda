@@ -758,7 +758,7 @@ export default function BillingWorkspacePage() {
               <div>
                 <h3 className="text-base font-bold text-slate-900">Approved Orders Ready for GST Invoicing</h3>
                 <p className="text-xs text-slate-500">
-                  These formulation orders have passed clinical triage and medical approval. Generate the official GST invoice to release each order into the Dispatch Queue.
+                  These formulation orders have passed medical sign-off and approval. Generate the official GST invoice to release each order into the Dispatch Queue.
                 </p>
               </div>
 
