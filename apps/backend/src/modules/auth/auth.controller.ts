@@ -25,7 +25,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Public()
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle({ default: { limit: 25, ttl: 60000 } })
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Employee login via email and password' })

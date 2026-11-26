@@ -151,4 +151,16 @@ export class UsersController {
     }
     return this.usersService.resetPassword(id, pwd, actorId);
   }
+
+  @Post(':id/unlock')
+  @Roles(RoleType.SUPER_ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Super Admin action: Unlock locked employee account and reset failed attempts' })
+  @ApiResponse({ status: 200, description: 'Employee account unlocked successfully' })
+  async unlockEmployee(
+    @Param('id') id: string,
+    @CurrentUser('id') actorId: string,
+  ) {
+    return this.usersService.unlockAccount(id, actorId);
+  }
 }

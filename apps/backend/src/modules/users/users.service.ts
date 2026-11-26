@@ -193,6 +193,10 @@ export class UsersService {
           isActive: true,
           isAcceptingLeads: true,
           lastLoginAt: true,
+          failedLoginAttempts: true,
+          lockoutUntil: true,
+          lockoutCycle: true,
+          lastFailedLoginAt: true,
           createdAt: true,
           _count: {
             select: {
@@ -232,6 +236,10 @@ export class UsersService {
         isActive: true,
         isAcceptingLeads: true,
         lastLoginAt: true,
+        failedLoginAttempts: true,
+        lockoutUntil: true,
+        lockoutCycle: true,
+        lastFailedLoginAt: true,
         createdAt: true,
         updatedAt: true,
         _count: {
@@ -389,7 +397,12 @@ export class UsersService {
     await this.prisma.$transaction(async (tx) => {
       await tx.user.update({
         where: { id },
-        data: { passwordHash },
+        data: {
+          passwordHash,
+          failedLoginAttempts: 0,
+          lockoutUntil: null,
+          lockoutCycle: 0,
+        },
       });
 
       // Revoke all existing sessions and refresh tokens to force fresh login with new password
@@ -417,6 +430,47 @@ export class UsersService {
     return {
       success: true,
       message: `Password for employee ${existing.employeeCode} has been successfully reset. Active sessions revoked.`,
+    };
+  }
+
+  /**
+   * Super Admin action: Manually unlock a locked employee account and reset failed attempt counters
+   */
+  async unlockAccount(id: string, actorId: string) {
+    const existing = await this.prisma.user.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException(`Employee with ID ${id} not found`);
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id },
+        data: {
+          failedLoginAttempts: 0,
+          lockoutUntil: null,
+          lockoutCycle: 0,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          userId: actorId,
+          action: 'ACCOUNT_UNLOCKED_BY_ADMIN',
+          entityType: 'User',
+          entityId: id,
+          newState: {
+            unlockedEmployeeCode: existing.employeeCode,
+            unlockedEmail: existing.email,
+            unlockedName: `${existing.firstName} ${existing.lastName}`,
+          },
+        },
+      });
+    });
+
+    this.logger.log(`Account ${existing.employeeCode} manually unlocked by admin ${actorId}`);
+    return {
+      success: true,
+      message: `Account for employee ${existing.employeeCode} (${existing.firstName} ${existing.lastName}) has been successfully unlocked.`,
     };
   }
 
@@ -582,6 +636,10 @@ export class UsersService {
         isActive: true,
         isAcceptingLeads: true,
         lastLoginAt: true,
+        failedLoginAttempts: true,
+        lockoutUntil: true,
+        lockoutCycle: true,
+        lastFailedLoginAt: true,
         createdAt: true,
         updatedAt: true,
         sessions: {

@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/button';
 import {
   Sparkles,
   ShieldCheck,
+  ShieldAlert,
   Lock,
   Mail,
   AlertCircle,
@@ -148,20 +149,70 @@ function LoginContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [showExpiredNotice, setShowExpiredNotice] = useState(isExpired);
 
+  // Progressive Login Attempt & Lockout State
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockoutSecondsRemaining, setLockoutSecondsRemaining] = useState(0);
+  const [lockoutUntil, setLockoutUntil] = useState<string | null>(null);
+  const [lockoutCycle, setLockoutCycle] = useState(1);
+  const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null);
+  const [lockoutExpiredNotice, setLockoutExpiredNotice] = useState(false);
+
   useEffect(() => {
     if (isExpired) {
       setShowExpiredNotice(true);
     }
   }, [isExpired]);
 
+  // Real-time ticking interval for security countdown timer
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (lockoutSecondsRemaining > 0) {
+      interval = setInterval(() => {
+        setLockoutSecondsRemaining((prev) => {
+          if (prev <= 1) {
+            setIsLocked(false);
+            setLockoutExpiredNotice(true);
+            setError(null);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [lockoutSecondsRemaining]);
+
+  const formatCountdown = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLocked) return;
     setError(null);
+    setLockoutExpiredNotice(false);
     setIsLoading(true);
 
     const result = await login(email, password);
     if (!result.success) {
-      setError(result.error || 'Invalid email or password. Please verify credentials.');
+      if (result.isLocked) {
+        setIsLocked(true);
+        const secs = result.remainingSeconds || 300;
+        setLockoutSecondsRemaining(secs);
+        setLockoutUntil(result.lockoutUntil || null);
+        setLockoutCycle(result.lockoutCycle || 1);
+        setRemainingAttempts(null);
+        setError(null);
+      } else {
+        if (result.remainingAttempts !== undefined) {
+          setRemainingAttempts(result.remainingAttempts);
+        }
+        setError(result.error || 'Invalid email or password. Please verify credentials.');
+      }
       setIsLoading(false);
     }
   };
@@ -171,6 +222,13 @@ function LoginContent() {
     setPassword(persona.pass);
     setSelectedCode(persona.code);
     setError(null);
+    setRemainingAttempts(null);
+    // If switching to a different persona, reset client-side lock state
+    if (persona.email !== email) {
+      setIsLocked(false);
+      setLockoutSecondsRemaining(0);
+      setLockoutExpiredNotice(false);
+    }
   };
 
   return (
@@ -365,8 +423,84 @@ function LoginContent() {
               </div>
             )}
 
-            {/* Error Notice */}
-            {error && (
+            {/* Lockout Period Expired Banner */}
+            {lockoutExpiredNotice && !isLocked && (
+              <div className="mt-3.5 flex items-center justify-between gap-2 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-xs text-emerald-900 shadow-sm animate-in fade-in duration-300">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                  <span className="font-semibold">Lockout period has expired. You may now attempt to sign in.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setLockoutExpiredNotice(false)}
+                  className="text-emerald-700 hover:text-emerald-900 font-bold ml-1"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
+            {/* Live Security Lockout Countdown Banner */}
+            {isLocked && lockoutSecondsRemaining > 0 && (
+              <div className="mt-3.5 rounded-2xl border-2 border-rose-300 bg-rose-50/95 p-4 shadow-md text-slate-800 space-y-3 animate-in fade-in duration-300">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="relative flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-600" />
+                    </span>
+                    <span className="font-extrabold text-xs text-rose-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <ShieldAlert className="h-4 w-4 text-rose-600" />
+                      Security Lockout Active
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono font-bold text-rose-800 bg-rose-100 px-2 py-0.5 rounded-md border border-rose-200">
+                    Cycle {lockoutCycle}
+                  </span>
+                </div>
+
+                <div className="bg-white p-3 rounded-xl border border-rose-200 flex items-center justify-between shadow-2xs">
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                      Retry Allowed In
+                    </span>
+                    <span className="text-2xl font-black font-mono text-rose-600 tracking-wider block mt-0.5">
+                      {formatCountdown(lockoutSecondsRemaining)}
+                    </span>
+                  </div>
+                  <div className="h-11 w-11 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600 border border-rose-200">
+                    <Clock className="h-5 w-5 animate-pulse" />
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-rose-800 leading-relaxed font-medium">
+                  Too many consecutive failed login attempts (5/5). To prevent brute-force intrusion, this account is temporarily restricted until the countdown completes.
+                </p>
+
+                <div className="pt-2 border-t border-rose-200 flex items-center justify-between text-[10px] text-slate-500">
+                  <span>Need urgent access?</span>
+                  <span className="font-bold text-rose-800">Contact Super Admin to unlock account</span>
+                </div>
+              </div>
+            )}
+
+            {/* Pre-Lockout Warning Notice (e.g. 1 to 4 attempts left) */}
+            {!isLocked && remainingAttempts !== null && remainingAttempts < 5 && (
+              <div className="mt-3.5 flex items-start gap-2.5 rounded-xl border-2 border-amber-300 bg-amber-50/90 p-3 text-xs text-amber-900 shadow-sm animate-in fade-in duration-200">
+                <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+                <div className="flex-1">
+                  <span className="font-bold block text-amber-950 uppercase tracking-wider text-[11px]">
+                    Security Warning: Invalid Credentials
+                  </span>
+                  <span className="mt-0.5 block leading-snug">
+                    You have <strong className="text-amber-950 font-black text-sm font-mono">{remainingAttempts}</strong> attempt{remainingAttempts === 1 ? '' : 's'} remaining before a mandatory <strong>5-minute security lockout</strong> is triggered.
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Error Notice (For errors other than lockout warning) */}
+            {error && !isLocked && (remainingAttempts === null || remainingAttempts >= 5) && (
               <div className="mt-3.5 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-2.5 text-xs text-red-700">
                 <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
                 <span>{error}</span>
@@ -386,12 +520,17 @@ function LoginContent() {
                   <input
                     type="email"
                     value={email}
+                    disabled={isLocked}
                     onChange={(e) => {
                       setEmail(e.target.value);
                       setSelectedCode('');
                     }}
                     placeholder="employee@melayurveda.com"
-                    className="w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:border-forest-700 focus:outline-none focus:ring-2 focus:ring-forest-700/20 transition"
+                    className={`w-full rounded-xl border pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 transition ${
+                      isLocked
+                        ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                        : 'bg-white border-slate-300 focus:border-forest-700 focus:outline-none focus:ring-2 focus:ring-forest-700/20'
+                    }`}
                     required
                   />
                 </div>
@@ -408,22 +547,29 @@ function LoginContent() {
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
+                    disabled={isLocked}
                     onChange={(e) => {
                       setPassword(e.target.value);
                       setSelectedCode('');
                     }}
                     placeholder="••••••••••••"
-                    className="w-full rounded-xl border border-slate-300 bg-white pl-9 pr-10 py-2 text-xs text-slate-900 placeholder-slate-400 focus:border-forest-700 focus:outline-none focus:ring-2 focus:ring-forest-700/20 transition font-mono tracking-wider"
+                    className={`w-full rounded-xl border pl-9 pr-10 py-2 text-xs text-slate-900 placeholder-slate-400 font-mono tracking-wider transition ${
+                      isLocked
+                        ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                        : 'bg-white border-slate-300 focus:border-forest-700 focus:outline-none focus:ring-2 focus:ring-forest-700/20'
+                    }`}
                     required
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition"
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
+                  {!isLocked && (
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition"
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -431,11 +577,22 @@ function LoginContent() {
                 type="submit"
                 variant="primary"
                 size="md"
-                className="w-full mt-2 bg-gradient-to-r from-[#0d4a2d] via-[#0f5434] to-[#0a3a23] hover:from-[#0b3e26] hover:to-[#082e1c] text-white font-bold py-2.5 rounded-xl shadow-md shadow-emerald-950/15 flex items-center justify-center gap-2 transition active:scale-[0.99]"
+                disabled={isLocked}
+                className={`w-full mt-2 text-white font-bold py-2.5 rounded-xl shadow-md flex items-center justify-center gap-2 transition active:scale-[0.99] ${
+                  isLocked
+                    ? 'bg-rose-800 hover:bg-rose-800 opacity-90 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-[#0d4a2d] via-[#0f5434] to-[#0a3a23] hover:from-[#0b3e26] hover:to-[#082e1c] shadow-emerald-950/15'
+                }`}
                 isLoading={isLoading}
-                icon={<ArrowRight className="h-4 w-4 text-amber-300" />}
+                icon={
+                  isLocked ? (
+                    <Clock className="h-4 w-4 animate-spin text-amber-300" />
+                  ) : (
+                    <ArrowRight className="h-4 w-4 text-amber-300" />
+                  )
+                }
               >
-                Sign In to Panel
+                {isLocked ? `Locked (${formatCountdown(lockoutSecondsRemaining)} Remaining)` : 'Sign In to Panel'}
               </Button>
             </form>
 

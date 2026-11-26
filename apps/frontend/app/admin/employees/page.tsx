@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   Building2,
   Lock,
+  Unlock,
   Trash2,
   Activity,
 } from 'lucide-react';
@@ -169,6 +170,17 @@ export default function EmployeesAdminPage() {
     }
   };
 
+  const handleUnlockEmployee = async (employee: any) => {
+    try {
+      setError(null);
+      const res = await apiClient.post(`/employees/${employee.id}/unlock`, {});
+      setSuccessMsg(res.data?.message || `Account ${employee.employeeCode} has been unlocked successfully.`);
+      fetchEmployees();
+    } catch (err: any) {
+      setError(getErrorMessage(err));
+    }
+  };
+
   const handleDeleteEmployee = async () => {
     if (!deleteEmployee) return;
 
@@ -257,63 +269,92 @@ export default function EmployeesAdminPage() {
     {
       key: 'status',
       header: 'Session Status',
-      render: (item) => (
-        <span
-          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-            item.isActive
-              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-              : 'bg-red-50 text-red-700 border border-red-200'
-          }`}
-        >
-          <span className={`h-1.5 w-1.5 rounded-full ${item.isActive ? 'bg-emerald-500' : 'bg-red-500'}`} />
-          {item.isActive ? 'Active' : 'Deactivated'}
-        </span>
-      ),
+      render: (item) => {
+        const isLocked = item.lockoutUntil && new Date(item.lockoutUntil) > new Date();
+        const remainingMinutes = isLocked
+          ? Math.max(1, Math.ceil((new Date(item.lockoutUntil).getTime() - Date.now()) / 60000))
+          : 0;
+
+        return (
+          <div className="space-y-1">
+            <span
+              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                item.isActive
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : 'bg-red-50 text-red-700 border border-red-200'
+              }`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${item.isActive ? 'bg-emerald-500' : 'bg-red-500'}`} />
+              {item.isActive ? 'Active' : 'Deactivated'}
+            </span>
+
+            {isLocked && (
+              <span className="flex items-center gap-1 text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md font-mono animate-pulse">
+                🔒 Locked ({remainingMinutes}m left)
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: 'actions',
       header: 'Credentials & Access',
       className: 'text-right',
-      render: (item) => (
-        <div className="flex items-center justify-end gap-1.5">
-          <button
-            onClick={() => handleOpenDossier(item)}
-            className="flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50/70 px-2 py-1 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 hover:text-emerald-900 transition shadow-2xs"
-            title="Inspect Work Activity & Output Dossier"
-          >
-            <Activity className="h-3.5 w-3.5 text-emerald-700" />
-            <span className="hidden sm:inline">Inspect</span>
-          </button>
-          <button
-            onClick={() => setResetEmployee(item)}
-            className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition shadow-2xs"
-            title="Reset Password"
-          >
-            <KeyRound className="h-3.5 w-3.5 text-amber-600" />
-            <span className="hidden sm:inline">Reset</span>
-          </button>
-          <button
-            onClick={() => handleToggleStatus(item)}
-            className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-xs transition shadow-2xs ${
-              item.isActive
-                ? 'border-red-200 bg-red-50/50 text-red-700 hover:bg-red-100/60'
-                : 'border-emerald-200 bg-emerald-50/50 text-emerald-700 hover:bg-emerald-100/60'
-            }`}
-            title={item.isActive ? 'Deactivate Account' : 'Activate Account'}
-          >
-            <Power className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">{item.isActive ? 'Suspend' : 'Activate'}</span>
-          </button>
-          <button
-            onClick={() => setDeleteEmployee(item)}
-            className="flex items-center gap-1 rounded-lg border border-red-200 bg-white px-2 py-1 text-xs text-red-600 hover:bg-red-50 hover:text-red-800 transition shadow-2xs"
-            title="Delete Employee Record"
-          >
-            <Trash2 className="h-3.5 w-3.5 text-red-600" />
-            <span className="hidden sm:inline">Delete</span>
-          </button>
-        </div>
-      ),
+      render: (item) => {
+        const isLocked = item.lockoutUntil && new Date(item.lockoutUntil) > new Date();
+
+        return (
+          <div className="flex items-center justify-end gap-1.5">
+            {isLocked && (
+              <button
+                onClick={() => handleUnlockEmployee(item)}
+                className="flex items-center gap-1 rounded-lg border border-rose-300 bg-rose-100 px-2 py-1 text-xs font-bold text-rose-800 hover:bg-rose-200 transition shadow-2xs cursor-pointer animate-pulse"
+                title="Manually Unlock Employee Account & Clear Lockout"
+              >
+                <Unlock className="h-3.5 w-3.5 text-rose-700" />
+                <span>Unlock</span>
+              </button>
+            )}
+            <button
+              onClick={() => handleOpenDossier(item)}
+              className="flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50/70 px-2 py-1 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 hover:text-emerald-900 transition shadow-2xs"
+              title="Inspect Work Activity & Output Dossier"
+            >
+              <Activity className="h-3.5 w-3.5 text-emerald-700" />
+              <span className="hidden sm:inline">Inspect</span>
+            </button>
+            <button
+              onClick={() => setResetEmployee(item)}
+              className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition shadow-2xs"
+              title="Reset Password"
+            >
+              <KeyRound className="h-3.5 w-3.5 text-amber-600" />
+              <span className="hidden sm:inline">Reset</span>
+            </button>
+            <button
+              onClick={() => handleToggleStatus(item)}
+              className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-xs transition shadow-2xs ${
+                item.isActive
+                  ? 'border-red-200 bg-red-50/50 text-red-700 hover:bg-red-100/60'
+                  : 'border-emerald-200 bg-emerald-50/50 text-emerald-700 hover:bg-emerald-100/60'
+              }`}
+              title={item.isActive ? 'Deactivate Account' : 'Activate Account'}
+            >
+              <Power className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">{item.isActive ? 'Suspend' : 'Activate'}</span>
+            </button>
+            <button
+              onClick={() => setDeleteEmployee(item)}
+              className="flex items-center gap-1 rounded-lg border border-red-200 bg-white px-2 py-1 text-xs text-red-600 hover:bg-red-50 hover:text-red-800 transition shadow-2xs"
+              title="Delete Employee Record"
+            >
+              <Trash2 className="h-3.5 w-3.5 text-red-600" />
+              <span className="hidden sm:inline">Delete</span>
+            </button>
+          </div>
+        );
+      },
     },
   ];
 

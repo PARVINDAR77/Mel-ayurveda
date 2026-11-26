@@ -33,6 +33,13 @@ model User {
   isActive           Boolean          @default(true)
   isAcceptingLeads   Boolean          @default(true)
   lastLoginAt        DateTime?        @db.Timestamptz
+  
+  // Progressive Login Attempt Security & Lockout
+  failedLoginAttempts Int             @default(0)
+  lockoutUntil        DateTime?       @db.Timestamptz
+  lockoutCycle        Int             @default(0)
+  lastFailedLoginAt   DateTime?       @db.Timestamptz
+
   createdAt          DateTime         @default(now()) @db.Timestamptz
   updatedAt          DateTime         @updatedAt @db.Timestamptz
 
@@ -56,6 +63,7 @@ model User {
 
   @@index([role, isActive])
   @@index([employeeCode])
+  @@index([lockoutUntil])
   @@map("users")
 }
 

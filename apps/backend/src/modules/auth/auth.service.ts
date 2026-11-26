@@ -3,6 +3,8 @@ import {
   UnauthorizedException,
   Logger,
   BadRequestException,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -11,6 +13,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { LoginResponseDto, UserSummaryDto } from './dto/auth-response.dto';
 import { verifyPassword, generateSecureToken, hashToken } from '../../common/utils/password.util';
+
+const HTTP_STATUS_LOCKED = 423;
 
 @Injectable()
 export class AuthService {
@@ -21,6 +25,29 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
+
+  /**
+   * Progressive backoff calculation:
+   * Cycle 0 -> 5 minutes (300s)
+   * Cycle 1 -> 15 minutes (900s)
+   * Cycle 2 -> 30 minutes (1800s)
+   * Cycle 3 -> 60 minutes (3600s)
+   * Cycle 4+ -> 24 hours (86400s)
+   */
+  getLockoutDurationMinutes(cycle: number): number {
+    switch (cycle) {
+      case 0:
+        return 5;
+      case 1:
+        return 15;
+      case 2:
+        return 30;
+      case 3:
+        return 60;
+      default:
+        return 1440; // 24 hours
+    }
+  }
 
   /**
    * Primary authentication handler with Argon2id check, session tracking,
@@ -48,10 +75,113 @@ export class AuthService {
       throw new UnauthorizedException('Your account has been deactivated. Contact Super Admin.');
     }
 
+    const now = new Date();
+
+    // Check if account is currently locked out
+    if (user.lockoutUntil && user.lockoutUntil > now) {
+      const remainingMs = user.lockoutUntil.getTime() - now.getTime();
+      const remainingSeconds = Math.max(1, Math.ceil(remainingMs / 1000));
+      const remainingMinutes = Math.ceil(remainingSeconds / 60);
+
+      this.logger.warn(
+        `Login blocked by lockout for ${user.employeeCode}: ${remainingSeconds}s remaining (Cycle ${user.lockoutCycle}) from ${ipAddress}`,
+      );
+
+      throw new HttpException(
+        {
+          statusCode: HTTP_STATUS_LOCKED, // 423 Locked
+          error: 'AccountLocked',
+          message: `Account is temporarily locked due to repeated failed login attempts. Please wait ${remainingMinutes} minute(s) before trying again.`,
+          lockoutUntil: user.lockoutUntil.toISOString(),
+          remainingSeconds,
+          lockoutCycle: user.lockoutCycle,
+        },
+        HTTP_STATUS_LOCKED,
+      );
+    }
+
     const isPasswordValid = await verifyPassword(user.passwordHash, dto.password);
     if (!isPasswordValid) {
-      this.logger.warn(`Failed password verification for user ${user.employeeCode} from ${ipAddress}`);
-      throw new UnauthorizedException('Invalid email or password');
+      const newFailedAttempts = (user.failedLoginAttempts || 0) + 1;
+
+      // Lockout threshold: 5 consecutive failed attempts
+      if (newFailedAttempts >= 5) {
+        const lockoutMinutes = this.getLockoutDurationMinutes(user.lockoutCycle || 0);
+        const lockoutUntil = new Date(Date.now() + lockoutMinutes * 60 * 1000);
+        const newLockoutCycle = (user.lockoutCycle || 0) + 1;
+
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            failedLoginAttempts: 0,
+            lockoutUntil,
+            lockoutCycle: newLockoutCycle,
+            lastFailedLoginAt: new Date(),
+          },
+        });
+
+        // Audit log security event
+        try {
+          await this.prisma.auditLog.create({
+            data: {
+              userId: user.id,
+              action: 'ACCOUNT_LOCKED_TEMPORARY',
+              entityType: 'User',
+              entityId: user.id,
+              ipAddress,
+              newState: {
+                lockoutMinutes,
+                lockoutCycle: newLockoutCycle,
+                lockoutUntil: lockoutUntil.toISOString(),
+                reason: '5 consecutive failed password attempts',
+              },
+            },
+          });
+        } catch (auditErr: any) {
+          this.logger.warn(`Could not write audit log for lockout: ${auditErr.message}`);
+        }
+
+        this.logger.warn(
+          `User ${user.employeeCode} locked out for ${lockoutMinutes}m (Cycle ${newLockoutCycle}) after 5 failed attempts from ${ipAddress}`,
+        );
+
+        throw new HttpException(
+          {
+            statusCode: HTTP_STATUS_LOCKED,
+            error: 'AccountLocked',
+            message: `Account temporarily locked due to 5 consecutive failed login attempts. Please try again in ${lockoutMinutes} minute(s).`,
+            lockoutUntil: lockoutUntil.toISOString(),
+            remainingSeconds: lockoutMinutes * 60,
+            lockoutCycle: newLockoutCycle,
+          },
+          HTTP_STATUS_LOCKED,
+        );
+      } else {
+        const remainingAttempts = 5 - newFailedAttempts;
+
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            failedLoginAttempts: newFailedAttempts,
+            lastFailedLoginAt: new Date(),
+          },
+        });
+
+        this.logger.warn(
+          `Failed password attempt ${newFailedAttempts}/5 for user ${user.employeeCode} from ${ipAddress}`,
+        );
+
+        throw new HttpException(
+          {
+            statusCode: HttpStatus.UNAUTHORIZED,
+            error: 'InvalidCredentials',
+            message: `Invalid email or password. You have ${remainingAttempts} attempt(s) remaining before temporary lockout.`,
+            remainingAttempts,
+            failedAttempts: newFailedAttempts,
+          },
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
     }
 
     // Generate short-lived JWT Access Token (15m)
@@ -68,7 +198,7 @@ export class AuthService {
     const hashedRefresh = hashToken(rawRefreshToken);
     const refreshExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-    // Transactionally record refresh token, session, and update lastLoginAt
+    // Transactionally record refresh token, session, and reset lockout state
     await this.prisma.$transaction(async (tx) => {
       // Create new refresh token record
       await tx.refreshToken.create({
@@ -90,10 +220,15 @@ export class AuthService {
         },
       });
 
-      // Update user last login timestamp
+      // Update user last login timestamp and reset failed attempts / lockout state
       await tx.user.update({
         where: { id: user.id },
-        data: { lastLoginAt: new Date() },
+        data: {
+          lastLoginAt: new Date(),
+          failedLoginAttempts: 0,
+          lockoutUntil: null,
+          lockoutCycle: 0,
+        },
       });
     });
 

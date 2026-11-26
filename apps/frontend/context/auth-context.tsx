@@ -25,11 +25,21 @@ export interface UserProfile {
   isAcceptingLeads?: boolean;
 }
 
+export interface LoginResult {
+  success: boolean;
+  error?: string;
+  isLocked?: boolean;
+  lockoutUntil?: string;
+  remainingSeconds?: number;
+  lockoutCycle?: number;
+  remainingAttempts?: number;
+}
+
 interface AuthContextType {
   user: UserProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<LoginResult>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   getPanelRoute: (role?: RoleType) => string;
@@ -98,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshUser();
   }, [refreshUser]);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<LoginResult> => {
     try {
       const res = await apiClient.post('/auth/login', { email, password });
       const { accessToken, user: loggedUser } = res.data;
@@ -110,9 +120,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       router.push(targetPath);
       return { success: true };
     } catch (err: any) {
+      const responseData = err.response?.data;
+      const isLocked =
+        err.response?.status === 423 ||
+        responseData?.error === 'AccountLocked' ||
+        responseData?.statusCode === 423;
+
       return {
         success: false,
         error: getErrorMessage(err),
+        isLocked,
+        lockoutUntil: responseData?.lockoutUntil,
+        remainingSeconds: responseData?.remainingSeconds,
+        lockoutCycle: responseData?.lockoutCycle,
+        remainingAttempts: responseData?.remainingAttempts,
       };
     }
   };
