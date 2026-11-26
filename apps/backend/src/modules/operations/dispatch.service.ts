@@ -79,7 +79,7 @@ export class DispatchService {
   /**
    * List all shipments with order, customer, and invoice details
    */
-  async findAll(page = 1, limit = 20, status?: ShipmentStatus) {
+  async findAll(page = 1, limit = 50, status?: ShipmentStatus) {
     const skip = (page - 1) * limit;
     const where: any = {};
     if (status) where.status = status;
@@ -100,8 +100,21 @@ export class DispatchService {
                   customerCode: true,
                   fullName: true,
                   phoneNumber: true,
+                  address: true,
                   city: true,
                   state: true,
+                  pincode: true,
+                },
+              },
+              items: {
+                include: {
+                  product: {
+                    select: {
+                      id: true,
+                      name: true,
+                      sku: true,
+                    },
+                  },
                 },
               },
               invoice: {

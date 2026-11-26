@@ -17,7 +17,7 @@ export class DispatchController {
   constructor(private readonly dispatchService: DispatchService) {}
 
   @Get()
-  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT, RoleType.SALESPERSON)
+  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT, RoleType.SALESPERSON, RoleType.BILLING_EXECUTIVE)
   @ApiOperation({ summary: 'List all consignment shipments with pagination' })
   @ApiResponse({ status: 200, description: 'Shipments list returned' })
   async findAll(

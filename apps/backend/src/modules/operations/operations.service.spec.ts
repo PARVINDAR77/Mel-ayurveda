@@ -167,6 +167,7 @@ describe('OperationsModule Unit Tests (Bundle 13)', () => {
   describe('DispatchService', () => {
     it('should create shipment and transition order status to SHIPPED', async () => {
       prisma.order.findUnique.mockResolvedValue(mockOrderGujarat);
+      prisma.invoice.findUnique.mockResolvedValue({ id: 'inv-1', invoiceNumber: 'MEL-INV-2026-00001' });
       prisma.shipment.findUnique.mockResolvedValue(null);
       prisma.shipment.create.mockResolvedValue({
         id: 'ship-1',
