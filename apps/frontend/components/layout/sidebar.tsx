@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../context/auth-context';
 import { useNotifications } from '../../context/notification-context';
 import {
@@ -31,7 +31,6 @@ import {
   Clock,
   RotateCcw,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { CreateLeadModal } from '../sales/create-lead-modal';
 import { CreateOrderModal } from '../sales/create-order-modal';
 
@@ -39,9 +38,18 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
-export function Sidebar({ onClose }: SidebarProps) {
+export function Sidebar(props: SidebarProps) {
+  return (
+    <React.Suspense fallback={<aside className="flex h-full w-64 flex-col border-r border-slate-800 bg-[#071912]" />}>
+      <SidebarContent {...props} />
+    </React.Suspense>
+  );
+}
+
+function SidebarContent({ onClose }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const { unreadCountByPath, hasUnreadForPath, markPathAsRead } = useNotifications();
 
@@ -59,6 +67,7 @@ export function Sidebar({ onClose }: SidebarProps) {
           { href: '/admin/orders', label: 'Order Management', icon: Package },
           { href: '/management/returns', label: 'Returns & RTO Desk', icon: RotateCcw },
           { href: '/billing', label: 'Billing & Stock Desk', icon: FileText },
+          { href: '/billing?tab=history', label: 'Billing History', icon: History },
           { href: '/admin/products', label: 'Products & Formulations', icon: Leaf },
           { href: '/admin/assignments', label: 'Lead Distribution', icon: UserCheck },
           { href: '/admin/customer-followups', label: 'Follow-Up Allocation', icon: HeartHandshake },
@@ -104,6 +113,7 @@ export function Sidebar({ onClose }: SidebarProps) {
           { href: '/admin/customer-followups', label: 'Follow-Up Allocation', icon: HeartHandshake },
           { href: '/management/products', label: 'Ayurvedic Products', icon: Layers },
           { href: '/management/orders', label: 'Formulation Orders', icon: Package },
+          { href: '/billing?tab=history', label: 'Billing History & Bills', icon: History },
           { href: '/management/invoices', label: 'GST Tax Invoicing', icon: FileText },
           { href: '/management/inventory', label: 'Warehouse Inventory', icon: Boxes },
           { href: '/management/dispatch', label: 'Courier Dispatch', icon: Truck },
@@ -118,9 +128,9 @@ export function Sidebar({ onClose }: SidebarProps) {
       case 'BILLING_EXECUTIVE':
         return [
           { href: '/billing', label: 'Billing Workspace', icon: LayoutDashboard },
-          { href: '/billing', label: 'Billing Queue', icon: Clock },
-          { href: '/management/inventory', label: 'Warehouse Stock', icon: Boxes },
-          { href: '/management/invoices', label: 'Issued GST Invoices', icon: FileText },
+          { href: '/billing?tab=queue', label: 'Billing Queue', icon: Clock },
+          { href: '/billing?tab=history', label: 'Billing History', icon: History },
+          { href: '/billing?tab=stock', label: 'Warehouse Stock', icon: Boxes },
         ];
 
       default:
@@ -218,7 +228,26 @@ export function Sidebar({ onClose }: SidebarProps) {
       {/* Nav List (Scrollbar Completely Hidden) */}
       <nav className="flex-1 overflow-y-auto px-3 py-2.5 space-y-1 no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== '/admin' && pathname?.startsWith(`${item.href}/`));
+          const itemPath = item.href.split('?')[0];
+          const itemTab = item.href.includes('tab=') ? new URLSearchParams(item.href.split('?')[1]).get('tab') : null;
+          const currentTab = searchParams?.get('tab');
+
+          let isActive = false;
+          if (itemTab) {
+            isActive = pathname === itemPath && currentTab === itemTab;
+          } else if (item.href.includes('?')) {
+            isActive = pathname === itemPath;
+          } else {
+            if (pathname === item.href) {
+              if (item.href === '/billing') {
+                isActive = !currentTab || currentTab === 'queue';
+              } else {
+                isActive = true;
+              }
+            } else if (item.href !== '/admin' && pathname?.startsWith(`${item.href}/`)) {
+              isActive = true;
+            }
+          }
           const Icon = item.icon;
           const hasUnread = hasUnreadForPath(item.href);
           const unreadCount = unreadCountByPath[item.href] || 0;

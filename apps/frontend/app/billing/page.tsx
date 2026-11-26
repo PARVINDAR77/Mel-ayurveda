@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { apiClient, getErrorMessage } from '../../lib/api-client';
 import { DataTable, Column } from '../../components/ui/data-table';
 import { Badge } from '../../components/ui/badge';
@@ -36,8 +37,27 @@ import {
   Calendar,
 } from 'lucide-react';
 
-export default function BillingWorkspacePage() {
-  const [activeTab, setActiveTab] = useState<'QUEUE' | 'STOCK' | 'INVOICES'>('QUEUE');
+function BillingWorkspaceContent() {
+  const searchParams = useSearchParams();
+  const tabParam = searchParams?.get('tab');
+
+  const getInitialTab = (): 'QUEUE' | 'STOCK' | 'INVOICES' => {
+    if (tabParam === 'history' || tabParam === 'invoices') return 'INVOICES';
+    if (tabParam === 'stock') return 'STOCK';
+    return 'QUEUE';
+  };
+
+  const [activeTab, setActiveTab] = useState<'QUEUE' | 'STOCK' | 'INVOICES'>(getInitialTab);
+
+  useEffect(() => {
+    if (tabParam === 'history' || tabParam === 'invoices') {
+      setActiveTab('INVOICES');
+    } else if (tabParam === 'stock') {
+      setActiveTab('STOCK');
+    } else if (tabParam === 'queue') {
+      setActiveTab('QUEUE');
+    }
+  }, [tabParam]);
 
   // Stats
   const [stats, setStats] = useState({
@@ -180,7 +200,7 @@ export default function BillingWorkspacePage() {
       const createdInvoice = res.data;
 
       setSuccessMsg(
-        `GST Tax Bill ${createdInvoice?.invoiceNumber || ''} generated successfully! Order released to Dispatch. You can view the bill record in the "Issued GST Invoices & Bills" tab.`,
+        `GST Tax Bill ${createdInvoice?.invoiceNumber || ''} generated successfully! Order released to Dispatch. View the record in Billing History.`,
       );
 
       setSelectedOrderForBilling(null);
@@ -556,7 +576,7 @@ export default function BillingWorkspacePage() {
         <div>
           <span className="font-mono text-xs font-bold text-slate-900 block">{inv.invoiceNumber}</span>
           <span className="text-[10px] text-slate-400 font-mono">
-            Issued: {new Date(inv.issuedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+            Issued: {new Date(inv.issuedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} • {new Date(inv.issuedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
           </span>
         </div>
       ),
@@ -656,7 +676,17 @@ export default function BillingWorkspacePage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant={activeTab === 'INVOICES' ? 'primary' : 'outline'}
+            size="sm"
+            onClick={() => setActiveTab('INVOICES')}
+            className={activeTab === 'INVOICES' ? 'bg-emerald-800 text-white font-bold shadow-xs' : 'text-slate-700 font-semibold'}
+            icon={<History className="h-3.5 w-3.5" />}
+          >
+            Billing History ({stats.totalInvoicesCount ?? invoices.length})
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
@@ -680,12 +710,22 @@ export default function BillingWorkspacePage() {
       )}
 
       {successMsg && (
-        <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs text-emerald-800">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs text-emerald-800 shadow-sm">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-            <span>{successMsg}</span>
+            <span className="font-medium">{successMsg}</span>
           </div>
-          <button onClick={() => setSuccessMsg(null)} className="font-bold hover:underline">✕</button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab('INVOICES')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg font-bold text-xs shadow-xs transition cursor-pointer"
+            >
+              <History className="h-3.5 w-3.5" />
+              <span>Open Billing History ({stats.totalInvoicesCount ?? invoices.length}) →</span>
+            </button>
+            <button onClick={() => setSuccessMsg(null)} className="font-bold text-slate-400 hover:text-slate-700 px-1">✕</button>
+          </div>
         </div>
       )}
 
@@ -760,6 +800,25 @@ export default function BillingWorkspacePage() {
         </button>
 
         <button
+          onClick={() => setActiveTab('INVOICES')}
+          className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer select-none ${
+            activeTab === 'INVOICES'
+              ? 'bg-emerald-800 text-white shadow-sm ring-1 ring-emerald-900/10'
+              : 'bg-white/80 hover:bg-white text-slate-700 hover:text-slate-900 border border-slate-200/80 shadow-2xs'
+          }`}
+        >
+          <History className="h-3.5 w-3.5" />
+          <span>📜 Billing History & Issued Invoices</span>
+          <span
+            className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full ${
+              activeTab === 'INVOICES' ? 'bg-emerald-950 text-emerald-200' : 'bg-slate-100 text-slate-600'
+            }`}
+          >
+            {stats?.totalInvoicesCount ?? invoices.length}
+          </span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('STOCK')}
           className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer select-none ${
             activeTab === 'STOCK'
@@ -775,25 +834,6 @@ export default function BillingWorkspacePage() {
             }`}
           >
             {stats?.totalInventoryCount ?? inventoryList.length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('INVOICES')}
-          className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer select-none ${
-            activeTab === 'INVOICES'
-              ? 'bg-emerald-800 text-white shadow-sm ring-1 ring-emerald-900/10'
-              : 'bg-white/80 hover:bg-white text-slate-700 hover:text-slate-900 border border-slate-200/80 shadow-2xs'
-          }`}
-        >
-          <FileText className="h-3.5 w-3.5" />
-          <span>Issued GST Invoices & Bills</span>
-          <span
-            className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full ${
-              activeTab === 'INVOICES' ? 'bg-emerald-950 text-emerald-200' : 'bg-slate-100 text-slate-600'
-            }`}
-          >
-            {stats?.totalInvoicesCount ?? invoices.length}
           </span>
         </button>
       </div>
@@ -889,15 +929,18 @@ export default function BillingWorkspacePage() {
         </div>
       )}
 
-      {/* TAB 3: ISSUED INVOICES */}
+      {/* TAB 3: ISSUED INVOICES (BILLING HISTORY) */}
       {activeTab === 'INVOICES' && (
         <div className="space-y-4">
           <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 className="text-base font-bold text-slate-900">Statutory GST Invoices & Bills Ledger</h3>
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <History className="h-4 w-4 text-emerald-700" />
+                  Statutory Billing History & GST Invoices Ledger
+                </h3>
                 <p className="text-xs text-slate-500">
-                  Historical repository of all issued tax invoices. Invoices are permanently archived and transmitted to courier fulfillment.
+                  Historical archive of all issued GST tax bills and commercial invoices. Track chronological billing records, print tax invoices, and verify dispatch transitions.
                 </p>
               </div>
 
@@ -905,7 +948,7 @@ export default function BillingWorkspacePage() {
                 <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Search invoice #, order #, patient..."
+                  placeholder="Search billing history by invoice #, order #, patient..."
                   value={invoiceSearch}
                   onChange={(e) => setInvoiceSearch(e.target.value)}
                   className="w-full pl-9 pr-8 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-700"
@@ -927,7 +970,7 @@ export default function BillingWorkspacePage() {
               columns={invoiceColumns}
               data={filteredInvoices}
               isLoading={isLoadingInvoices}
-              emptyMessage="No GST tax invoices issued yet."
+              emptyMessage="No GST tax invoices issued yet in billing history."
             />
           </div>
         </div>
@@ -1545,5 +1588,13 @@ export default function BillingWorkspacePage() {
         )}
       </Drawer>
     </div>
+  );
+}
+
+export default function BillingWorkspacePage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xs text-slate-500">Loading Billing Workspace...</div>}>
+      <BillingWorkspaceContent />
+    </Suspense>
   );
 }
