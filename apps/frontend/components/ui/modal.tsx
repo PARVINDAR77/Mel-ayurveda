@@ -77,7 +77,7 @@ export function Modal({
           </div>
         )}
 
-        <div className={clsx('flex-1 overflow-y-auto min-h-0', hasHeader && 'p-6')}>
+        <div className={clsx('flex-1 overflow-y-auto no-scrollbar min-h-0', hasHeader && 'p-6')}>
           {children}
         </div>
       </div>

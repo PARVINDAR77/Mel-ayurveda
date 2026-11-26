@@ -61,6 +61,7 @@ export default function CourierDispatchPage() {
   const [trackingAwb, setTrackingAwb] = useState('');
   const [trackingUrl, setTrackingUrl] = useState('');
   const [manifestSearchQuery, setManifestSearchQuery] = useState('');
+  const [isSelectingManifestOrder, setIsSelectingManifestOrder] = useState(false);
   const [isManifesting, setIsManifesting] = useState(false);
 
   // Update Status Modal state
@@ -1192,91 +1193,134 @@ export default function CourierDispatchPage() {
         maxWidth="md"
       >
         <form onSubmit={handleManifestSubmit} className="space-y-4 text-xs">
-          {/* Enhanced Searchable Order Selector */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="block font-semibold text-slate-700">
-                Search & Select Confirmed Order *
-              </label>
-              {manifestSearchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setManifestSearchQuery('')}
-                  className="text-[11px] text-forest-700 font-bold hover:underline"
-                >
-                  Clear Search
-                </button>
-              )}
-            </div>
-
-            {/* Live Search Input */}
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search by customer name, phone, or order #..."
-                value={manifestSearchQuery}
-                onChange={(e) => setManifestSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-8 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-forest-600 focus:ring-1 focus:ring-forest-600"
-              />
-              {manifestSearchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setManifestSearchQuery('')}
-                  className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-
-            <select
-              required
-              value={selectedOrderId}
-              onChange={(e) => setSelectedOrderId(e.target.value)}
-              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-forest-600 focus:outline-none font-mono"
-            >
-              {filteredManifestOrders.map((ord: any) => (
-                <option key={ord.id} value={ord.id}>
-                  {ord.orderNumber} - {ord.customer?.fullName} (₹{ord.totalAmount}) •{' '}
-                  {ord.customer?.city || 'Gujarat'}
-                </option>
-              ))}
-              {filteredManifestOrders.length === 0 && (
-                <option value="">No confirmed orders match &quot;{manifestSearchQuery}&quot;</option>
-              )}
-            </select>
-
-            {/* Selected Order Summary Preview Card */}
-            {selectedManifestOrder && (
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 space-y-1.5 shadow-2xs">
+          {/* Sleek Single Searchable Order Selector */}
+          <div>
+            {selectedManifestOrder && !isSelectingManifestOrder ? (
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="font-mono font-bold text-xs text-slate-900 bg-white px-2 py-0.5 rounded border border-emerald-300">
-                    {selectedManifestOrder.orderNumber}
-                  </span>
-                  <span className="font-mono font-bold text-forest-900 text-xs">
-                    ₹{Number(selectedManifestOrder.totalAmount).toFixed(2)} (
-                    {selectedManifestOrder.paymentMode === 'CASH_ON_DELIVERY' ? 'COD' : 'PREPAID'})
-                  </span>
+                  <label className="block font-semibold text-slate-700">
+                    Confirmed Order Reference *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSelectingManifestOrder(true);
+                      setManifestSearchQuery('');
+                    }}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-forest-700 hover:text-forest-900 hover:underline"
+                  >
+                    <Search className="h-3 w-3" />
+                    <span>Search / Change Order</span>
+                  </button>
                 </div>
 
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-slate-900">
-                    {selectedManifestOrder.customer?.fullName}
-                  </span>
-                  <span className="font-mono text-slate-600 text-[11px]">
-                    {selectedManifestOrder.customer?.phoneNumber}
-                  </span>
+                <div className="rounded-xl border border-emerald-300 bg-emerald-50/70 p-3 space-y-1 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono font-bold text-xs text-slate-900 bg-white px-2 py-0.5 rounded border border-emerald-300">
+                      {selectedManifestOrder.orderNumber}
+                    </span>
+                    <span className="font-mono font-bold text-forest-900 text-xs">
+                      ₹{Number(selectedManifestOrder.totalAmount).toFixed(2)} (
+                      {selectedManifestOrder.paymentMode === 'CASH_ON_DELIVERY' ? 'COD' : 'PREPAID'})
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs pt-0.5">
+                    <span className="font-bold text-slate-900">
+                      {selectedManifestOrder.customer?.fullName}
+                    </span>
+                    <span className="font-mono text-slate-600 text-[11px]">
+                      {selectedManifestOrder.customer?.phoneNumber}
+                    </span>
+                  </div>
+
+                  <div className="text-[11px] text-slate-500 truncate">
+                    {[
+                      selectedManifestOrder.customer?.address,
+                      selectedManifestOrder.customer?.city,
+                      selectedManifestOrder.customer?.state,
+                    ]
+                      .filter(Boolean)
+                      .join(', ') || 'Gujarat, India'}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block font-semibold text-slate-700">
+                    Search Customer Name or Order # *
+                  </label>
+                  {selectedManifestOrder && (
+                    <button
+                      type="button"
+                      onClick={() => setIsSelectingManifestOrder(false)}
+                      className="text-[11px] text-slate-500 font-bold hover:underline"
+                    >
+                      Keep Current
+                    </button>
+                  )}
                 </div>
 
-                <div className="text-[11px] text-slate-500 line-clamp-1">
-                  {[
-                    selectedManifestOrder.customer?.address,
-                    selectedManifestOrder.customer?.city,
-                    selectedManifestOrder.customer?.state,
-                  ]
-                    .filter(Boolean)
-                    .join(', ') || 'Gujarat, India'}
+                <div className="relative">
+                  <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder="Type name, phone number, or order number..."
+                    value={manifestSearchQuery}
+                    onChange={(e) => setManifestSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-8 py-2 rounded-lg border border-slate-300 bg-white text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-forest-600 focus:ring-1 focus:ring-forest-600"
+                  />
+                  {manifestSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setManifestSearchQuery('')}
+                      className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="max-h-40 overflow-y-auto no-scrollbar rounded-xl border border-slate-200 bg-slate-50/90 divide-y divide-slate-100 p-1 shadow-2xs">
+                  {filteredManifestOrders.length === 0 ? (
+                    <div className="p-3 text-center text-xs text-slate-400">
+                      No confirmed orders match &quot;{manifestSearchQuery}&quot;
+                    </div>
+                  ) : (
+                    filteredManifestOrders.slice(0, 10).map((ord: any) => (
+                      <div
+                        key={ord.id}
+                        onClick={() => {
+                          setSelectedOrderId(ord.id);
+                          setIsSelectingManifestOrder(false);
+                          setManifestSearchQuery('');
+                        }}
+                        className={`p-2 rounded-lg cursor-pointer transition flex items-center justify-between text-xs ${
+                          selectedOrderId === ord.id
+                            ? 'bg-emerald-50 border border-emerald-300 font-bold text-emerald-950'
+                            : 'hover:bg-white text-slate-700'
+                        }`}
+                      >
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono font-bold text-slate-900">{ord.orderNumber}</span>
+                          </div>
+                          <div className="text-[11px] text-slate-500 flex items-center gap-2">
+                            <span className="font-semibold text-slate-800">{ord.customer?.fullName}</span>
+                            {ord.customer?.phoneNumber && <span>• {ord.customer.phoneNumber}</span>}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-mono font-bold text-forest-800">
+                            ₹{Number(ord.totalAmount).toFixed(2)}
+                          </span>
+                          <span className="block text-[10px] text-slate-400">Click to pick</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             )}
