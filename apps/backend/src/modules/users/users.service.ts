@@ -563,4 +563,444 @@ export class UsersService {
       message: `Employee ${user.employeeCode} (${user.firstName} ${user.lastName}) has been permanently deleted.`,
     };
   }
+
+  /**
+   * Retrieves comprehensive work activity, role-tailored KPIs, recent work ledger,
+   * and chronological audit trail for the Super Admin Employee Dossier.
+   */
+  async getEmployeeActivity(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        employeeCode: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        phoneNumber: true,
+        role: true,
+        isActive: true,
+        isAcceptingLeads: true,
+        lastLoginAt: true,
+        createdAt: true,
+        updatedAt: true,
+        sessions: {
+          where: { isActive: true },
+          select: {
+            id: true,
+            ipAddress: true,
+            userAgent: true,
+            lastActiveAt: true,
+            createdAt: true,
+          },
+          orderBy: { lastActiveAt: 'desc' },
+          take: 5,
+        },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`Employee with ID ${id} not found`);
+    }
+
+    // 1. Audit logs for this user (up to 30 most recent actions)
+    const auditLogs = await this.prisma.auditLog.findMany({
+      where: { userId: id },
+      orderBy: { createdAt: 'desc' },
+      take: 30,
+      select: {
+        id: true,
+        action: true,
+        entityType: true,
+        entityId: true,
+        newState: true,
+        oldState: true,
+        ipAddress: true,
+        userAgent: true,
+        createdAt: true,
+      },
+    });
+
+    const summary: Record<string, any> = {};
+    const breakdowns: Record<string, any> = {};
+    const recentWorkItems: Record<string, any> = {};
+
+    // 2. Role-specific aggregations:
+    // SALESPERSON
+    if (user.role === RoleType.SALESPERSON || user.role === RoleType.SUPER_ADMIN) {
+      const [
+        leadsCount,
+        leadsByStatusRaw,
+        leadsBySourceRaw,
+        recentLeads,
+        callLogsCount,
+        callDurationAgg,
+        callOutcomesRaw,
+        recentCalls,
+        ordersCount,
+        ordersRevenueAgg,
+        ordersByStatusRaw,
+        recentOrders,
+      ] = await Promise.all([
+        this.prisma.lead.count({ where: { assignedToId: id } }),
+        this.prisma.lead.groupBy({
+          by: ['status'],
+          where: { assignedToId: id },
+          _count: true,
+        }),
+        this.prisma.lead.groupBy({
+          by: ['sourceType'],
+          where: { assignedToId: id },
+          _count: true,
+        }),
+        this.prisma.lead.findMany({
+          where: { assignedToId: id },
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          select: {
+            id: true,
+            leadCode: true,
+            customerName: true,
+            phoneNumber: true,
+            productInterest: true,
+            status: true,
+            sourceType: true,
+            priority: true,
+            createdAt: true,
+          },
+        }),
+        this.prisma.callLog.count({ where: { callerId: id } }),
+        this.prisma.callLog.aggregate({
+          where: { callerId: id },
+          _sum: { durationSeconds: true },
+          _avg: { durationSeconds: true },
+        }),
+        this.prisma.callLog.groupBy({
+          by: ['callOutcome'],
+          where: { callerId: id },
+          _count: true,
+        }),
+        this.prisma.callLog.findMany({
+          where: { callerId: id },
+          orderBy: { calledAt: 'desc' },
+          take: 10,
+          include: {
+            lead: {
+              select: {
+                leadCode: true,
+                customerName: true,
+                phoneNumber: true,
+              },
+            },
+          },
+        }),
+        this.prisma.order.count({ where: { createdById: id } }),
+        this.prisma.order.aggregate({
+          where: { createdById: id },
+          _sum: { totalAmount: true },
+        }),
+        this.prisma.order.groupBy({
+          by: ['status'],
+          where: { createdById: id },
+          _count: true,
+        }),
+        this.prisma.order.findMany({
+          where: { createdById: id },
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          include: {
+            customer: {
+              select: {
+                customerCode: true,
+                fullName: true,
+                phoneNumber: true,
+              },
+            },
+          },
+        }),
+      ]);
+
+      const leadsByStatus = leadsByStatusRaw.reduce((acc, curr) => {
+        acc[curr.status] = curr._count;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const leadsBySource = leadsBySourceRaw.reduce((acc, curr) => {
+        acc[curr.sourceType] = curr._count;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const callOutcomes = callOutcomesRaw.reduce((acc, curr) => {
+        acc[curr.callOutcome] = curr._count;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const ordersByStatus = ordersByStatusRaw.reduce((acc, curr) => {
+        acc[curr.status] = curr._count;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const convertedCount = leadsByStatus['CONVERTED'] || 0;
+      const conversionRate = leadsCount > 0 ? Number(((convertedCount / leadsCount) * 100).toFixed(1)) : 0;
+      const totalRevenue = Number(ordersRevenueAgg._sum.totalAmount || 0);
+
+      summary.totalAssignedLeads = leadsCount;
+      summary.convertedLeads = convertedCount;
+      summary.conversionRate = conversionRate;
+      summary.totalCalls = callLogsCount;
+      summary.totalCallDurationSeconds = callDurationAgg._sum.durationSeconds || 0;
+      summary.avgCallDurationSeconds = Math.round(callDurationAgg._avg.durationSeconds || 0);
+      summary.totalOrdersBooked = ordersCount;
+      summary.realizedRevenue = totalRevenue;
+
+      breakdowns.leadsByStatus = leadsByStatus;
+      breakdowns.leadsBySource = leadsBySource;
+      breakdowns.callOutcomes = callOutcomes;
+      breakdowns.ordersByStatus = ordersByStatus;
+
+      recentWorkItems.leads = recentLeads;
+      recentWorkItems.calls = recentCalls;
+      recentWorkItems.orders = recentOrders;
+    }
+
+    // BILLING_EXECUTIVE
+    if (user.role === RoleType.BILLING_EXECUTIVE || user.role === RoleType.SUPER_ADMIN) {
+      // Find invoices generated through audit logs or query recent
+      const invoiceAuditLogs = await this.prisma.auditLog.findMany({
+        where: {
+          userId: id,
+          action: 'INVOICE_GENERATED',
+        },
+        select: { entityId: true },
+        take: 100,
+      });
+      const invoiceIds = invoiceAuditLogs.map((l) => l.entityId).filter(Boolean);
+
+      let invoices: any[] = [];
+      let invoicesAgg: any = { _count: 0, _sum: {} };
+
+      if (invoiceIds.length > 0) {
+        [invoices, invoicesAgg] = await Promise.all([
+          this.prisma.invoice.findMany({
+            where: { id: { in: invoiceIds } },
+            orderBy: { issuedAt: 'desc' },
+            take: 10,
+            include: {
+              order: {
+                include: {
+                  customer: { select: { fullName: true, phoneNumber: true, state: true } },
+                },
+              },
+            },
+          }),
+          this.prisma.invoice.aggregate({
+            where: { id: { in: invoiceIds } },
+            _sum: {
+              grandTotal: true,
+              totalTax: true,
+              cgstAmount: true,
+              sgstAmount: true,
+              igstAmount: true,
+            },
+            _count: true,
+          }),
+        ]);
+      } else {
+        // Fallback to recent system invoices if not logged by specific user ID
+        [invoices, invoicesAgg] = await Promise.all([
+          this.prisma.invoice.findMany({
+            orderBy: { issuedAt: 'desc' },
+            take: 10,
+            include: {
+              order: {
+                include: {
+                  customer: { select: { fullName: true, phoneNumber: true, state: true } },
+                },
+              },
+            },
+          }),
+          this.prisma.invoice.aggregate({
+            _sum: {
+              grandTotal: true,
+              totalTax: true,
+              cgstAmount: true,
+              sgstAmount: true,
+              igstAmount: true,
+            },
+            _count: true,
+          }),
+        ]);
+      }
+
+      // Inventory actions by this staff member
+      const inventoryAudits = await this.prisma.auditLog.findMany({
+        where: {
+          userId: id,
+          action: { in: ['INVENTORY_RESTOCKED', 'INVENTORY_ADJUSTED', 'STOCK_RESTOCKED_FROM_RETURN'] },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      });
+
+      summary.totalInvoices = invoicesAgg._count || 0;
+      summary.totalInvoicedAmount = Number(invoicesAgg._sum.grandTotal || 0);
+      summary.totalGstCollected = Number(invoicesAgg._sum.totalTax || 0);
+      summary.cgstTotal = Number(invoicesAgg._sum.cgstAmount || 0);
+      summary.sgstTotal = Number(invoicesAgg._sum.sgstAmount || 0);
+      summary.igstTotal = Number(invoicesAgg._sum.igstAmount || 0);
+      summary.inventoryActionsLogged = inventoryAudits.length;
+
+      recentWorkItems.invoices = invoices;
+      recentWorkItems.inventoryActions = inventoryAudits;
+    }
+
+    // APPROVAL_OFFICER
+    if (user.role === RoleType.APPROVAL_OFFICER || user.role === RoleType.SUPER_ADMIN) {
+      const [decisionsRaw, totalDecisions, recentApprovals] = await Promise.all([
+        this.prisma.approvalRequest.groupBy({
+          by: ['decision'],
+          where: { officerId: id },
+          _count: true,
+        }),
+        this.prisma.approvalRequest.count({ where: { officerId: id } }),
+        this.prisma.approvalRequest.findMany({
+          where: { officerId: id },
+          orderBy: { updatedAt: 'desc' },
+          take: 10,
+          include: {
+            lead: {
+              select: {
+                leadCode: true,
+                customerName: true,
+                phoneNumber: true,
+                productInterest: true,
+                state: true,
+              },
+            },
+          },
+        }),
+      ]);
+
+      const decisionBreakdown = decisionsRaw.reduce((acc, curr) => {
+        if (curr.decision) acc[curr.decision] = curr._count;
+        return acc;
+      }, {} as Record<string, number>);
+
+      summary.totalApprovalsReviewed = totalDecisions;
+      summary.approvedCount = decisionBreakdown['APPROVE'] || 0;
+      summary.rejectedCount = decisionBreakdown['REJECT'] || 0;
+      summary.sentBackCount = decisionBreakdown['SEND_BACK'] || 0;
+      summary.approvalRate =
+        totalDecisions > 0
+          ? Number((((decisionBreakdown['APPROVE'] || 0) / totalDecisions) * 100).toFixed(1))
+          : 0;
+
+      breakdowns.approvalDecisions = decisionBreakdown;
+      recentWorkItems.approvals = recentApprovals;
+    }
+
+    // PENDING_REVIEWER
+    if (user.role === RoleType.PENDING_REVIEWER || user.role === RoleType.SUPER_ADMIN) {
+      const [reviewsRaw, totalReviews, recentReviews] = await Promise.all([
+        this.prisma.pendingReview.groupBy({
+          by: ['decision'],
+          where: { claimedById: id },
+          _count: true,
+        }),
+        this.prisma.pendingReview.count({ where: { claimedById: id } }),
+        this.prisma.pendingReview.findMany({
+          where: { claimedById: id },
+          orderBy: { updatedAt: 'desc' },
+          take: 10,
+          include: {
+            lead: {
+              select: {
+                leadCode: true,
+                customerName: true,
+                phoneNumber: true,
+                productInterest: true,
+              },
+            },
+          },
+        }),
+      ]);
+
+      const reviewBreakdown = reviewsRaw.reduce((acc, curr) => {
+        if (curr.decision) acc[curr.decision] = curr._count;
+        return acc;
+      }, {} as Record<string, number>);
+
+      summary.totalReviewsHandled = totalReviews;
+      summary.reviewApproved = reviewBreakdown['APPROVE'] || 0;
+      summary.reviewRejected = reviewBreakdown['REJECT'] || 0;
+      summary.reviewSentBack = reviewBreakdown['SEND_BACK'] || 0;
+
+      breakdowns.reviewDecisions = reviewBreakdown;
+      recentWorkItems.pendingReviews = recentReviews;
+    }
+
+    // FOLLOWUP_EXECUTIVE
+    if (user.role === RoleType.FOLLOWUP_EXECUTIVE || user.role === RoleType.SUPER_ADMIN) {
+      const [followupsCount, recentFollowups, customerLogs] = await Promise.all([
+        this.prisma.customerFollowUp.count({ where: { assignedToId: id } }),
+        this.prisma.customerFollowUp.findMany({
+          where: { assignedToId: id },
+          orderBy: { scheduledTime: 'desc' },
+          take: 10,
+          include: {
+            customer: { select: { fullName: true, phoneNumber: true } },
+          },
+        }),
+        this.prisma.customerFollowUpLog.findMany({
+          where: { callerId: id },
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          include: {
+            followUp: {
+              include: { customer: { select: { fullName: true, phoneNumber: true } } },
+            },
+          },
+        }),
+      ]);
+
+      summary.totalFollowupsAssigned = followupsCount;
+      summary.totalFollowupCallsLogged = customerLogs.length;
+      recentWorkItems.followups = recentFollowups;
+      recentWorkItems.followupLogs = customerLogs;
+    }
+
+    // MANAGEMENT
+    if (user.role === RoleType.MANAGEMENT || user.role === RoleType.SUPER_ADMIN) {
+      const [dispatchesCount, returnsHandled] = await Promise.all([
+        this.prisma.auditLog.count({
+          where: {
+            userId: id,
+            action: { in: ['ORDER_DISPATCHED', 'COURIER_ASSIGNED'] },
+          },
+        }),
+        this.prisma.orderReturn.findMany({
+          where: { handledById: id },
+          orderBy: { updatedAt: 'desc' },
+          take: 10,
+          include: {
+            order: {
+              include: { customer: { select: { fullName: true, phoneNumber: true } } },
+            },
+          },
+        }),
+      ]);
+
+      summary.dispatchesHandled = dispatchesCount;
+      summary.returnsHandled = returnsHandled.length;
+      recentWorkItems.returns = returnsHandled;
+    }
+
+    return {
+      employee: user,
+      summary,
+      breakdowns,
+      recentWorkItems,
+      auditTrail: auditLogs,
+    };
+  }
 }

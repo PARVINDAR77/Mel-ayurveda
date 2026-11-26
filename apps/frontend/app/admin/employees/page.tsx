@@ -22,7 +22,9 @@ import {
   Building2,
   Lock,
   Trash2,
+  Activity,
 } from 'lucide-react';
+import { EmployeeActivityDrawer } from './employee-activity-drawer';
 
 export default function EmployeesAdminPage() {
   const [employees, setEmployees] = useState<any[]>([]);
@@ -51,6 +53,15 @@ export default function EmployeesAdminPage() {
   // Delete Employee Modal
   const [deleteEmployee, setDeleteEmployee] = useState<any | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Employee Work Activity Dossier Drawer
+  const [selectedDossierEmployee, setSelectedDossierEmployee] = useState<any | null>(null);
+  const [isDossierOpen, setIsDossierOpen] = useState(false);
+
+  const handleOpenDossier = (employee: any) => {
+    setSelectedDossierEmployee(employee);
+    setIsDossierOpen(true);
+  };
 
   const fetchEmployees = async () => {
     try {
@@ -187,9 +198,15 @@ export default function EmployeesAdminPage() {
       key: 'employeeCode',
       header: 'Employee ID',
       render: (item) => (
-        <span className="font-mono font-bold text-xs text-slate-900 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
-          {item.employeeCode}
-        </span>
+        <button
+          type="button"
+          onClick={() => handleOpenDossier(item)}
+          className="font-mono font-bold text-xs text-emerald-900 bg-emerald-50 hover:bg-emerald-100/80 px-2.5 py-1 rounded-md border border-emerald-200/80 transition cursor-pointer flex items-center gap-1.5 shadow-2xs group"
+          title="Inspect Staff Performance Dossier"
+        >
+          <Activity className="h-3 w-3 text-emerald-700 group-hover:scale-110 transition-transform" />
+          <span>{item.employeeCode}</span>
+        </button>
       ),
     },
     {
@@ -197,13 +214,23 @@ export default function EmployeesAdminPage() {
       header: 'Full Name & Email',
       render: (item) => (
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800 font-bold text-xs border border-emerald-200">
-            {item.firstName[0]}{item.lastName[0]}
-          </div>
+          <button
+            type="button"
+            onClick={() => handleOpenDossier(item)}
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold text-xs border border-emerald-200 transition cursor-pointer"
+            title="Inspect Staff Performance Dossier"
+          >
+            {item.firstName[0]}
+            {item.lastName[0]}
+          </button>
           <div>
-            <span className="font-bold text-slate-900 text-xs block leading-snug">
+            <button
+              type="button"
+              onClick={() => handleOpenDossier(item)}
+              className="font-bold text-slate-900 text-xs block leading-snug hover:text-emerald-700 transition cursor-pointer text-left"
+            >
               {item.firstName} {item.lastName}
-            </span>
+            </button>
             <div className="flex items-center gap-1 text-[11px] text-slate-500 font-mono">
               <Mail className="h-3 w-3 text-slate-400" />
               <span>{item.email}</span>
@@ -249,6 +276,14 @@ export default function EmployeesAdminPage() {
       className: 'text-right',
       render: (item) => (
         <div className="flex items-center justify-end gap-1.5">
+          <button
+            onClick={() => handleOpenDossier(item)}
+            className="flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50/70 px-2 py-1 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 hover:text-emerald-900 transition shadow-2xs"
+            title="Inspect Work Activity & Output Dossier"
+          >
+            <Activity className="h-3.5 w-3.5 text-emerald-700" />
+            <span className="hidden sm:inline">Inspect</span>
+          </button>
           <button
             onClick={() => setResetEmployee(item)}
             className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition shadow-2xs"
@@ -615,6 +650,21 @@ export default function EmployeesAdminPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Staff Performance Dossier & Work Activity Drawer */}
+      <EmployeeActivityDrawer
+        isOpen={isDossierOpen}
+        onClose={() => {
+          setIsDossierOpen(false);
+          setSelectedDossierEmployee(null);
+        }}
+        employee={selectedDossierEmployee}
+        onResetPassword={(emp) => {
+          setIsDossierOpen(false);
+          setResetEmployee(emp);
+        }}
+        onToggleStatus={handleToggleStatus}
+      />
     </div>
   );
 }

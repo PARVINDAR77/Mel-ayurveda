@@ -60,6 +60,15 @@ export class UsersController {
     return this.usersService.findById(id);
   }
 
+  @Get(':id/activity')
+  @Roles(RoleType.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Get full employee work activity, performance metrics, and dossier' })
+  @ApiResponse({ status: 200, description: 'Employee activity retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Employee not found' })
+  async getEmployeeActivity(@Param('id') id: string) {
+    return this.usersService.getEmployeeActivity(id);
+  }
+
   @Patch(':id')
   @Roles(RoleType.SUPER_ADMIN)
   @ApiOperation({ summary: 'Update employee information' })

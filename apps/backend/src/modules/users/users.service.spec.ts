@@ -37,30 +37,57 @@ describe('UsersService (Bundle 02 Verification)', () => {
             },
             lead: {
               updateMany: jest.fn(),
+              count: jest.fn().mockResolvedValue(0),
+              groupBy: jest.fn().mockResolvedValue([]),
+              findMany: jest.fn().mockResolvedValue([]),
             },
             leadAssignment: {
               deleteMany: jest.fn(),
             },
             callLog: {
               deleteMany: jest.fn(),
+              count: jest.fn().mockResolvedValue(0),
+              aggregate: jest.fn().mockResolvedValue({ _sum: { durationSeconds: 0 }, _avg: { durationSeconds: 0 } }),
+              groupBy: jest.fn().mockResolvedValue([]),
+              findMany: jest.fn().mockResolvedValue([]),
             },
             followUp: {
               deleteMany: jest.fn(),
             },
             pendingReview: {
               updateMany: jest.fn(),
+              count: jest.fn().mockResolvedValue(0),
+              groupBy: jest.fn().mockResolvedValue([]),
+              findMany: jest.fn().mockResolvedValue([]),
             },
             approvalRequest: {
               updateMany: jest.fn(),
+              count: jest.fn().mockResolvedValue(0),
+              groupBy: jest.fn().mockResolvedValue([]),
+              findMany: jest.fn().mockResolvedValue([]),
             },
             order: {
               updateMany: jest.fn(),
+              count: jest.fn().mockResolvedValue(0),
+              aggregate: jest.fn().mockResolvedValue({ _sum: { totalAmount: 0 } }),
+              groupBy: jest.fn().mockResolvedValue([]),
+              findMany: jest.fn().mockResolvedValue([]),
+            },
+            invoice: {
+              findMany: jest.fn().mockResolvedValue([]),
+              aggregate: jest.fn().mockResolvedValue({ _count: 0, _sum: {} }),
+            },
+            orderReturn: {
+              findMany: jest.fn().mockResolvedValue([]),
             },
             customerFollowUpLog: {
               deleteMany: jest.fn(),
+              findMany: jest.fn().mockResolvedValue([]),
             },
             customerFollowUp: {
               deleteMany: jest.fn(),
+              count: jest.fn().mockResolvedValue(0),
+              findMany: jest.fn().mockResolvedValue([]),
             },
             notification: {
               deleteMany: jest.fn(),
@@ -75,6 +102,8 @@ describe('UsersService (Bundle 02 Verification)', () => {
             },
             auditLog: {
               create: jest.fn(),
+              findMany: jest.fn().mockResolvedValue([]),
+              count: jest.fn().mockResolvedValue(0),
               updateMany: jest.fn().mockResolvedValue({ count: 0 }),
             },
             $transaction: jest.fn((cb) => (typeof cb === 'function' ? cb(prisma) : Promise.all(cb))),
@@ -185,6 +214,101 @@ describe('UsersService (Bundle 02 Verification)', () => {
       const result = await service.deleteEmployee('sales-1', 'admin-1');
       expect(result.success).toBe(true);
       expect(result.message).toContain('MEL-SAL-013');
+    });
+  });
+
+  describe('getEmployeeActivity()', () => {
+    it('should throw NotFoundException if employee is not found', async () => {
+      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(null);
+      await expect(service.getEmployeeActivity('invalid-id')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should return aggregated activity for a SALESPERSON', async () => {
+      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue({
+        id: 'sales-1',
+        employeeCode: 'MEL-SAL-010',
+        firstName: 'Vikram',
+        lastName: 'Consultant',
+        email: 'consultant1@melayurveda.com',
+        phoneNumber: '9123456789',
+        role: RoleType.SALESPERSON,
+        isActive: true,
+        sessions: [],
+      } as any);
+
+      jest.spyOn(prisma.lead, 'count').mockResolvedValue(25);
+      jest.spyOn(prisma.lead, 'groupBy').mockImplementation(({ by }: any) => {
+        if (by.includes('status')) {
+          return Promise.resolve([
+            { status: 'NEW', _count: 10 },
+            { status: 'CONVERTED', _count: 5 },
+          ]) as any;
+        }
+        if (by.includes('sourceType')) {
+          return Promise.resolve([
+            { sourceType: 'FACEBOOK_ADS', _count: 15 },
+            { sourceType: 'GOOGLE_ADS', _count: 10 },
+          ]) as any;
+        }
+        return Promise.resolve([]);
+      });
+
+      jest.spyOn(prisma.callLog, 'count').mockResolvedValue(40);
+      jest.spyOn(prisma.callLog, 'aggregate').mockResolvedValue({
+        _sum: { durationSeconds: 2400 },
+        _avg: { durationSeconds: 60 },
+      } as any);
+
+      jest.spyOn(prisma.order, 'count').mockResolvedValue(5);
+      jest.spyOn(prisma.order, 'aggregate').mockResolvedValue({
+        _sum: { totalAmount: 12500 },
+      } as any);
+
+      const dossier = await service.getEmployeeActivity('sales-1');
+
+      expect(dossier.employee.employeeCode).toBe('MEL-SAL-010');
+      expect(dossier.summary.totalAssignedLeads).toBe(25);
+      expect(dossier.summary.convertedLeads).toBe(5);
+      expect(dossier.summary.conversionRate).toBe(20);
+      expect(dossier.summary.totalCalls).toBe(40);
+      expect(dossier.summary.totalOrdersBooked).toBe(5);
+      expect(dossier.summary.realizedRevenue).toBe(12500);
+      expect(dossier.breakdowns.leadsBySource['FACEBOOK_ADS']).toBe(15);
+    });
+
+    it('should return aggregated activity for a BILLING_EXECUTIVE', async () => {
+      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue({
+        id: 'bil-1',
+        employeeCode: 'MEL-BIL-001',
+        firstName: 'Ram',
+        lastName: 'Patel',
+        email: 'billing@melayurveda.com',
+        phoneNumber: '9104082233',
+        role: RoleType.BILLING_EXECUTIVE,
+        isActive: true,
+        sessions: [],
+      } as any);
+
+      jest.spyOn(prisma.invoice, 'aggregate').mockResolvedValue({
+        _count: 18,
+        _sum: {
+          grandTotal: 34500,
+          totalTax: 4140,
+          cgstAmount: 2070,
+          sgstAmount: 2070,
+          igstAmount: 0,
+        },
+      } as any);
+
+      const dossier = await service.getEmployeeActivity('bil-1');
+
+      expect(dossier.employee.employeeCode).toBe('MEL-BIL-001');
+      expect(dossier.summary.totalInvoices).toBe(18);
+      expect(dossier.summary.totalInvoicedAmount).toBe(34500);
+      expect(dossier.summary.totalGstCollected).toBe(4140);
+      expect(dossier.summary.cgstTotal).toBe(2070);
     });
   });
 });
