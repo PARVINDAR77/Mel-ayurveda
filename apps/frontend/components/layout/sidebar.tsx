@@ -90,7 +90,7 @@ function SidebarContent({ onClose }: SidebarProps) {
               { href: '/admin/assignments', label: 'Lead Distribution', icon: UserCheck },
               { href: '/admin/sources', label: 'Lead Sources & Ads', icon: Radio },
               { href: '/management/customers', label: 'Customer CRM', icon: Users },
-              { href: '/admin/customer-followups', label: 'Follow-Up Allocation', icon: HeartHandshake },
+              { href: '/admin/customer-followups', label: 'Manage Allocation', icon: HeartHandshake },
             ],
           },
           {
@@ -178,7 +178,7 @@ function SidebarContent({ onClose }: SidebarProps) {
             title: 'Patient CRM & Care',
             items: [
               { href: '/management/customers', label: 'Customer CRM', icon: Users },
-              { href: '/admin/customer-followups', label: 'Follow-Up Allocation', icon: HeartHandshake },
+              { href: '/admin/customer-followups', label: 'Manage Allocation', icon: HeartHandshake },
             ],
           },
           {

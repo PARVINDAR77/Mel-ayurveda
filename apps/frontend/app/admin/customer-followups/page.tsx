@@ -204,7 +204,7 @@ export default function SuperAdminCustomerFollowupsPage() {
             <Badge variant="role">Post-Sales Care Desk</Badge>
           </div>
           <h2 className="mt-1 text-2xl font-black text-slate-900 tracking-tight">
-            Client Follow-Up Allocation & Care Desk
+            Manage Allocation & Care Desk
           </h2>
           <p className="text-xs text-slate-500">
             Select clients manually (5, 6, 10 or more) and assign them to a dedicated Follow-Up Executive with specific directives.
@@ -216,7 +216,7 @@ export default function SuperAdminCustomerFollowupsPage() {
             data={filteredCustomers}
             columns={adminFollowupsExportColumns}
             fileName="Melayurveda_SuperAdmin_Client_Followups"
-            sheetName="Follow-Up Allocation"
+            sheetName="Manage Allocation"
           />
 
           <Button
