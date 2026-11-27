@@ -12,6 +12,7 @@ import { StatCard } from '../../../components/ui/stat-card';
 import { EditOrderModal } from '../../../components/orders/edit-order-modal';
 import { DecideOrderModal } from '../../../components/orders/decide-order-modal';
 import { ExportButton } from '../../../components/ui/export-button';
+import { ImportButton } from '../../../components/ui/import-button';
 import { ExcelColumnDef } from '../../../lib/export-excel';
 import { OFFICIAL_SALES_ORDERS_EXPORT_COLUMNS } from '../../../lib/official-sales-export';
 import {
@@ -534,6 +535,11 @@ export default function SuperAdminOrdersPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <ImportButton
+            mode="orders"
+            label="Import from Excel"
+            onImportSuccess={fetchOrders}
+          />
           <ExportButton
             data={orders}
             columns={adminOrdersExportColumns}

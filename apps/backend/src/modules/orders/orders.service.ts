@@ -10,6 +10,7 @@ import { CreateDraftOrderDto } from './dto/create-draft-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { DecideOrderDto } from './dto/decide-order.dto';
 import { OrderQueryDto } from './dto/order-query.dto';
+import { BulkImportOrdersDto } from './dto/bulk-import-orders.dto';
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { InventoryTxType, OrderStatus, PaymentMode, PaymentStatus, LeadStatus, LeadPriority, RoleType, NotificationType } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -1257,6 +1258,249 @@ export class OrdersService {
       decision: dto.decision,
       message: `Order ${order.orderNumber} ${isRectification ? 'marked for rectification' : 'rejected'}. Salesperson notified.`,
       order: result,
+    };
+  }
+
+  /**
+   * Bulk import historical orders from Excel / CSV spreadsheet
+   */
+  async bulkImportOrders(dto: BulkImportOrdersDto, user: AuthenticatedUser) {
+    if (!dto.orders || dto.orders.length === 0) {
+      return { success: true, count: 0, imported: 0, skipped: 0, errors: [] };
+    }
+
+    const availableProducts = await this.prisma.product.findMany({
+      select: { id: true, name: true, sku: true, sellingPrice: true },
+    });
+
+    const allUsers = await this.prisma.user.findMany({
+      select: { id: true, employeeCode: true, firstName: true, lastName: true },
+    });
+
+    let importedCount = 0;
+    let skippedCount = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < dto.orders.length; i++) {
+      const row = dto.orders[i];
+      try {
+        const rawPhone = String(row.mobile || '').replace(/[^0-9]/g, '');
+        if (!rawPhone || rawPhone.length < 8) {
+          skippedCount++;
+          errors.push(`Row ${i + 1}: Missing or invalid mobile number (${row.mobile || 'empty'})`);
+          continue;
+        }
+
+        const phoneDigits = rawPhone.length > 10 ? rawPhone.slice(-10) : rawPhone;
+        const formattedPhone = phoneDigits;
+
+        // 1. Find or create customer
+        let customer = await this.prisma.customer.findFirst({
+          where: {
+            OR: [
+              { phoneNumber: formattedPhone },
+              { phoneNumber: `+91${formattedPhone}` },
+              { phoneNumber: `91${formattedPhone}` },
+            ],
+          },
+        });
+
+        const customerName = (row.customerName || 'Patient').trim();
+
+        if (!customer) {
+          const count = await this.prisma.customer.count();
+          const timestamp = Date.now().toString().slice(-4);
+          const customerCode = `MEL-CUST-${String(count + 1).padStart(4, '0')}-${timestamp}`;
+
+          customer = await this.prisma.customer.create({
+            data: {
+              customerCode,
+              fullName: customerName,
+              phoneNumber: formattedPhone,
+              alternatePhone: row.alternateMobile ? String(row.alternateMobile).trim() : null,
+              address: row.address ? String(row.address).trim() : null,
+              city: row.city ? String(row.city).trim() : null,
+              state: row.state ? String(row.state).trim() : null,
+              pincode: row.pincode ? String(row.pincode).trim() : null,
+            },
+          });
+        } else {
+          // Update customer address / details if currently empty
+          await this.prisma.customer.update({
+            where: { id: customer.id },
+            data: {
+              fullName: customer.fullName || customerName,
+              alternatePhone: customer.alternatePhone || (row.alternateMobile ? String(row.alternateMobile).trim() : null),
+              address: customer.address || (row.address ? String(row.address).trim() : null),
+              city: customer.city || (row.city ? String(row.city).trim() : null),
+              state: customer.state || (row.state ? String(row.state).trim() : null),
+              pincode: customer.pincode || (row.pincode ? String(row.pincode).trim() : null),
+            },
+          });
+        }
+
+        // 2. Resolve Agent (creator)
+        let creatorId = user.id;
+        if (row.agent) {
+          const agentQuery = String(row.agent).toLowerCase();
+          const matchedUser = allUsers.find(
+            (u) =>
+              (u.employeeCode && agentQuery.includes(u.employeeCode.toLowerCase())) ||
+              (u.firstName && agentQuery.includes(u.firstName.toLowerCase())) ||
+              (u.lastName && agentQuery.includes(u.lastName.toLowerCase())),
+          );
+          if (matchedUser) {
+            creatorId = matchedUser.id;
+          }
+        }
+
+        // 3. Resolve Order ID
+        let orderNumber = String(row.orderId || '').trim();
+        if (orderNumber) {
+          const existingOrd = await this.prisma.order.findUnique({
+            where: { orderNumber },
+          });
+          if (existingOrd) {
+            orderNumber = `${orderNumber}-${Date.now().toString().slice(-4)}`;
+          }
+        } else {
+          orderNumber = await this.generateOrderNumber();
+        }
+
+        // 4. Resolve Order Date
+        let createdAt = new Date();
+        if (row.date) {
+          const dateStr = String(row.date).trim();
+          const ddmmyyyy = dateStr.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+          if (ddmmyyyy) {
+            createdAt = new Date(Number(ddmmyyyy[3]), Number(ddmmyyyy[2]) - 1, Number(ddmmyyyy[1]), 12, 0, 0);
+          } else {
+            const parsed = new Date(dateStr);
+            if (!isNaN(parsed.getTime())) {
+              createdAt = parsed;
+            }
+          }
+        }
+
+        // 5. Resolve Payment Mode
+        let paymentMode: PaymentMode = PaymentMode.CASH_ON_DELIVERY;
+        const pModeStr = String(row.paymentMode || '').toUpperCase();
+        if (pModeStr.includes('UPI')) {
+          paymentMode = PaymentMode.UPI;
+        } else if (pModeStr.includes('NET_BANKING') || pModeStr.includes('NET BANKING')) {
+          paymentMode = PaymentMode.NET_BANKING;
+        } else if (pModeStr.includes('CARD')) {
+          paymentMode = PaymentMode.CARD;
+        } else if (pModeStr.includes('ONLINE') || pModeStr.includes('PREPAID')) {
+          paymentMode = PaymentMode.PREPAID;
+        }
+
+        // 6. Resolve Status
+        let orderStatus: OrderStatus = OrderStatus.CONFIRMED;
+        const stStr = String(row.status || '').toUpperCase();
+        if (stStr.includes('DELIVERED')) {
+          orderStatus = OrderStatus.DELIVERED;
+        } else if (stStr.includes('SHIP') || stStr.includes('TRANSIT')) {
+          orderStatus = OrderStatus.SHIPPED;
+        } else if (stStr.includes('DRAFT') || stStr.includes('PENDING')) {
+          orderStatus = OrderStatus.DRAFT;
+        } else if (stStr.includes('CANCEL') || stStr.includes('RTO')) {
+          orderStatus = OrderStatus.CANCELLED;
+        }
+
+        // 7. Resolve Products
+        const orderItemsToCreate: Array<{ productId: string; quantity: number; unitPrice: number; totalPrice: number }> = [];
+        const items = row.products && row.products.length > 0 ? row.products : [];
+
+        let totalOrderAmount = Number(row.amount || 0);
+
+        if (items.length > 0) {
+          for (const it of items) {
+            if (!it.name || !String(it.name).trim()) continue;
+            const itNameLower = String(it.name).toLowerCase().trim();
+            const qty = Math.max(1, Number(it.quantity) || 1);
+
+            let matchedProduct = availableProducts.find(
+              (p) =>
+                p.name.toLowerCase() === itNameLower ||
+                p.name.toLowerCase().includes(itNameLower) ||
+                itNameLower.includes(p.name.toLowerCase()) ||
+                (p.sku && p.sku.toLowerCase() === itNameLower),
+            );
+
+            if (!matchedProduct && availableProducts.length > 0) {
+              matchedProduct = availableProducts[0];
+            }
+
+            if (matchedProduct) {
+              const uPrice = Number(matchedProduct.sellingPrice || 500);
+              orderItemsToCreate.push({
+                productId: matchedProduct.id,
+                quantity: qty,
+                unitPrice: uPrice,
+                totalPrice: uPrice * qty,
+              });
+            }
+          }
+        }
+
+        if (orderItemsToCreate.length === 0 && availableProducts.length > 0) {
+          const defaultProd = availableProducts[0];
+          const uPrice = totalOrderAmount > 0 ? totalOrderAmount : Number(defaultProd.sellingPrice || 1000);
+          orderItemsToCreate.push({
+            productId: defaultProd.id,
+            quantity: 1,
+            unitPrice: uPrice,
+            totalPrice: uPrice,
+          });
+        }
+
+        if (totalOrderAmount <= 0) {
+          totalOrderAmount = orderItemsToCreate.reduce((sum, it) => sum + it.totalPrice, 0);
+        }
+
+        const subtotal = totalOrderAmount;
+        const taxAmount = 0;
+
+        // 8. Create Order in Database
+        await this.prisma.order.create({
+          data: {
+            orderNumber,
+            customerId: customer.id,
+            createdById: creatorId,
+            status: orderStatus,
+            paymentMode,
+            paymentStatus: orderStatus === OrderStatus.DELIVERED ? PaymentStatus.PAID : PaymentStatus.PENDING,
+            subtotal,
+            taxAmount,
+            totalAmount: totalOrderAmount,
+            discountAmount: 0,
+            notes: `[EXCEL IMPORT] Disease: ${row.disease || 'General'} | Source: ${row.sourceOfLead || 'Tele-Sales'}`,
+            createdAt,
+            items: {
+              create: orderItemsToCreate.map((it) => ({
+                productId: it.productId,
+                quantity: it.quantity,
+                unitPrice: it.unitPrice,
+                totalPrice: it.totalPrice,
+              })),
+            },
+          },
+        });
+
+        importedCount++;
+      } catch (err: any) {
+        skippedCount++;
+        errors.push(`Row ${i + 1}: ${err.message || 'Error importing order'}`);
+      }
+    }
+
+    return {
+      success: true,
+      total: dto.orders.length,
+      imported: importedCount,
+      skipped: skippedCount,
+      errors: errors.slice(0, 10),
     };
   }
 }

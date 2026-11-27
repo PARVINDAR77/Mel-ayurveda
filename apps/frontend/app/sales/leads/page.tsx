@@ -10,6 +10,7 @@ import { CreateLeadModal } from '../../../components/sales/create-lead-modal';
 import { CreateOrderModal } from '../../../components/sales/create-order-modal';
 import { ScheduleFollowUpModal } from '../../../components/sales/schedule-follow-up-modal';
 import { ExportButton } from '../../../components/ui/export-button';
+import { ImportButton } from '../../../components/ui/import-button';
 import { ExcelColumnDef } from '../../../lib/export-excel';
 import { OFFICIAL_SALES_LEADS_EXPORT_COLUMNS } from '../../../lib/official-sales-export';
 import {
@@ -226,6 +227,11 @@ export default function MyAssignedLeadsPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <ImportButton
+            mode="leads"
+            label="Import from Excel"
+            onImportSuccess={fetchLeads}
+          />
           <ExportButton
             data={leads}
             columns={leadsExportColumns}

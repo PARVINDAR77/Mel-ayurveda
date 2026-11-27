@@ -29,6 +29,7 @@ import {
 import { RouteToSalesModal } from '../../../components/management/route-to-sales-modal';
 import { BatchAssignModal } from '../../../components/admin/batch-assign-modal';
 import { ExportButton } from '../../../components/ui/export-button';
+import { ImportButton } from '../../../components/ui/import-button';
 import { ExcelColumnDef } from '../../../lib/export-excel';
 
 export default function CustomerCRMPage() {
@@ -360,6 +361,11 @@ export default function CustomerCRMPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <ImportButton
+            mode="orders"
+            label="Import from Excel"
+            onImportSuccess={fetchCustomers}
+          />
           <ExportButton
             data={customers}
             columns={customersExportColumns}

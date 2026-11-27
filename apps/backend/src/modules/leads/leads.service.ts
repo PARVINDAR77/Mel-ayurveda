@@ -10,6 +10,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { LeadPriority, LeadStatus, LeadSourceType, RoleType } from '@prisma/client';
 import { CreateManualLeadDto, UpdateLeadDto } from './dto/create-manual-lead.dto';
 import { LeadQueryDto } from './dto/lead-query.dto';
+import { BulkImportLeadsDto } from './dto/bulk-import-leads.dto';
 import { sanitizeLeadForSalesperson, formatLeadForAdmin } from './dto/lead-projections';
 
 @Injectable()
@@ -400,5 +401,139 @@ export class LeadsService {
     return userRole === RoleType.SALESPERSON
       ? sanitizeLeadForSalesperson(updated)
       : formatLeadForAdmin(updated);
+  }
+
+  /**
+   * Bulk import historical leads from Excel / CSV spreadsheet
+   */
+  async bulkImportLeads(dto: BulkImportLeadsDto, userRole: RoleType, currentUserId: string) {
+    if (!dto.leads || dto.leads.length === 0) {
+      return { success: true, count: 0, imported: 0, skipped: 0, errors: [] };
+    }
+
+    const allUsers = await this.prisma.user.findMany({
+      select: { id: true, employeeCode: true, firstName: true, lastName: true },
+    });
+
+    let importedCount = 0;
+    let skippedCount = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < dto.leads.length; i++) {
+      const row = dto.leads[i];
+      try {
+        const rawPhone = String(row.mobile || '').replace(/[^0-9]/g, '');
+        if (!rawPhone || rawPhone.length < 8) {
+          skippedCount++;
+          errors.push(`Row ${i + 1}: Missing or invalid mobile number (${row.mobile || 'empty'})`);
+          continue;
+        }
+
+        const phoneDigits = rawPhone.length > 10 ? rawPhone.slice(-10) : rawPhone;
+        const formattedPhone = phoneDigits;
+
+        // Check if lead with this phone already exists
+        const existing = await this.prisma.lead.findFirst({
+          where: {
+            OR: [
+              { phoneNumber: formattedPhone },
+              { phoneNumber: `+91${formattedPhone}` },
+              { phoneNumber: `91${formattedPhone}` },
+            ],
+          },
+        });
+
+        if (existing) {
+          skippedCount++;
+          errors.push(`Row ${i + 1}: Lead with phone ${formattedPhone} already exists (${existing.leadCode})`);
+          continue;
+        }
+
+        // Resolve Assigned To
+        let assignedToId: string | null = currentUserId;
+        if (row.agent) {
+          const agentQuery = String(row.agent).toLowerCase();
+          const matchedUser = allUsers.find(
+            (u) =>
+              (u.employeeCode && agentQuery.includes(u.employeeCode.toLowerCase())) ||
+              (u.firstName && agentQuery.includes(u.firstName.toLowerCase())) ||
+              (u.lastName && agentQuery.includes(u.lastName.toLowerCase())),
+          );
+          if (matchedUser) {
+            assignedToId = matchedUser.id;
+          }
+        }
+
+        // Generate Lead Code
+        const year = new Date().getFullYear();
+        const count = await this.prisma.lead.count();
+        const rand = Date.now().toString().slice(-4);
+        const leadCode = row.leadCode?.trim() || `MEL-LEAD-${year}-${String(count + 1).padStart(5, '0')}-${rand}`;
+
+        // Resolve Date
+        let createdAt = new Date();
+        if (row.date) {
+          const dateStr = String(row.date).trim();
+          const ddmmyyyy = dateStr.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+          if (ddmmyyyy) {
+            createdAt = new Date(Number(ddmmyyyy[3]), Number(ddmmyyyy[2]) - 1, Number(ddmmyyyy[1]), 12, 0, 0);
+          } else {
+            const parsed = new Date(dateStr);
+            if (!isNaN(parsed.getTime())) {
+              createdAt = parsed;
+            }
+          }
+        }
+
+        // Resolve Source Type
+        let sourceType: LeadSourceType = LeadSourceType.MANUAL;
+        const srcStr = String(row.sourceOfLead || '').toUpperCase();
+        if (srcStr.includes('FACEBOOK')) sourceType = LeadSourceType.FACEBOOK_ADS;
+        else if (srcStr.includes('INSTAGRAM')) sourceType = LeadSourceType.INSTAGRAM_ADS;
+        else if (srcStr.includes('GOOGLE')) sourceType = LeadSourceType.GOOGLE_ADS;
+        else if (srcStr.includes('WHATSAPP')) sourceType = LeadSourceType.WHATSAPP;
+        else if (srcStr.includes('WEBSITE') || srcStr.includes('WEB')) sourceType = LeadSourceType.WEBSITE;
+        else if (srcStr.includes('REFERRAL') || srcStr.includes('OTHER')) sourceType = LeadSourceType.OTHER;
+
+        // Resolve Status
+        let status: LeadStatus = LeadStatus.NEW;
+        const stStr = String(row.status || '').toUpperCase();
+        if (stStr.includes('CONVERT')) status = LeadStatus.CONVERTED;
+        else if (stStr.includes('INTEREST')) status = LeadStatus.INTERESTED;
+        else if (stStr.includes('CONTACT') || stStr.includes('PROGRESS')) status = LeadStatus.CONTACTED;
+        else if (stStr.includes('LOST') || stStr.includes('REJECT') || stStr.includes('NOT')) status = LeadStatus.NOT_INTERESTED;
+
+        await this.prisma.lead.create({
+          data: {
+            leadCode,
+            customerName: (row.customerName || 'Inbound Prospect').trim(),
+            phoneNumber: formattedPhone,
+            alternatePhone: row.alternateMobile ? String(row.alternateMobile).trim() : null,
+            address: row.address ? String(row.address).trim() : null,
+            city: row.city ? String(row.city).trim() : null,
+            state: row.state ? String(row.state).trim() : null,
+            productInterest: row.productInterest || row.disease || 'General Wellness',
+            customerRequirements: row.disease ? `Target condition: ${row.disease}` : null,
+            sourceType,
+            status,
+            assignedToId,
+            createdAt,
+          },
+        });
+
+        importedCount++;
+      } catch (err: any) {
+        skippedCount++;
+        errors.push(`Row ${i + 1}: ${err.message || 'Error importing lead'}`);
+      }
+    }
+
+    return {
+      success: true,
+      total: dto.leads.length,
+      imported: importedCount,
+      skipped: skippedCount,
+      errors: errors.slice(0, 10),
+    };
   }
 }

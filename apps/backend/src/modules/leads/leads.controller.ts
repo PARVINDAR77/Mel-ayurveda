@@ -12,6 +12,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { LeadsService } from './leads.service';
 import { CreateManualLeadDto, UpdateLeadDto } from './dto/create-manual-lead.dto';
 import { LeadQueryDto } from './dto/lead-query.dto';
+import { BulkImportLeadsDto } from './dto/bulk-import-leads.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -34,6 +35,17 @@ export class LeadsController {
     @CurrentUser('id') creatorId: string,
   ) {
     return this.leadsService.createManualLead(dto, creatorId);
+  }
+
+  @Post('bulk-import')
+  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT, RoleType.SALESPERSON)
+  @ApiOperation({ summary: 'Bulk import historical leads from Excel / CSV spreadsheet' })
+  @ApiResponse({ status: 200, description: 'Leads bulk imported successfully' })
+  async bulkImportLeads(
+    @Body() dto: BulkImportLeadsDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.leadsService.bulkImportLeads(dto, user.role as RoleType, user.id);
   }
 
   @Get('check-duplicate')

@@ -14,6 +14,7 @@ import { CreateDraftOrderDto } from './dto/create-draft-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { DecideOrderDto } from './dto/decide-order.dto';
 import { OrderQueryDto } from './dto/order-query.dto';
+import { BulkImportOrdersDto } from './dto/bulk-import-orders.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -39,6 +40,17 @@ export class OrdersController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.ordersService.createDraftOrder(dto, user);
+  }
+
+  @Post('bulk-import')
+  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT, RoleType.SALESPERSON)
+  @ApiOperation({ summary: 'Bulk import historical orders from Excel / CSV spreadsheet' })
+  @ApiResponse({ status: 200, description: 'Orders bulk imported successfully' })
+  async bulkImportOrders(
+    @Body() dto: BulkImportOrdersDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.ordersService.bulkImportOrders(dto, user);
   }
 
   @Post(':id/confirm')

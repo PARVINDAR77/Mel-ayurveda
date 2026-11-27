@@ -7,6 +7,7 @@ import { Input } from './input';
 import { Button } from './button';
 import { ExcelColumnDef } from '../../lib/export-excel';
 import { ExportButton } from './export-button';
+import { ImportButton } from './import-button';
 
 export interface Column<T> {
   key: string;
@@ -23,6 +24,12 @@ export interface DataTableExportConfig<T = any> {
   label?: string;
 }
 
+export interface DataTableImportConfig {
+  mode?: 'orders' | 'leads';
+  label?: string;
+  onImportSuccess?: () => void;
+}
+
 interface DataTableProps<T> {
   columns: Column<T>[];
   data: T[];
@@ -34,6 +41,7 @@ interface DataTableProps<T> {
   pageSize?: number;
   totalRecords?: number;
   exportConfig?: DataTableExportConfig<T>;
+  importConfig?: DataTableImportConfig;
   actions?: React.ReactNode;
   hideToolbar?: boolean;
 }
@@ -48,6 +56,7 @@ export function DataTable<T extends Record<string, any>>({
   onRowClick,
   pageSize = 10,
   exportConfig,
+  importConfig,
   actions,
   hideToolbar = false,
 }: DataTableProps<T>) {
@@ -130,6 +139,13 @@ export function DataTable<T extends Record<string, any>>({
 
           <div className="flex items-center gap-2">
             {actions}
+            {importConfig && (
+              <ImportButton
+                mode={importConfig.mode}
+                label={importConfig.label}
+                onImportSuccess={importConfig.onImportSuccess}
+              />
+            )}
             {exportConfig && (
               <ExportButton
                 data={filteredData}
