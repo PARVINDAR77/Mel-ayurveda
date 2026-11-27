@@ -20,6 +20,8 @@ import {
   TrendingUp,
   Tag,
   ArrowRight,
+  HeartPulse,
+  HeartHandshake,
 } from 'lucide-react';
 
 interface StaffDayDrawerProps {
@@ -38,7 +40,7 @@ export function StaffDayDrawer({
   const [data, setData] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'calls' | 'leads' | 'orders' | 'audit'>('calls');
+  const [activeTab, setActiveTab] = useState<'calls' | 'leads' | 'orders' | 'audit' | 'followups'>('calls');
 
   const fetchDayLog = async (userId: string, targetDate: string) => {
     try {
@@ -58,11 +60,15 @@ export function StaffDayDrawer({
   useEffect(() => {
     if (isOpen && staff?.id) {
       fetchDayLog(staff.id, dateStr);
-      setActiveTab('calls');
+      if (staff.role === 'FOLLOWUP_EXECUTIVE') {
+        setActiveTab('followups');
+      } else {
+        setActiveTab('calls');
+      }
     } else {
       setData(null);
     }
-  }, [isOpen, staff?.id, dateStr]);
+  }, [isOpen, staff?.id, staff?.role, dateStr]);
 
   if (!staff) return null;
 
@@ -70,6 +76,7 @@ export function StaffDayDrawer({
   const leads = data?.leads || [];
   const orders = data?.orders || [];
   const auditLogs = data?.auditLogs || [];
+  const followUpLogs = data?.followUpLogs || [];
 
   const formatDuration = (seconds: number) => {
     if (!seconds || seconds <= 0) return '0s';
@@ -180,6 +187,19 @@ export function StaffDayDrawer({
 
         {/* Tab Navigation */}
         <div className="flex border-b border-slate-200 bg-white px-4 shrink-0 shadow-2xs">
+          {(staff.role === 'FOLLOWUP_EXECUTIVE' || followUpLogs.length > 0) && (
+            <button
+              onClick={() => setActiveTab('followups')}
+              className={`py-3 px-4 text-xs font-bold border-b-2 transition flex items-center gap-2 ${
+                activeTab === 'followups'
+                  ? 'border-emerald-600 text-emerald-800 bg-emerald-50/40'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <HeartPulse className="w-3.5 h-3.5 text-emerald-700" />
+              Patient Care Follow-ups ({followUpLogs.length})
+            </button>
+          )}
           <button
             onClick={() => setActiveTab('calls')}
             className={`py-3 px-4 text-xs font-bold border-b-2 transition flex items-center gap-2 ${
@@ -240,6 +260,82 @@ export function StaffDayDrawer({
             </div>
           ) : (
             <>
+              {/* TAB 0: PATIENT CARE FOLLOW-UPS */}
+              {activeTab === 'followups' && (
+                <div className="space-y-3">
+                  {followUpLogs.length === 0 ? (
+                    <div className="p-8 text-center bg-white rounded-xl border border-dashed border-slate-300 text-slate-400 text-xs">
+                      No customer care consultations logged on this date.
+                    </div>
+                  ) : (
+                    followUpLogs.map((fu: any) => (
+                      <div
+                        key={fu.id}
+                        className="bg-white rounded-2xl border border-slate-200 p-4 space-y-2.5 shadow-2xs hover:shadow-sm transition"
+                      >
+                        <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                              {fu.followUp?.customer?.customerCode || 'PATIENT'}
+                            </span>
+                            <span className="font-bold text-slate-900 text-xs">
+                              {fu.followUp?.customer?.fullName || 'Client'}
+                            </span>
+                            <span className="text-[11px] text-slate-500 font-mono">
+                              📞 {fu.followUp?.customer?.phoneNumber}
+                            </span>
+                          </div>
+
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            {new Date(fu.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-slate-100 text-slate-900 border border-slate-200">
+                            {fu.disposition}
+                          </span>
+                          {fu.healthRating && (
+                            <span
+                              className={`px-2.5 py-1 rounded-lg text-[10px] font-black border ${
+                                fu.healthRating === 'SIGNIFICANT_RELIEF'
+                                  ? 'bg-emerald-50 text-emerald-900 border-emerald-300'
+                                  : fu.healthRating === 'MODERATE_RELIEF'
+                                  ? 'bg-teal-50 text-teal-900 border-teal-300'
+                                  : 'bg-amber-50 text-amber-900 border-amber-300'
+                              }`}
+                            >
+                              {fu.healthRating === 'SIGNIFICANT_RELIEF'
+                                ? '🌟 80-100% Relief'
+                                : fu.healthRating === 'MODERATE_RELIEF'
+                                ? '🌿 40-79% Relief'
+                                : '⏳ No Change'}
+                            </span>
+                          )}
+                          {fu.refillRequested && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-slate-950">
+                              🛒 Refill Requested
+                            </span>
+                          )}
+                          <span className="text-[10px] text-slate-400 font-mono ml-auto">
+                            Duration: {fu.callDurationSeconds || 0}s
+                          </span>
+                        </div>
+
+                        <div>
+                          <span className="block text-[10px] uppercase font-bold text-slate-400 mb-0.5">
+                            Consultation Notes & Discussion:
+                          </span>
+                          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 font-medium whitespace-pre-line leading-relaxed">
+                            {fu.consultationNotes}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
               {/* TAB 1: CALLS */}
               {activeTab === 'calls' && (
                 <div className="space-y-2.5">

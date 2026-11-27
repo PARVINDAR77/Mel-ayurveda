@@ -92,6 +92,12 @@ export default function CustomerCareFollowUpPage() {
     fetchFollowUps();
   }, [statusTab]);
 
+  useEffect(() => {
+    if (selectedFollowUp?.status === 'COMPLETED') {
+      setRightTab('history');
+    }
+  }, [selectedFollowUp?.id, selectedFollowUp?.status]);
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     fetchFollowUps();
@@ -383,6 +389,26 @@ export default function CustomerCareFollowUpPage() {
                       <div className="text-[10px] text-emerald-800 bg-white p-1.5 rounded-lg border border-emerald-200/80 font-medium truncate">
                         🎯 {item.campaignObjective}
                       </div>
+
+                      {/* Executive & Latest Note Snippet */}
+                      <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono">
+                        {item.assignedTo && (
+                          <span className="font-semibold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                            👤 {item.assignedTo.employeeCode}
+                          </span>
+                        )}
+                        {item.logs && item.logs.length > 0 && (
+                          <span className="text-emerald-700 font-bold truncate max-w-[130px]">
+                            {item.logs[0].disposition?.replace('CONNECTED_', '').replace(/_/g, ' ')}
+                          </span>
+                        )}
+                      </div>
+
+                      {item.logs && item.logs.length > 0 && item.logs[0].consultationNotes && (
+                        <div className="text-[10px] text-slate-700 bg-slate-100/90 p-1.5 rounded-lg border border-slate-200 italic line-clamp-1">
+                          &quot;{item.logs[0].consultationNotes}&quot;
+                        </div>
+                      )}
                     </div>
                   );
                 })
@@ -404,6 +430,12 @@ export default function CustomerCareFollowUpPage() {
                         {customer.customerCode}
                       </span>
                       <h3 className="text-xl font-black text-slate-900">{customer.fullName}</h3>
+
+                      {selectedFollowUp.assignedTo && (
+                        <span className="text-[11px] font-mono font-bold text-slate-700 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-lg">
+                          Assigned: {selectedFollowUp.assignedTo.firstName || ''} ({selectedFollowUp.assignedTo.employeeCode})
+                        </span>
+                      )}
 
                       {/* Interactive Status Dropdown Selector */}
                       <select

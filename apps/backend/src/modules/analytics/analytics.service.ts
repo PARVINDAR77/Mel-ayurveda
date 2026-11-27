@@ -1127,6 +1127,31 @@ export class AnalyticsService {
       take: 50,
     });
 
+    // Customer care follow-up consultations on this day
+    const followUpLogs = await this.prisma.customerFollowUpLog.findMany({
+      where: {
+        callerId: userId,
+        createdAt: { gte: startDate, lte: endDate },
+      },
+      include: {
+        followUp: {
+          include: {
+            customer: {
+              select: {
+                id: true,
+                customerCode: true,
+                fullName: true,
+                phoneNumber: true,
+                city: true,
+                state: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
     return {
       user,
       date: normalizedDate,
@@ -1134,6 +1159,7 @@ export class AnalyticsService {
       calls,
       leads,
       orders,
+      followUpLogs,
       auditLogs,
     };
   }

@@ -131,11 +131,18 @@ export class CustomerFollowupsService {
 
   /**
    * Get follow-up agenda for currently logged-in executive
+   * (Super Admin & Management can view system-wide or filter by executive)
    */
   async getMyFollowUps(query: CustomerFollowUpQueryDto, user: AuthenticatedUser) {
-    const where: any = {
-      assignedToId: user.id,
-    };
+    const where: any = {};
+
+    // Standard follow-up executives and tele-sales agents only see their own queue
+    if (user.role === RoleType.FOLLOWUP_EXECUTIVE || user.role === RoleType.SALESPERSON) {
+      where.assignedToId = user.id;
+    } else if (query.assignedToId) {
+      // Super Admin and Management can optionally filter by a specific executive
+      where.assignedToId = query.assignedToId;
+    }
 
     if (query.status) {
       where.status = query.status;
@@ -197,6 +204,9 @@ export class CustomerFollowupsService {
                 },
               },
             },
+          },
+          assignedTo: {
+            select: { id: true, employeeCode: true, firstName: true, lastName: true },
           },
           assignedBy: {
             select: { id: true, employeeCode: true, firstName: true, lastName: true },

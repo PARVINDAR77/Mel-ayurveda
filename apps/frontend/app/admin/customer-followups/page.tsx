@@ -25,6 +25,10 @@ import {
   ArrowRight,
   ShieldCheck,
   X,
+  Eye,
+  FileText,
+  HeartPulse,
+  History,
 } from 'lucide-react';
 
 export default function SuperAdminCustomerFollowupsPage() {
@@ -39,6 +43,9 @@ export default function SuperAdminCustomerFollowupsPage() {
   // Checkbox multi-select state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+
+  // Inspected Dossier Modal State
+  const [inspectedData, setInspectedData] = useState<{ customer: any; followUp: any } | null>(null);
 
   const fetchData = async () => {
     try {
@@ -133,7 +140,27 @@ export default function SuperAdminCustomerFollowupsPage() {
     }},
     { header: 'Assigned Executive', accessor: (c: any) => {
       const f = followUps.find((item: any) => item.customerId === c.id);
-      return f?.assignedUser ? `${f.assignedUser.firstName || ''} ${f.assignedUser.lastName || ''}`.trim() : 'Unassigned';
+      return f?.assignedTo ? `${f.assignedTo.firstName || ''} ${f.assignedTo.lastName || ''} (${f.assignedTo.employeeCode})`.trim() : 'Unassigned';
+    }},
+    { header: 'Latest Call Outcome', accessor: (c: any) => {
+      const f = followUps.find((item: any) => item.customerId === c.id);
+      return f?.logs?.[0]?.disposition || 'N/A';
+    }},
+    { header: 'Patient Relief Scale', accessor: (c: any) => {
+      const f = followUps.find((item: any) => item.customerId === c.id);
+      return f?.logs?.[0]?.healthRating || 'N/A';
+    }},
+    { header: 'Consultation Notes', accessor: (c: any) => {
+      const f = followUps.find((item: any) => item.customerId === c.id);
+      return f?.logs?.[0]?.consultationNotes || 'N/A';
+    }},
+    { header: 'Refill Requested', accessor: (c: any) => {
+      const f = followUps.find((item: any) => item.customerId === c.id);
+      return f?.logs?.[0]?.refillRequested ? 'YES' : 'NO';
+    }},
+    { header: 'Completed Date', accessor: (c: any) => {
+      const f = followUps.find((item: any) => item.customerId === c.id);
+      return f?.completedAt ? new Date(f.completedAt).toLocaleString('en-IN') : 'N/A';
     }},
   ];
 
@@ -467,29 +494,93 @@ export default function SuperAdminCustomerFollowupsPage() {
 
                       <td className="py-3 px-4">
                         {fu ? (
-                          <div className="space-y-1">
-                            <Badge
-                              variant={
-                                fu.status === 'COMPLETED'
-                                  ? 'success'
-                                  : fu.status === 'PENDING'
-                                  ? 'warning'
-                                  : 'info'
-                              }
-                            >
-                              {fu.status}
-                            </Badge>
-                            <span className="block text-[10px] text-slate-600 font-mono">
-                              Assigned: {fu.assignedTo?.employeeCode || 'Executive'}
-                            </span>
-                            <span className="block text-[10px] text-slate-500 truncate max-w-[180px]">
-                              {fu.campaignObjective}
-                            </span>
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <Badge
+                                variant={
+                                  fu.status === 'COMPLETED'
+                                    ? 'success'
+                                    : fu.status === 'PENDING'
+                                    ? 'warning'
+                                    : 'info'
+                                }
+                              >
+                                {fu.status}
+                              </Badge>
+                              {fu.assignedTo && (
+                                <span className="text-[10px] text-slate-700 font-mono font-bold bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded">
+                                  {fu.assignedTo.employeeCode}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Show Latest Consultation Log Notes & Response */}
+                            {fu.logs && fu.logs.length > 0 ? (
+                              <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-2.5 space-y-1 text-xs max-w-xs shadow-2xs">
+                                <div className="flex items-center justify-between gap-1">
+                                  <span className="font-extrabold text-[11px] text-emerald-950 truncate">
+                                    {fu.logs[0].disposition}
+                                  </span>
+                                  {fu.logs[0].healthRating && (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-700 text-white shrink-0">
+                                      {fu.logs[0].healthRating === 'SIGNIFICANT_RELIEF'
+                                        ? '🌟 80-100%'
+                                        : fu.logs[0].healthRating === 'MODERATE_RELIEF'
+                                        ? '🌿 40-79%'
+                                        : '⏳ Adjust'}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-[11px] text-slate-800 font-medium italic line-clamp-2 bg-white/80 p-1.5 rounded-lg border border-emerald-100">
+                                  &quot;{fu.logs[0].consultationNotes}&quot;
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setInspectedData({ customer: cust, followUp: fu });
+                                  }}
+                                  className="w-full mt-1 py-1 text-[10px] font-extrabold text-emerald-900 bg-white hover:bg-emerald-100 border border-emerald-300 rounded-lg transition flex items-center justify-center gap-1 cursor-pointer shadow-2xs"
+                                >
+                                  <Eye className="w-3 h-3 text-emerald-700" />
+                                  <span>View Consultation Notes ({fu.logs.length})</span>
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="space-y-1">
+                                <span className="block text-[10px] text-slate-500 truncate max-w-[180px]">
+                                  {fu.campaignObjective || 'Routine health review'}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setInspectedData({ customer: cust, followUp: fu });
+                                  }}
+                                  className="text-[10px] font-bold text-slate-600 hover:text-slate-900 underline flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Eye className="w-3 h-3" />
+                                  <span>View Care Dossier</span>
+                                </button>
+                              </div>
+                            )}
                           </div>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                            Unassigned
-                          </span>
+                          <div className="space-y-1">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                              Unassigned
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setInspectedData({ customer: cust, followUp: null });
+                              }}
+                              className="block text-[10px] font-bold text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                            >
+                              Client Profile
+                            </button>
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -549,6 +640,267 @@ export default function SuperAdminCustomerFollowupsPage() {
         selectedCustomers={selectedCustomers}
         onSuccess={handleAssignSuccess}
       />
+
+      {/* Super Admin Inspection: Client Care & Consultation Dossier Modal */}
+      {inspectedData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+            onClick={() => setInspectedData(null)}
+          />
+
+          <div className="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-[#061e14] via-[#092b1d] to-[#0c3725] text-white p-5 border-b border-emerald-900/60 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 flex items-center justify-center font-bold text-lg shadow-inner">
+                  {inspectedData.customer.fullName?.charAt(0) || 'C'}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-extrabold text-white">
+                      {inspectedData.customer.fullName}
+                    </h3>
+                    <span className="font-mono text-[10px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/40 px-2 py-0.5 rounded">
+                      {inspectedData.customer.customerCode}
+                    </span>
+                  </div>
+                  <p className="text-xs text-emerald-300/80 mt-0.5 font-mono">
+                    📞 {inspectedData.customer.phoneNumber}{' '}
+                    {inspectedData.customer.alternatePhone ? `/ ${inspectedData.customer.alternatePhone}` : ''} • 📍 {[inspectedData.customer.city, inspectedData.customer.state].filter(Boolean).join(', ') || 'India'}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setInspectedData(null)}
+                className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Content Scroll Area */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-5 text-xs bg-slate-50/70">
+              {/* Summary Metrics Banner */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Care Status</span>
+                  <div className="mt-1 flex items-center gap-1.5">
+                    <Badge
+                      variant={
+                        inspectedData.followUp?.status === 'COMPLETED'
+                          ? 'success'
+                          : inspectedData.followUp?.status === 'PENDING'
+                          ? 'warning'
+                          : 'slate'
+                      }
+                    >
+                      {inspectedData.followUp?.status || 'UNASSIGNED'}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Assigned Executive</span>
+                  <span className="mt-1 block font-bold text-slate-900 font-mono">
+                    {inspectedData.followUp?.assignedTo
+                      ? `${inspectedData.followUp.assignedTo.employeeCode} (${inspectedData.followUp.assignedTo.firstName || ''})`
+                      : 'None'}
+                  </span>
+                </div>
+
+                <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Lifetime Orders</span>
+                  <span className="mt-1 block font-bold text-slate-900 font-mono">
+                    {inspectedData.customer.orders?.length || 0} Orders
+                  </span>
+                </div>
+
+                <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Completed Date</span>
+                  <span className="mt-1 block font-bold text-slate-900 font-mono text-[11px]">
+                    {inspectedData.followUp?.completedAt
+                      ? new Date(inspectedData.followUp.completedAt).toLocaleDateString('en-IN')
+                      : 'Pending Care'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Directives Banner */}
+              {inspectedData.followUp?.adminDirectives && (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 space-y-1">
+                  <span className="text-[10px] font-black uppercase text-amber-800 tracking-wider block">
+                    Super Admin Directives:
+                  </span>
+                  <p className="text-xs text-amber-950 font-medium italic">
+                    &quot;{inspectedData.followUp.adminDirectives}&quot;
+                  </p>
+                </div>
+              )}
+
+              {/* Section 1: Executive Consultation Logs & Discussion */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                    <HeartPulse className="w-4 h-4 text-emerald-700" />
+                    <span>Executive Consultation Records & Patient Notes ({inspectedData.followUp?.logs?.length || 0})</span>
+                  </h4>
+                  <span className="text-[10px] text-slate-500 font-mono">Real-time Tele-Care Feedback</span>
+                </div>
+
+                {(!inspectedData.followUp?.logs || inspectedData.followUp.logs.length === 0) ? (
+                  <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-400 space-y-1">
+                    <p className="font-semibold">No consultation notes recorded yet.</p>
+                    <p className="text-[11px]">Once the executive conducts the call and submits the mandatory consultation details, they will be archived here permanently.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {inspectedData.followUp.logs.map((log: any, idx: number) => (
+                      <div
+                        key={log.id || idx}
+                        className="bg-white rounded-2xl border border-slate-200 p-4 space-y-2.5 shadow-2xs"
+                      >
+                        {/* Outcome & Rating Bar */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-black text-slate-900 bg-slate-100 px-2.5 py-1 rounded-lg text-xs">
+                              {log.disposition}
+                            </span>
+
+                            {log.healthRating && (
+                              <span
+                                className={`px-2.5 py-1 rounded-lg font-bold text-[11px] border ${
+                                  log.healthRating === 'SIGNIFICANT_RELIEF'
+                                    ? 'bg-emerald-50 text-emerald-900 border-emerald-300'
+                                    : log.healthRating === 'MODERATE_RELIEF'
+                                    ? 'bg-teal-50 text-teal-900 border-teal-300'
+                                    : 'bg-amber-50 text-amber-900 border-amber-300'
+                                }`}
+                              >
+                                {log.healthRating === 'SIGNIFICANT_RELIEF'
+                                  ? '🌟 Significant Symptom Relief (80-100%)'
+                                  : log.healthRating === 'MODERATE_RELIEF'
+                                  ? '🌿 Moderate Symptom Relief (40-79%)'
+                                  : '⏳ No Change / Regimen Adjusted'}
+                              </span>
+                            )}
+
+                            {log.refillRequested && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-slate-950 shadow-2xs">
+                                🛒 Refill Requested
+                              </span>
+                            )}
+                          </div>
+
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            {new Date(log.createdAt).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+
+                        {/* Consultation Notes & Discussion */}
+                        <div>
+                          <span className="block text-[10px] uppercase font-bold text-slate-400 mb-1">
+                            Consultation Notes & Patient Discussion:
+                          </span>
+                          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-900 font-medium whitespace-pre-line leading-relaxed shadow-inner">
+                            {log.consultationNotes}
+                          </div>
+                        </div>
+
+                        {/* Patient Feedback */}
+                        {log.patientFeedback && (
+                          <div>
+                            <span className="block text-[10px] uppercase font-bold text-slate-400 mb-1">
+                              Patient Remarks / Questions:
+                            </span>
+                            <div className="bg-amber-50/50 border border-amber-200 rounded-xl p-2.5 text-xs text-amber-950 font-medium">
+                              {log.patientFeedback}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Caller Metadata Footer */}
+                        <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono pt-2 border-t border-slate-100">
+                          <span>
+                            Logged By: <strong>{log.caller?.employeeCode || 'Executive'}</strong>{' '}
+                            {log.caller?.firstName ? `(${log.caller.firstName} ${log.caller.lastName || ''})` : ''}
+                          </span>
+                          <span>Duration: {log.callDurationSeconds || 0} seconds</span>
+                          {log.nextFollowUpDate && (
+                            <span className="text-emerald-700 font-bold">
+                              Next Check-in: {new Date(log.nextFollowUpDate).toLocaleDateString('en-IN')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Section 2: Patient Formulations & Orders */}
+              <div className="space-y-2 pt-2 border-t border-slate-200">
+                <h4 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                  <Package className="w-4 h-4 text-emerald-700" />
+                  <span>Prescribed Formulations & Past Orders ({inspectedData.customer.orders?.length || 0})</span>
+                </h4>
+
+                {(!inspectedData.customer.orders || inspectedData.customer.orders.length === 0) ? (
+                  <p className="text-slate-400 italic text-xs">No orders recorded for this patient.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {inspectedData.customer.orders.map((order: any) => (
+                      <div
+                        key={order.id}
+                        className="bg-white rounded-xl border border-slate-200 p-3 flex items-center justify-between text-xs"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-bold text-slate-900">{order.orderNumber}</span>
+                            <Badge variant={order.status === 'DELIVERED' ? 'success' : 'slate'} className="text-[9px]">
+                              {order.status}
+                            </Badge>
+                          </div>
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            {new Date(order.createdAt).toLocaleDateString('en-IN')}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-mono font-bold text-slate-900">
+                            ₹{Number(order.totalAmount || 0).toLocaleString('en-IN')}
+                          </span>
+                          {order.shipment?.trackingAwb && (
+                            <span className="block text-[10px] text-slate-500 font-mono">
+                              AWB: {order.shipment.trackingAwb}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-white border-t border-slate-200 flex items-center justify-between shrink-0">
+              <span className="text-[11px] text-slate-500">
+                Patient Dossier verified by Melayurveda Clinical Governance Desk.
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setInspectedData(null)}
+                className="font-bold text-xs px-5 cursor-pointer"
+              >
+                Close Dossier
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
