@@ -34,11 +34,11 @@ export function exportToExcel<T = any>({
       return false;
     }
 
-    // 1. Transform objects into row dictionaries matching column definitions
-    const rows = data.map((item, rowIndex) => {
-      const row: Record<string, any> = {};
+    // 1. Transform objects into row arrays matching column definitions (supports identical header names like QUANITY)
+    const headers = columns.map((col) => col.header);
 
-      columns.forEach((col) => {
+    const dataRows = data.map((item) => {
+      return columns.map((col) => {
         let value: any;
 
         if (typeof col.accessor === 'function') {
@@ -65,44 +65,42 @@ export function exportToExcel<T = any>({
 
         // Clean formatting for Excel cells
         if (value === null || value === undefined) {
-          row[col.header] = '';
+          return '';
         } else if (value instanceof Date) {
-          row[col.header] = value.toLocaleString('en-IN');
+          return value.toLocaleString('en-IN');
         } else if (typeof value === 'boolean') {
-          row[col.header] = value ? 'YES' : 'NO';
+          return value ? 'YES' : 'NO';
         } else if (typeof value === 'object') {
           // If array of items (e.g. order items), format as readable comma string
           if (Array.isArray(value)) {
-            row[col.header] = value
+            return value
               .map((v) => (v?.name || v?.product?.name ? `${v.name || v.product.name} (x${v.quantity || 1})` : JSON.stringify(v)))
               .join('; ');
           } else {
-            row[col.header] = JSON.stringify(value);
+            return JSON.stringify(value);
           }
         } else {
-          row[col.header] = value;
+          return value;
         }
       });
-
-      return row;
     });
 
-    // 2. Create Sheet from JSON rows
-    const worksheet = XLSX.utils.json_to_sheet(rows);
+    // 2. Create Sheet from Array of Arrays (AOA) preserving all 27 distinct columns
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
 
     // 3. Calculate dynamic column widths (wch) based on cell lengths
-    const colWidths = columns.map((col) => {
+    const colWidths = columns.map((col, colIdx) => {
       if (col.width) return { wch: col.width };
 
-      let maxLen = col.header.length;
-      rows.forEach((r) => {
-        const valStr = String(r[col.header] ?? '');
+      let maxLen = (col.header || '').length;
+      dataRows.forEach((row) => {
+        const valStr = String(row[colIdx] ?? '');
         if (valStr.length > maxLen) {
           maxLen = valStr.length;
         }
       });
 
-      // Clamp column width between 12 and 45 characters
+      // Clamp column width between 12 and 48 characters
       return { wch: Math.min(Math.max(maxLen + 3, 12), 48) };
     });
 
