@@ -60,6 +60,7 @@ model User {
   customerFollowUpsCreated  CustomerFollowUp[] @relation("FollowUpAssignedBy")
   customerFollowUpLogs      CustomerFollowUpLog[]
   handledReturns            OrderReturn[]          @relation("HandledReturns")
+  ofdConfirmedShipments     Shipment[]             @relation("OFDConfirmedShipments")
 
   @@index([role, isActive])
   @@index([employeeCode])
@@ -561,22 +562,44 @@ enum ShipmentStatus {
   RTO
 }
 
-model Shipment {
-  id              String         @id @default(uuid()) @db.Uuid
-  orderId         String         @unique @db.Uuid
-  courierPartner  String         @db.VarChar(100)
-  trackingAwb     String         @unique @db.VarChar(100)
-  trackingUrl     String?        @db.VarChar(500)
-  status          ShipmentStatus @default(MANIFESTED)
-  dispatchedAt    DateTime?      @db.Timestamptz
-  deliveredAt     DateTime?      @db.Timestamptz
-  createdAt       DateTime       @default(now()) @db.Timestamptz
-  updatedAt       DateTime       @updatedAt @db.Timestamptz
+enum OFDCallStatus {
+  PENDING_CALL
+  CALL_CONNECTED
+  DELIVERED_CONFIRMED
+  RE_ATTEMPT_SCHEDULED
+  DOORSTEP_REFUSED
+  CUSTOMER_UNREACHABLE
+}
 
-  order           Order          @relation(fields: [orderId], references: [id])
-  returns         OrderReturn[]
+model Shipment {
+  id                    String         @id @default(uuid()) @db.Uuid
+  orderId               String         @unique @db.Uuid
+  courierPartner        String         @db.VarChar(100)
+  trackingAwb           String         @unique @db.VarChar(100)
+  trackingUrl           String?        @db.VarChar(500)
+  status                ShipmentStatus @default(MANIFESTED)
+  dispatchedAt          DateTime?      @db.Timestamptz
+  deliveredAt           DateTime?      @db.Timestamptz
+
+  // OFD Calling & Delivery Confirmation Engine
+  ofdCallStatus         OFDCallStatus  @default(PENDING_CALL)
+  ofdCallAttempts       Int            @default(0)
+  ofdLastCalledAt       DateTime?      @db.Timestamptz
+  ofdCallNotes          String?        @db.Text
+  ofdCustomerReason     String?        @db.Text
+  ofdRescheduleDate     DateTime?      @db.Timestamptz
+  ofdConfirmedById      String?        @db.Uuid
+  codAmountCollected    Decimal?       @db.Decimal(10, 2)
+
+  createdAt             DateTime       @default(now()) @db.Timestamptz
+  updatedAt             DateTime       @updatedAt @db.Timestamptz
+
+  order                 Order          @relation(fields: [orderId], references: [id])
+  returns               OrderReturn[]
+  ofdConfirmedBy        User?          @relation("OFDConfirmedShipments", fields: [ofdConfirmedById], references: [id])
 
   @@index([status, createdAt])
+  @@index([status, ofdCallStatus])
   @@map("shipments")
 }
 

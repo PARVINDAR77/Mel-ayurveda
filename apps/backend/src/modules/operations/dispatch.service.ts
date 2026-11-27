@@ -8,6 +8,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateShipmentDto } from './dto/create-shipment.dto';
 import { UpdateShipmentStatusDto } from './dto/update-shipment-status.dto';
+import { LogOFDCallDto, EscalateToRtoDto } from './dto/ofd-calling.dto';
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import {
   InventoryTxType,
@@ -15,6 +16,7 @@ import {
   PaymentMode,
   PaymentStatus,
   ShipmentStatus,
+  OFDCallStatus,
   NotificationType,
   RoleType,
   ReturnStatus,
@@ -539,5 +541,284 @@ export class DispatchService {
     }
 
     return shipment;
+  }
+
+  /**
+   * Helper to generate unique return reference
+   */
+  private async generateReturnCode(): Promise<string> {
+    const year = new Date().getFullYear();
+    const count = await this.prisma.orderReturn.count();
+    const sequence = String(count + 1).padStart(6, '0');
+    return `MEL-RET-${year}-${sequence}`;
+  }
+
+  /**
+   * Retrieves shipments currently in OUT_FOR_DELIVERY or active doorstep calling stage
+   */
+  async getOfdQueue(page = 1, limit = 50, courierPartner?: string, ofdStatus?: string, search?: string) {
+    const skip = (page - 1) * limit;
+    const where: any = {};
+
+    // Filter by courier partner if provided
+    if (courierPartner && courierPartner !== 'ALL') {
+      where.courierPartner = courierPartner;
+    }
+
+    // Filter by OFD status or default to active queue
+    if (ofdStatus && ofdStatus !== 'ALL') {
+      where.ofdCallStatus = ofdStatus as OFDCallStatus;
+    }
+
+    // Search by customer name, phone, order number, tracking AWB
+    if (search && search.trim()) {
+      const s = search.trim();
+      where.OR = [
+        { trackingAwb: { contains: s, mode: 'insensitive' } },
+        { order: { orderNumber: { contains: s, mode: 'insensitive' } } },
+        { order: { customer: { fullName: { contains: s, mode: 'insensitive' } } } },
+        { order: { customer: { phoneNumber: { contains: s } } } },
+      ];
+    }
+
+    const [total, data] = await Promise.all([
+      this.prisma.shipment.count({ where }),
+      this.prisma.shipment.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: [{ ofdCallStatus: 'asc' }, { updatedAt: 'desc' }],
+        include: {
+          order: {
+            include: {
+              customer: {
+                select: {
+                  id: true,
+                  customerCode: true,
+                  fullName: true,
+                  phoneNumber: true,
+                  alternatePhone: true,
+                  city: true,
+                  state: true,
+                  address: true,
+                  pincode: true,
+                },
+              },
+              items: {
+                include: {
+                  product: {
+                    select: { id: true, name: true, sku: true, sellingPrice: true, targetDisease: true },
+                  },
+                },
+              },
+              createdBy: {
+                select: { id: true, employeeCode: true, firstName: true, lastName: true },
+              },
+              invoice: {
+                select: { id: true, invoiceNumber: true, grandTotal: true },
+              },
+            },
+          },
+          returns: {
+            take: 1,
+            orderBy: { createdAt: 'desc' },
+          },
+          ofdConfirmedBy: {
+            select: { id: true, employeeCode: true, firstName: true, lastName: true },
+          },
+        },
+      }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  /**
+   * Retrieves summary metrics for the OFD Delivery Calling Desk
+   */
+  async getOfdStats() {
+    const [totalOfd, confirmedDelivered, rescheduled, refused, allConfirmed] = await Promise.all([
+      this.prisma.shipment.count({
+        where: {
+          OR: [
+            { status: ShipmentStatus.OUT_FOR_DELIVERY },
+            { ofdCallStatus: { not: OFDCallStatus.PENDING_CALL } },
+          ],
+        },
+      }),
+      this.prisma.shipment.count({
+        where: { ofdCallStatus: OFDCallStatus.DELIVERED_CONFIRMED },
+      }),
+      this.prisma.shipment.count({
+        where: { ofdCallStatus: OFDCallStatus.RE_ATTEMPT_SCHEDULED },
+      }),
+      this.prisma.shipment.count({
+        where: { ofdCallStatus: OFDCallStatus.DOORSTEP_REFUSED },
+      }),
+      this.prisma.shipment.findMany({
+        where: { ofdCallStatus: OFDCallStatus.DELIVERED_CONFIRMED },
+        select: { codAmountCollected: true, order: { select: { totalAmount: true } } },
+      }),
+    ]);
+
+    const totalCodCollected = allConfirmed.reduce((sum, item) => {
+      const amt = item.codAmountCollected ? Number(item.codAmountCollected) : Number(item.order?.totalAmount || 0);
+      return sum + amt;
+    }, 0);
+
+    return {
+      totalOfd,
+      confirmedDelivered,
+      rescheduled,
+      refused,
+      totalCodCollected,
+      confirmationRate: totalOfd > 0 ? Math.round((confirmedDelivered / totalOfd) * 100) : 0,
+    };
+  }
+
+  /**
+   * Records a customer doorstep call disposition and executes state transitions
+   */
+  async logOfdCall(shipmentId: string, dto: LogOFDCallDto, user: AuthenticatedUser) {
+    const shipment = await this.prisma.shipment.findUnique({
+      where: { id: shipmentId },
+      include: { order: { include: { items: true, customer: true } } },
+    });
+
+    if (!shipment) {
+      throw new NotFoundException(`Shipment with ID ${shipmentId} not found`);
+    }
+
+    const isDelivered = dto.callOutcome === OFDCallStatus.DELIVERED_CONFIRMED;
+    const isRefused = dto.callOutcome === OFDCallStatus.DOORSTEP_REFUSED;
+    const now = new Date();
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      // 1. Update Shipment OFD fields
+      const updatedShipment = await tx.shipment.update({
+        where: { id: shipmentId },
+        data: {
+          ofdCallStatus: dto.callOutcome,
+          ofdCallAttempts: { increment: 1 },
+          ofdLastCalledAt: now,
+          ofdCallNotes: dto.callNotes || null,
+          ofdCustomerReason: dto.customerRemarks || null,
+          ofdRescheduleDate: dto.rescheduleDate ? new Date(dto.rescheduleDate) : null,
+          ofdConfirmedById: user.id,
+          codAmountCollected: dto.codAmountCollected ? Number(dto.codAmountCollected) : null,
+          status: isDelivered
+            ? ShipmentStatus.DELIVERED
+            : isRefused
+            ? ShipmentStatus.RTO
+            : shipment.status,
+          deliveredAt: isDelivered ? now : shipment.deliveredAt,
+        },
+      });
+
+      // 2. If customer picked / parcel delivered: fulfill order & mark COD as paid
+      if (isDelivered) {
+        await tx.order.update({
+          where: { id: shipment.orderId },
+          data: {
+            status: OrderStatus.DELIVERED,
+            paymentStatus:
+              shipment.order.paymentMode === PaymentMode.CASH_ON_DELIVERY
+                ? PaymentStatus.PAID
+                : shipment.order.paymentStatus,
+          },
+        });
+
+        // Fulfill reserved warehouse inventory
+        for (const item of shipment.order.items) {
+          const inv = await tx.inventory.findUnique({
+            where: { productId: item.productId },
+          });
+
+          if (inv) {
+            const newReserved = Math.max(0, inv.reservedQuantity - item.quantity);
+            await tx.inventory.update({
+              where: { id: inv.id },
+              data: { reservedQuantity: newReserved },
+            });
+
+            await tx.inventoryTransaction.create({
+              data: {
+                inventoryId: inv.id,
+                type: InventoryTxType.ORDER_FULFILLED,
+                quantity: item.quantity,
+                balanceAfter: inv.availableQuantity,
+                notes: `OFD Doorstep Verified Delivery. Parcel picked by customer ${shipment.order.customer?.fullName || ''} (Order ${shipment.order.orderNumber}).`,
+              },
+            });
+          }
+        }
+      }
+
+      // 3. If customer refused at doorstep: automatically create OrderReturn and route to Return & RTO Desk
+      if (isRefused) {
+        const returnCode = await this.generateReturnCode();
+        await tx.orderReturn.create({
+          data: {
+            returnCode,
+            orderId: shipment.orderId,
+            shipmentId: shipment.id,
+            status: ReturnStatus.CALL_CONNECTED,
+            returnReason: dto.reasonCategory || ReturnReason.CUSTOMER_REFUSED,
+            callOutcome: 'DOORSTEP_REFUSED',
+            callNotes: dto.callNotes || 'Doorstep refusal confirmed via OFD calling.',
+            customerRemarks: dto.customerRemarks || 'Customer refused parcel at delivery door.',
+            handledById: user.id,
+          },
+        });
+      }
+
+      return updatedShipment;
+    });
+
+    this.logger.log(
+      `OFD Call logged for shipment ${shipment.trackingAwb}. Outcome: ${dto.callOutcome} by ${user.employeeCode}`,
+    );
+
+    return result;
+  }
+
+  /**
+   * Direct delivery confirmation action from the OFD desk
+   */
+  async confirmOfdDelivery(shipmentId: string, codAmountCollected?: number, notes?: string, user?: AuthenticatedUser) {
+    return this.logOfdCall(
+      shipmentId,
+      {
+        callOutcome: OFDCallStatus.DELIVERED_CONFIRMED,
+        codAmountCollected,
+        customerRemarks: 'Parcel confirmed picked and received by customer.',
+        callNotes: notes || 'Delivery confirmed via OFD calling desk.',
+      },
+      user || ({ id: 'system', employeeCode: 'SYSTEM' } as AuthenticatedUser),
+    );
+  }
+
+  /**
+   * Direct RTO escalation from OFD desk
+   */
+  async escalateToRto(shipmentId: string, dto: EscalateToRtoDto, user: AuthenticatedUser) {
+    return this.logOfdCall(
+      shipmentId,
+      {
+        callOutcome: OFDCallStatus.DOORSTEP_REFUSED,
+        reasonCategory: dto.reason,
+        customerRemarks: dto.customerRemarks,
+        callNotes: dto.callNotes || 'Direct RTO escalation from OFD calling desk.',
+      },
+      user,
+    );
   }
 }

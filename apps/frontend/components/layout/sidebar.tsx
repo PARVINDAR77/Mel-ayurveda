@@ -31,6 +31,7 @@ import {
   Clock,
   RotateCcw,
   Award,
+  PhoneForwarded,
 } from 'lucide-react';
 import { CreateLeadModal } from '../sales/create-lead-modal';
 import { CreateOrderModal } from '../sales/create-order-modal';
@@ -107,7 +108,8 @@ function SidebarContent({ onClose }: SidebarProps) {
               { href: '/billing?tab=history', label: 'Billing History', icon: History },
               { href: '/admin/products', label: 'Products & Formulations', icon: Leaf },
               { href: '/management/dispatch', label: 'Courier Dispatch', icon: Truck },
-              { href: '/management/returns', label: 'Returns & RTO Desk', icon: RotateCcw },
+              { href: '/management/ofd', label: 'OFD & Delivery Calling', icon: PhoneForwarded },
+              { href: '/management/returns', label: 'Return & RTO Orders', icon: RotateCcw },
             ],
           },
           {
@@ -200,6 +202,7 @@ function SidebarContent({ onClose }: SidebarProps) {
             items: [
               { href: '/management/inventory', label: 'Warehouse Inventory', icon: Boxes },
               { href: '/management/dispatch', label: 'Courier Dispatch', icon: Truck },
+              { href: '/management/ofd', label: 'OFD & Delivery Calling', icon: PhoneForwarded },
               { href: '/management/returns', label: 'Return & RTO Orders', icon: RotateCcw },
             ],
           },
