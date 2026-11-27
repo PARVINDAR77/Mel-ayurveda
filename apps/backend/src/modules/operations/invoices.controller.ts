@@ -62,8 +62,9 @@ export class InvoicesController {
     @Query('page') page?: number,
     @Query('limit') limit?: number,
     @Query('search') search?: string,
+    @Query('date') date?: string,
   ) {
-    return this.invoicesService.findAll(Number(page) || 1, Number(limit) || 50, search);
+    return this.invoicesService.findAll(Number(page) || 1, Number(limit) || 50, search, date);
   }
 
   @Get('order/:orderId')

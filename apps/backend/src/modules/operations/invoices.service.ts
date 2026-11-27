@@ -6,15 +6,19 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
-import { OrderStatus } from '@prisma/client';
+import { OrderStatus, RoleType, NotificationType } from '@prisma/client';
 
 @Injectable()
 export class InvoicesService {
   private readonly logger = new Logger(InvoicesService.name);
   private readonly companyHomeState = 'gujarat';
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   /**
    * Generates sequential tax invoice number: MEL-INV-YYYY-XXXXX
@@ -104,7 +108,7 @@ export class InvoicesService {
 
     const invoiceNumber = await this.generateInvoiceNumber();
 
-    return this.prisma.$transaction(async (tx) => {
+    const createdInvoice = await this.prisma.$transaction(async (tx) => {
       // 1. Create Invoice record
       const invoice = await tx.invoice.create({
         data: {
@@ -159,12 +163,29 @@ export class InvoicesService {
 
       return invoice;
     });
+
+    // 4. Real-time alert to Super Admin and Operations Management that order is billed and waiting in Courier Dispatch
+    try {
+      await this.notificationsService.dispatchToRole(
+        [RoleType.SUPER_ADMIN, RoleType.MANAGEMENT],
+        {
+          title: `📦 Order ${order.orderNumber} Ready for Dispatch`,
+          message: `Tax Invoice ${createdInvoice.invoiceNumber} generated for ${order.customer?.fullName || 'Patient'}. Consignment released to Dispatch queue.`,
+          type: NotificationType.DISPATCH_UPDATE,
+          link: `/management/dispatch`,
+        },
+      );
+    } catch (notifErr) {
+      this.logger.warn(`Failed to dispatch invoice notification to management: ${notifErr}`);
+    }
+
+    return createdInvoice;
   }
 
   /**
    * Retrieves all invoices
    */
-  async findAll(page = 1, limit = 50, search?: string) {
+  async findAll(page = 1, limit = 50, search?: string, date?: string) {
     const skip = (page - 1) * limit;
     const where: any = {};
 
@@ -176,6 +197,17 @@ export class InvoicesService {
         { order: { customer: { fullName: { contains: q, mode: 'insensitive' } } } },
         { order: { customer: { phoneNumber: { contains: q } } } },
       ];
+    }
+
+    if (date && date.trim()) {
+      const targetDate = new Date(date.trim());
+      if (!isNaN(targetDate.getTime())) {
+        const startOfDay = new Date(targetDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(targetDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        where.issuedAt = { gte: startOfDay, lte: endOfDay };
+      }
     }
 
     const [total, invoices] = await Promise.all([

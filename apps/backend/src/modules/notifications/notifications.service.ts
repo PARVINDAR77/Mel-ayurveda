@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException, MessageEvent } from 
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { NotificationQueryDto } from './dto/notification-query.dto';
-import { NotificationType, RoleType } from '@prisma/client';
+import { NotificationType, RoleType, OrderStatus } from '@prisma/client';
 import { Subject, Observable, merge, interval } from 'rxjs';
 import { filter, map } from 'rxjs/operators';
 
@@ -164,6 +164,11 @@ export class NotificationsService {
    * Get unread notification counts grouped by target path for sidebar red dots
    */
   async getUnreadSummary(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+
     const unreadNotifications = await this.prisma.notification.findMany({
       where: { userId, isRead: false },
       select: { id: true, link: true, type: true },
@@ -176,8 +181,28 @@ export class NotificationsService {
       }
     }
 
+    // Dynamic queue counters for operations management & super admin
+    if (user && (user.role === RoleType.SUPER_ADMIN || user.role === RoleType.MANAGEMENT)) {
+      const readyDispatchOrdersCount = await this.prisma.order.count({
+        where: {
+          status: { in: [OrderStatus.PROCESSING, OrderStatus.CONFIRMED] },
+          invoice: { isNot: null },
+          shipment: null,
+        },
+      });
+
+      if (readyDispatchOrdersCount > 0) {
+        byPath['/management/dispatch'] = Math.max(
+          byPath['/management/dispatch'] || 0,
+          readyDispatchOrdersCount,
+        );
+      }
+    }
+
+    const totalUnread = Object.values(byPath).reduce((a, b) => a + b, 0);
+
     return {
-      totalUnread: unreadNotifications.length,
+      totalUnread: Math.max(unreadNotifications.length, totalUnread),
       byPath,
     };
   }

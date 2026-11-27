@@ -113,8 +113,8 @@ function SidebarContent({ onClose }: SidebarProps) {
           { href: '/admin/customer-followups', label: 'Follow-Up Allocation', icon: HeartHandshake },
           { href: '/management/products', label: 'Ayurvedic Products', icon: Layers },
           { href: '/management/orders', label: 'Formulation Orders', icon: Package },
-          { href: '/billing?tab=history', label: 'Billing History & Bills', icon: History },
-          { href: '/management/invoices', label: 'GST Tax Invoicing', icon: FileText },
+          { href: '/management/invoices?tab=history', label: 'Billing History & Bills', icon: History },
+          { href: '/management/invoices?tab=queue', label: 'GST Tax Invoicing', icon: FileText },
           { href: '/management/inventory', label: 'Warehouse Inventory', icon: Boxes },
           { href: '/management/dispatch', label: 'Courier Dispatch', icon: Truck },
           { href: '/management/returns', label: 'Return & RTO Orders', icon: RotateCcw },
@@ -234,17 +234,35 @@ function SidebarContent({ onClose }: SidebarProps) {
 
           let isActive = false;
           if (itemTab) {
-            isActive = pathname === itemPath && currentTab === itemTab;
+            if (pathname === itemPath) {
+              if (currentTab) {
+                isActive = currentTab === itemTab;
+              } else {
+                if (itemPath === '/management/invoices' && itemTab === 'history') {
+                  isActive = true;
+                } else if (itemPath === '/billing' && itemTab === 'queue') {
+                  isActive = true;
+                }
+              }
+            }
           } else if (item.href.includes('?')) {
             isActive = pathname === itemPath;
           } else {
             if (pathname === item.href) {
               if (item.href === '/billing') {
                 isActive = !currentTab || currentTab === 'queue';
+              } else if (item.href === '/management/invoices') {
+                isActive = !currentTab || currentTab === 'history';
               } else {
                 isActive = true;
               }
-            } else if (item.href !== '/admin' && pathname?.startsWith(`${item.href}/`)) {
+            } else if (
+              item.href !== '/admin' &&
+              item.href !== '/management' &&
+              item.href !== '/approval' &&
+              item.href !== '/sales' &&
+              pathname?.startsWith(`${item.href}/`)
+            ) {
               isActive = true;
             }
           }
