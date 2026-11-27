@@ -695,4 +695,446 @@ export class AnalyticsService {
       topSellingProducts,
     };
   }
+
+  /**
+   * Helper to parse date/month boundaries for staff activity aggregation
+   */
+  private parseDateRange(mode?: 'daily' | 'monthly', dateStr?: string, monthStr?: string) {
+    const now = new Date();
+    if (mode === 'monthly') {
+      let year = now.getFullYear();
+      let month = now.getMonth(); // 0-indexed
+      if (monthStr && /^\d{4}-\d{2}$/.test(monthStr)) {
+        const parts = monthStr.split('-').map(Number);
+        year = parts[0];
+        month = parts[1] - 1;
+      }
+      const startDate = new Date(year, month, 1, 0, 0, 0, 0);
+      const endDate = new Date(year, month + 1, 0, 23, 59, 59, 999);
+      const monthLabel = startDate.toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+      return {
+        mode: 'monthly',
+        startDate,
+        endDate,
+        label: monthLabel,
+        dateStr: `${year}-${String(month + 1).padStart(2, '0')}`,
+        monthStart: startDate,
+        monthEnd: endDate,
+      };
+    } else {
+      let targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      if (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        const parts = dateStr.split('-').map(Number);
+        targetDate = new Date(parts[0], parts[1] - 1, parts[2]);
+      }
+      const startDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0, 0);
+      const endDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59, 999);
+      const isToday =
+        startDate.getDate() === now.getDate() &&
+        startDate.getMonth() === now.getMonth() &&
+        startDate.getFullYear() === now.getFullYear();
+      const dateLabel = isToday
+        ? `Today, ${startDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
+        : startDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
+      // Month bounds for MTD calculations
+      const monthStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1, 0, 0, 0, 0);
+      const monthEnd = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59, 999);
+
+      return {
+        mode: 'daily',
+        startDate,
+        endDate,
+        label: dateLabel,
+        dateStr: `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-${String(startDate.getDate()).padStart(2, '0')}`,
+        monthStart,
+        monthEnd,
+      };
+    }
+  }
+
+  /**
+   * Panel 01: Super Admin Staff Daily & Monthly Activity, Performance & Incentive Ledger
+   */
+  async getStaffDailyActivity(query: {
+    mode?: 'daily' | 'monthly';
+    date?: string;
+    month?: string;
+    role?: RoleType;
+  }) {
+    const range = this.parseDateRange(query.mode, query.date, query.month);
+    const { startDate, endDate, monthStart, monthEnd, mode, label, dateStr } = range;
+
+    const users = await this.prisma.user.findMany({
+      where: {
+        isActive: true,
+        ...(query.role ? { role: query.role } : {}),
+      },
+      select: {
+        id: true,
+        employeeCode: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phoneNumber: true,
+        role: true,
+        isActive: true,
+        lastLoginAt: true,
+        createdAt: true,
+      },
+      orderBy: [
+        { role: 'asc' },
+        { employeeCode: 'asc' },
+      ],
+    });
+
+    let totalCalls = 0;
+    let totalCallDurationSeconds = 0;
+    let totalOrdersCreated = 0;
+    let totalRevenueRealized = 0;
+    let totalInvoicesIssued = 0;
+    let totalIncentivePool = 0;
+
+    let topPerformer = {
+      employeeCode: '',
+      name: '',
+      revenue: 0,
+      orders: 0,
+    };
+
+    const staff = await Promise.all(
+      users.map(async (u) => {
+        // 1. Leads assigned in period
+        const leadsAssigned = await this.prisma.lead.count({
+          where: {
+            assignedToId: u.id,
+            OR: [
+              { assignedAt: { gte: startDate, lte: endDate } },
+              { createdAt: { gte: startDate, lte: endDate } },
+            ],
+          },
+        });
+
+        // 2. Calls logged in period
+        const [callsCount, callsDurationAgg, callOutcomesRaw] = await Promise.all([
+          this.prisma.callLog.count({
+            where: { callerId: u.id, calledAt: { gte: startDate, lte: endDate } },
+          }),
+          this.prisma.callLog.aggregate({
+            where: { callerId: u.id, calledAt: { gte: startDate, lte: endDate } },
+            _sum: { durationSeconds: true },
+          }),
+          this.prisma.callLog.groupBy({
+            by: ['callOutcome'],
+            where: { callerId: u.id, calledAt: { gte: startDate, lte: endDate } },
+            _count: true,
+          }),
+        ]);
+
+        const callDurationSeconds = callsDurationAgg._sum.durationSeconds || 0;
+        const callOutcomes = callOutcomesRaw.reduce((acc, curr) => {
+          acc[curr.callOutcome] = curr._count;
+          return acc;
+        }, {} as Record<string, number>);
+
+        // 3. Orders booked in period
+        const [ordersCount, ordersRevenueAgg] = await Promise.all([
+          this.prisma.order.count({
+            where: {
+              createdById: u.id,
+              createdAt: { gte: startDate, lte: endDate },
+              status: { notIn: [OrderStatus.CANCELLED] },
+            },
+          }),
+          this.prisma.order.aggregate({
+            where: {
+              createdById: u.id,
+              createdAt: { gte: startDate, lte: endDate },
+              status: { notIn: [OrderStatus.CANCELLED] },
+            },
+            _sum: { totalAmount: true },
+          }),
+        ]);
+
+        const revenueRealized = Number(ordersRevenueAgg._sum.totalAmount || 0);
+
+        // 4. MTD numbers for Quota calculation
+        const mStart = mode === 'monthly' ? startDate : monthStart;
+        const mEnd = mode === 'monthly' ? endDate : monthEnd;
+
+        const [mtdOrdersCount, mtdRevenueAgg, mtdCallsCount] = await Promise.all([
+          this.prisma.order.count({
+            where: {
+              createdById: u.id,
+              createdAt: { gte: mStart, lte: mEnd },
+              status: { notIn: [OrderStatus.CANCELLED] },
+            },
+          }),
+          this.prisma.order.aggregate({
+            where: {
+              createdById: u.id,
+              createdAt: { gte: mStart, lte: mEnd },
+              status: { notIn: [OrderStatus.CANCELLED] },
+            },
+            _sum: { totalAmount: true },
+          }),
+          this.prisma.callLog.count({
+            where: { callerId: u.id, calledAt: { gte: mStart, lte: mEnd } },
+          }),
+        ]);
+
+        const monthlyAchieved = Number(mtdRevenueAgg._sum.totalAmount || 0);
+        const monthlyTarget = 100000; // Baseline ₹1,00,000 monthly quota
+        const monthlyQuotaPercentage =
+          monthlyTarget > 0 ? Number(((monthlyAchieved / monthlyTarget) * 100).toFixed(1)) : 0;
+
+        // 5. Role-specific output
+        let approvalsCount = 0;
+        let reviewsCount = 0;
+        let invoicesCount = 0;
+        let followupsCount = 0;
+
+        if (u.role === RoleType.APPROVAL_OFFICER) {
+          approvalsCount = await this.prisma.approvalRequest.count({
+            where: { officerId: u.id, updatedAt: { gte: startDate, lte: endDate } },
+          });
+        } else if (u.role === RoleType.PENDING_REVIEWER) {
+          reviewsCount = await this.prisma.pendingReview.count({
+            where: { claimedById: u.id, updatedAt: { gte: startDate, lte: endDate } },
+          });
+        } else if (u.role === RoleType.BILLING_EXECUTIVE) {
+          invoicesCount = await this.prisma.auditLog.count({
+            where: {
+              userId: u.id,
+              action: 'INVOICE_GENERATED',
+              createdAt: { gte: startDate, lte: endDate },
+            },
+          });
+        } else if (u.role === RoleType.FOLLOWUP_EXECUTIVE) {
+          followupsCount = await this.prisma.customerFollowUpLog.count({
+            where: { callerId: u.id, createdAt: { gte: startDate, lte: endDate } },
+          });
+        }
+
+        // 6. Incentive Calculation Engine
+        // Base commission on period sales (3%)
+        let baseIncentive = 0;
+        let milestoneBonus = 0;
+        let activityBonus = 0;
+
+        if (u.role === RoleType.SALESPERSON || u.role === RoleType.SUPER_ADMIN) {
+          baseIncentive = Math.round(revenueRealized * 0.03);
+
+          // Milestone bonus based on MTD revenue
+          if (monthlyAchieved >= 200000) {
+            milestoneBonus = 10000;
+          } else if (monthlyAchieved >= 100000) {
+            milestoneBonus = 4000;
+          } else if (monthlyAchieved >= 50000) {
+            milestoneBonus = 1500;
+          }
+
+          // Daily call volume bonus
+          if (mode === 'daily' && callsCount >= 35) {
+            activityBonus += 150;
+          } else if (mode === 'monthly' && mtdCallsCount >= 600) {
+            activityBonus += 2500;
+          }
+        } else if (u.role === RoleType.APPROVAL_OFFICER) {
+          // ₹25 per formulation review sign-off
+          baseIncentive = approvalsCount * 25;
+        } else if (u.role === RoleType.BILLING_EXECUTIVE) {
+          // ₹15 per invoice released
+          baseIncentive = invoicesCount * 15;
+        } else if (u.role === RoleType.FOLLOWUP_EXECUTIVE) {
+          // ₹40 per completed care follow-up
+          baseIncentive = followupsCount * 40;
+        }
+
+        const totalIncentive = baseIncentive + milestoneBonus + activityBonus;
+
+        // Conversion rate
+        const conversionRate =
+          leadsAssigned > 0 ? Number(((ordersCount / leadsAssigned) * 100).toFixed(1)) : 0;
+
+        // Team aggregates
+        totalCalls += callsCount;
+        totalCallDurationSeconds += callDurationSeconds;
+        totalOrdersCreated += ordersCount;
+        totalRevenueRealized += revenueRealized;
+        totalInvoicesIssued += invoicesCount;
+        totalIncentivePool += totalIncentive;
+
+        if (revenueRealized > topPerformer.revenue) {
+          topPerformer = {
+            employeeCode: u.employeeCode,
+            name: `${u.firstName} ${u.lastName}`,
+            revenue: revenueRealized,
+            orders: ordersCount,
+          };
+        }
+
+        return {
+          id: u.id,
+          employeeCode: u.employeeCode,
+          name: `${u.firstName} ${u.lastName}`,
+          role: u.role,
+          isActive: u.isActive,
+          phoneNumber: u.phoneNumber,
+          email: u.email,
+          leadsAssigned,
+          callsCount,
+          callDurationSeconds,
+          callOutcomes,
+          ordersCount,
+          revenueRealized,
+          conversionRate,
+          monthlyTarget,
+          monthlyAchieved,
+          monthlyQuotaPercentage,
+          approvalsCount,
+          reviewsCount,
+          invoicesCount,
+          followupsCount,
+          baseIncentive,
+          milestoneBonus,
+          activityBonus,
+          totalIncentive,
+        };
+      }),
+    );
+
+    return {
+      timeframe: {
+        mode,
+        label,
+        date: dateStr,
+        startDate,
+        endDate,
+      },
+      summaryKpis: {
+        totalActiveStaff: users.length,
+        totalCalls,
+        totalCallDurationSeconds,
+        totalOrdersCreated,
+        totalRevenueRealized,
+        totalInvoicesIssued,
+        totalIncentivePool,
+        topPerformer: topPerformer.revenue > 0 ? topPerformer : null,
+      },
+      staff,
+    };
+  }
+
+  /**
+   * Panel 01: Drill-down chronological day log for a specific staff member
+   */
+  async getStaffDayLog(userId: string, dateStr?: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        employeeCode: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phoneNumber: true,
+        role: true,
+        isActive: true,
+        lastLoginAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`Employee with ID ${userId} not found`);
+    }
+
+    const range = this.parseDateRange('daily', dateStr);
+    const { startDate, endDate, dateStr: normalizedDate, label } = range;
+
+    // Calls on this day
+    const calls = await this.prisma.callLog.findMany({
+      where: { callerId: userId, calledAt: { gte: startDate, lte: endDate } },
+      include: {
+        lead: {
+          select: {
+            id: true,
+            leadCode: true,
+            customerName: true,
+            phoneNumber: true,
+            city: true,
+            state: true,
+            productInterest: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: { calledAt: 'desc' },
+    });
+
+    // Leads assigned on this day
+    const leads = await this.prisma.lead.findMany({
+      where: {
+        assignedToId: userId,
+        OR: [
+          { assignedAt: { gte: startDate, lte: endDate } },
+          { createdAt: { gte: startDate, lte: endDate } },
+        ],
+      },
+      select: {
+        id: true,
+        leadCode: true,
+        customerName: true,
+        phoneNumber: true,
+        productInterest: true,
+        priority: true,
+        status: true,
+        sourceType: true,
+        createdAt: true,
+        assignedAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Orders created on this day
+    const orders = await this.prisma.order.findMany({
+      where: {
+        createdById: userId,
+        createdAt: { gte: startDate, lte: endDate },
+      },
+      include: {
+        customer: { select: { fullName: true, phoneNumber: true, city: true, state: true } },
+        items: { include: { product: { select: { name: true, sku: true } } } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Audit logs on this day
+    const auditLogs = await this.prisma.auditLog.findMany({
+      where: {
+        userId,
+        createdAt: { gte: startDate, lte: endDate },
+      },
+      select: {
+        id: true,
+        action: true,
+        entityType: true,
+        entityId: true,
+        createdAt: true,
+        ipAddress: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+
+    return {
+      user,
+      date: normalizedDate,
+      label,
+      calls,
+      leads,
+      orders,
+      auditLogs,
+    };
+  }
 }

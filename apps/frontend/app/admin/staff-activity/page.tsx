@@ -1,0 +1,634 @@
+'use client';
+
+import React, { useState, useEffect, useMemo } from 'react';
+import { apiClient, getErrorMessage } from '../../../lib/api-client';
+import { ExportButton } from '../../../components/ui/export-button';
+import { ExcelColumnDef } from '../../../lib/export-excel';
+import { StaffDayDrawer } from './staff-day-drawer';
+import { IncentiveRulesModal } from './incentive-rules-modal';
+import {
+  Calendar,
+  Clock,
+  PhoneCall,
+  Package,
+  TrendingUp,
+  Users,
+  Award,
+  Search,
+  RefreshCw,
+  Sparkles,
+  ShieldCheck,
+  FileText,
+  HeartHandshake,
+  ArrowUpRight,
+  Filter,
+  DollarSign,
+  ChevronRight,
+  UserCheck,
+} from 'lucide-react';
+
+export default function StaffActivityPage() {
+  const todayStr = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
+
+  const currentMonthStr = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }, []);
+
+  const [mode, setMode] = useState<'daily' | 'monthly'>('daily');
+  const [selectedDate, setSelectedDate] = useState<string>(todayStr);
+  const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthStr);
+  const [selectedRole, setSelectedRole] = useState<string>('ALL');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
+  const [data, setData] = useState<any | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Drawer & Modal states
+  const [drawerStaff, setDrawerStaff] = useState<any | null>(null);
+  const [isRulesModalOpen, setIsRulesModalOpen] = useState<boolean>(false);
+
+  // Fetch Activity Data
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const params: Record<string, string> = {
+        mode,
+      };
+
+      if (mode === 'daily') {
+        params.date = selectedDate;
+      } else {
+        params.month = selectedMonth;
+      }
+
+      if (selectedRole !== 'ALL') {
+        params.role = selectedRole;
+      }
+
+      const res = await apiClient.get('/analytics/staff-activity', { params });
+      setData(res.data);
+    } catch (err: any) {
+      setError(getErrorMessage(err));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [mode, selectedDate, selectedMonth, selectedRole]);
+
+  // Filtering by search query
+  const filteredStaff = useMemo(() => {
+    if (!data?.staff) return [];
+    if (!searchQuery.trim()) return data.staff;
+    const q = searchQuery.toLowerCase().trim();
+    return data.staff.filter(
+      (s: any) =>
+        s.name.toLowerCase().includes(q) ||
+        s.employeeCode.toLowerCase().includes(q) ||
+        (s.phoneNumber && s.phoneNumber.includes(q))
+    );
+  }, [data?.staff, searchQuery]);
+
+  // Helper formatting
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(amount || 0);
+  };
+
+  const formatDuration = (seconds: number) => {
+    if (!seconds || seconds <= 0) return '0m';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  };
+
+  const getRoleBadge = (role: string) => {
+    switch (role) {
+      case 'SALESPERSON':
+        return <span className="px-2 py-0.5 text-[11px] font-bold rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300">Ayurvedic Consultant</span>;
+      case 'APPROVAL_OFFICER':
+        return <span className="px-2 py-0.5 text-[11px] font-bold rounded-md bg-blue-100 text-blue-800 border border-blue-300">Medical Doctor</span>;
+      case 'PENDING_REVIEWER':
+        return <span className="px-2 py-0.5 text-[11px] font-bold rounded-md bg-purple-100 text-purple-800 border border-purple-300">Triage Reviewer</span>;
+      case 'BILLING_EXECUTIVE':
+        return <span className="px-2 py-0.5 text-[11px] font-bold rounded-md bg-cyan-100 text-cyan-800 border border-cyan-300">Billing & GST Desk</span>;
+      case 'FOLLOWUP_EXECUTIVE':
+        return <span className="px-2 py-0.5 text-[11px] font-bold rounded-md bg-amber-100 text-amber-800 border border-amber-300">Patient Care Desk</span>;
+      case 'SUPER_ADMIN':
+        return <span className="px-2 py-0.5 text-[11px] font-bold rounded-md bg-slate-900 text-amber-300 border border-amber-400">Super Administrator</span>;
+      default:
+        return <span className="px-2 py-0.5 text-[11px] font-bold rounded-md bg-slate-100 text-slate-700">{role}</span>;
+    }
+  };
+
+  // Excel Columns Specification
+  const exportColumns: ExcelColumnDef<any>[] = [
+    { header: 'Employee Code', accessor: 'employeeCode' },
+    { header: 'Staff Name', accessor: 'name' },
+    { header: 'Role', accessor: (item: any) => String(item.role || '').replace('_', ' ') },
+    { header: 'Assigned Leads', accessor: 'leadsAssigned' },
+    { header: 'Calls Logged', accessor: 'callsCount' },
+    { header: 'Talk Time (Sec)', accessor: 'callDurationSeconds' },
+    { header: 'Orders Booked', accessor: 'ordersCount' },
+    { header: 'Realized Revenue (₹)', accessor: (item: any) => Number(item.revenueRealized || 0).toFixed(2) },
+    { header: 'MTD Achieved (₹)', accessor: (item: any) => Number(item.monthlyAchieved || 0).toFixed(2) },
+    { header: 'Quota Achieved %', accessor: (item: any) => `${item.monthlyQuotaPercentage || 0}%` },
+    { header: 'Base Incentive (₹)', accessor: (item: any) => Number(item.baseIncentive || 0).toFixed(2) },
+    { header: 'Milestone Bonus (₹)', accessor: (item: any) => Number(item.milestoneBonus || 0).toFixed(2) },
+    { header: 'Volume Bonus (₹)', accessor: (item: any) => Number(item.activityBonus || 0).toFixed(2) },
+    { header: 'Total Payable Incentive (₹)', accessor: (item: any) => Number(item.totalIncentive || 0).toFixed(2) },
+  ];
+
+  const summary = data?.summaryKpis || {};
+  const timeframe = data?.timeframe || {};
+
+  return (
+    <div className="min-h-screen bg-slate-50/50 pb-16">
+      {/* Top Header Card */}
+      <div className="bg-white border-b border-slate-200 px-6 py-5 shadow-2xs">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                Super Admin Overview & Analytics
+              </span>
+              <span className="text-xs text-slate-400">•</span>
+              <span className="text-xs font-medium text-slate-500">Personnel Dossier</span>
+            </div>
+            <h1 className="text-xl font-extrabold text-slate-900 tracking-tight mt-1 flex items-center gap-2.5">
+              Staff Work & Daily Activity
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                Incentive Control
+              </span>
+            </h1>
+            <p className="text-xs text-slate-500 mt-1 max-w-2xl">
+              Real-time daily output, calling time, lead progression & monthly incentive reconciliation across all personnel.
+            </p>
+          </div>
+
+          {/* Action Tools */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* View Mode Toggle */}
+            <div className="bg-slate-100 p-1 rounded-xl flex items-center border border-slate-200 shadow-2xs">
+              <button
+                type="button"
+                onClick={() => setMode('daily')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  mode === 'daily'
+                    ? 'bg-emerald-800 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                Daily Work View
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('monthly')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  mode === 'monthly'
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <TrendingUp className="w-3.5 h-3.5" />
+                Monthly Incentive View
+              </button>
+            </div>
+
+            {/* Date or Month Picker */}
+            {mode === 'daily' ? (
+              <div className="flex items-center gap-1.5 bg-white border border-slate-300 rounded-xl px-2.5 py-1 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setSelectedDate(todayStr)}
+                  className={`text-[11px] font-bold px-2 py-1 rounded-md transition cursor-pointer ${
+                    selectedDate === todayStr
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'text-slate-500 hover:bg-slate-100'
+                  }`}
+                >
+                  Today
+                </button>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="text-xs font-bold text-slate-800 bg-transparent outline-none cursor-pointer"
+                />
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 bg-white border border-slate-300 rounded-xl px-2.5 py-1 shadow-2xs">
+                <input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="text-xs font-bold text-slate-800 bg-transparent outline-none cursor-pointer"
+                />
+              </div>
+            )}
+
+            {/* Incentive Formula Button */}
+            <button
+              type="button"
+              onClick={() => setIsRulesModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer"
+            >
+              <Award className="w-3.5 h-3.5 text-amber-600" />
+              Incentive Rules
+            </button>
+
+            {/* Excel Export Button */}
+            <ExportButton
+              data={filteredStaff}
+              columns={exportColumns}
+              fileName={`Melayurveda_Staff_${mode === 'daily' ? selectedDate : selectedMonth}`}
+              sheetName={mode === 'daily' ? 'Daily Productivity' : 'Monthly Incentives'}
+              label="Export to Excel"
+            />
+
+            {/* Refresh Button */}
+            <button
+              type="button"
+              onClick={fetchData}
+              disabled={isLoading}
+              className="p-2 bg-white hover:bg-slate-50 border border-slate-300 text-slate-600 rounded-xl transition shadow-2xs cursor-pointer disabled:opacity-50"
+              title="Refresh Data"
+            >
+              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-emerald-700' : ''}`} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-[1600px] mx-auto px-6 mt-6 space-y-6">
+        {/* KPI Cards Row */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
+          {/* Card 1: Active Staff */}
+          <div className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-2xs hover:shadow-xs transition">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Staff On Duty</span>
+              <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                <Users className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <div className="flex items-baseline gap-2 mt-2">
+              <span className="text-2xl font-extrabold text-slate-900">{summary.totalActiveStaff || 0}</span>
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Active
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1 truncate">
+              {timeframe.label || 'Selected Period'}
+            </p>
+          </div>
+
+          {/* Card 2: Calls Dialed */}
+          <div className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-2xs hover:shadow-xs transition">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Calls Dialed</span>
+              <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                <PhoneCall className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <div className="flex items-baseline gap-2 mt-2">
+              <span className="text-2xl font-extrabold text-slate-900">{summary.totalCalls || 0}</span>
+              <span className="text-xs font-mono font-bold text-emerald-700">
+                {formatDuration(summary.totalCallDurationSeconds || 0)}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1">Total tele-sales talk time</p>
+          </div>
+
+          {/* Card 3: Orders Created */}
+          <div className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-2xs hover:shadow-xs transition">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Orders Booked</span>
+              <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
+                <Package className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <div className="flex items-baseline gap-2 mt-2">
+              <span className="text-2xl font-extrabold text-slate-900">{summary.totalOrdersCreated || 0}</span>
+              <span className="text-[11px] text-slate-500">prescriptions</span>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1">Confirmed clinical kits</p>
+          </div>
+
+          {/* Card 4: Sales Revenue */}
+          <div className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-2xs hover:shadow-xs transition">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Realized Sales</span>
+              <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                <TrendingUp className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <div className="mt-2">
+              <span className="text-xl font-black text-emerald-800 font-mono tracking-tight block truncate">
+                {formatCurrency(summary.totalRevenueRealized || 0)}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1">Booked commercial value</p>
+          </div>
+
+          {/* Card 5: Top Performer */}
+          <div className="bg-gradient-to-br from-[#071912] to-[#123828] text-white rounded-2xl p-4 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1">
+                <Award className="w-3 h-3 text-amber-400" />
+                Top Performer
+              </span>
+            </div>
+            <div className="mt-2">
+              <span className="text-sm font-bold text-white block truncate">
+                {summary.topPerformer?.name || 'In Progress'}
+              </span>
+              <span className="text-xs font-mono font-bold text-amber-300">
+                {formatCurrency(summary.topPerformer?.revenue || 0)}
+              </span>
+            </div>
+            <p className="text-[10px] text-emerald-200/70 mt-1">
+              {summary.topPerformer ? `${summary.topPerformer.orders} orders closed` : 'Awaiting sales'}
+            </p>
+          </div>
+
+          {/* Card 6: Incentive Pool */}
+          <div className="bg-gradient-to-br from-amber-500/10 via-amber-50/60 to-emerald-50/40 rounded-2xl border border-amber-300/60 p-4 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-900 flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                Incentive Pool
+              </span>
+            </div>
+            <div className="mt-2">
+              <span className="text-xl font-black text-amber-900 font-mono tracking-tight block">
+                {formatCurrency(summary.totalIncentivePool || 0)}
+              </span>
+            </div>
+            <p className="text-[11px] text-amber-700/80 mt-1">Accrued staff commissions</p>
+          </div>
+        </div>
+
+        {/* Filter and Search Bar */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-3 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+          {/* Role Filter Pills */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {[
+              { id: 'ALL', label: 'All Roles' },
+              { id: 'SALESPERSON', label: 'Ayurvedic Consultants' },
+              { id: 'APPROVAL_OFFICER', label: 'Doctors / Approvals' },
+              { id: 'PENDING_REVIEWER', label: 'Reviewers' },
+              { id: 'BILLING_EXECUTIVE', label: 'Billing & Stock' },
+              { id: 'FOLLOWUP_EXECUTIVE', label: 'Follow-Up Desk' },
+            ].map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => setSelectedRole(r.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  selectedRole === r.id
+                    ? 'bg-emerald-800 text-white shadow-2xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Search Box */}
+          <div className="relative min-w-[260px]">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search staff by name or code..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-emerald-600 transition"
+            />
+          </div>
+        </div>
+
+        {/* Master Performance Table Card */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">
+                Staff Daily Work Output & Incentive Ledger
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Showing {filteredStaff.length} staff records for {timeframe.label || 'current period'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-mono text-slate-400">
+                Live Data Synchronized
+              </span>
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+              <div className="w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin mb-2" />
+              <p className="text-xs font-medium">Aggregating live tele-consultation and sales metrics...</p>
+            </div>
+          ) : error ? (
+            <div className="p-8 text-center text-rose-600 text-xs">
+              Failed to load activity metrics: {error}
+            </div>
+          ) : filteredStaff.length === 0 ? (
+            <div className="p-16 text-center text-slate-400 text-xs">
+              No staff members found matching the selected filters.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                    <th className="py-3 px-4">Staff Member</th>
+                    <th className="py-3 px-4">Department / Role</th>
+                    <th className="py-3 px-4 text-center">Leads Assigned</th>
+                    <th className="py-3 px-4">Calls & Talk Time</th>
+                    <th className="py-3 px-4 text-center">Orders</th>
+                    <th className="py-3 px-4 text-right">Realized Sales (₹)</th>
+                    <th className="py-3 px-4">Monthly Quota / Target</th>
+                    <th className="py-3 px-4 text-right">Earned Incentive</th>
+                    <th className="py-3 px-4 text-center">Dossier</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredStaff.map((staff: any) => {
+                    const quotaPct = Math.min(staff.monthlyQuotaPercentage || 0, 100);
+                    return (
+                      <tr
+                        key={staff.id}
+                        className="hover:bg-emerald-50/30 transition group"
+                      >
+                        {/* 1. Staff Info */}
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-emerald-100 group-hover:text-emerald-800 transition">
+                              {staff.name
+                                ?.split(' ')
+                                .map((n: string) => n[0])
+                                .join('')
+                                .toUpperCase() || 'EMP'}
+                            </div>
+                            <div>
+                              <div className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                                {staff.name}
+                                {!staff.isActive && (
+                                  <span className="text-[10px] text-rose-600 bg-rose-50 px-1 rounded">Inactive</span>
+                                )}
+                              </div>
+                              <span className="font-mono text-[11px] text-slate-500">
+                                {staff.employeeCode}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* 2. Role */}
+                        <td className="py-3.5 px-4">
+                          {getRoleBadge(staff.role)}
+                        </td>
+
+                        {/* 3. Leads Assigned */}
+                        <td className="py-3.5 px-4 text-center">
+                          <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 font-mono font-bold text-slate-800 text-xs">
+                            {staff.leadsAssigned || 0}
+                          </span>
+                        </td>
+
+                        {/* 4. Calls & Duration */}
+                        <td className="py-3.5 px-4">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-extrabold text-slate-900 text-xs font-mono">
+                                {staff.callsCount || 0} calls
+                              </span>
+                              <span className="text-[11px] font-mono text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                {formatDuration(staff.callDurationSeconds || 0)}
+                              </span>
+                            </div>
+                            {/* Call outcome summary pill */}
+                            <div className="flex items-center gap-1 mt-1 text-[10px] text-slate-400 font-mono">
+                              <span className="text-emerald-600 font-bold">{staff.callOutcomes?.INTERESTED || 0} Int</span>
+                              <span>•</span>
+                              <span className="text-amber-600 font-bold">{staff.callOutcomes?.FOLLOW_UP_REQUIRED || 0} F/U</span>
+                              <span>•</span>
+                              <span className="text-rose-500 font-bold">{staff.callOutcomes?.NOT_INTERESTED || 0} Reject</span>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* 5. Orders Booked */}
+                        <td className="py-3.5 px-4 text-center">
+                          <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-md bg-amber-50 text-amber-800 border border-amber-200 font-mono font-bold text-xs">
+                            {staff.ordersCount || 0}
+                          </span>
+                        </td>
+
+                        {/* 6. Realized Sales */}
+                        <td className="py-3.5 px-4 text-right">
+                          <span className="font-extrabold text-emerald-800 font-mono text-xs block">
+                            {formatCurrency(staff.revenueRealized || 0)}
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            Conv: {staff.conversionRate || 0}%
+                          </span>
+                        </td>
+
+                        {/* 7. Monthly Quota Target */}
+                        <td className="py-3.5 px-4 min-w-[160px]">
+                          <div>
+                            <div className="flex items-center justify-between text-[11px] mb-1">
+                              <span className="font-mono text-slate-500">
+                                {formatCurrency(staff.monthlyAchieved || 0)}
+                              </span>
+                              <span className="font-bold font-mono text-slate-800">
+                                {staff.monthlyQuotaPercentage || 0}%
+                              </span>
+                            </div>
+                            {/* Progress Bar */}
+                            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                              <div
+                                className={`h-full transition-all duration-300 ${
+                                  quotaPct >= 80
+                                    ? 'bg-emerald-600'
+                                    : quotaPct >= 50
+                                    ? 'bg-amber-500'
+                                    : 'bg-rose-500'
+                                }`}
+                                style={{ width: `${quotaPct}%` }}
+                              />
+                            </div>
+                            <span className="text-[10px] text-slate-400 block mt-0.5">
+                              Target: {formatCurrency(staff.monthlyTarget || 100000)}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* 8. Earned Incentive */}
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="inline-block text-right">
+                            <span className="font-black text-amber-900 font-mono text-xs bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 block">
+                              {formatCurrency(staff.totalIncentive || 0)}
+                            </span>
+                            <span className="text-[10px] text-slate-400 block mt-0.5">
+                              Base: ₹{staff.baseIncentive || 0} + Bonus: ₹{(staff.milestoneBonus || 0) + (staff.activityBonus || 0)}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* 9. Action / Dossier Drawer Button */}
+                        <td className="py-3.5 px-4 text-center">
+                          <button
+                            type="button"
+                            onClick={() => setDrawerStaff(staff)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-emerald-700 hover:text-white text-slate-700 text-xs font-bold transition shadow-2xs cursor-pointer group/btn"
+                            title="Inspect complete day ledger & call timeline"
+                          >
+                            <span>Inspect</span>
+                            <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover/btn:text-white transition" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Slide-Over Staff Day Dossier Drawer */}
+      <StaffDayDrawer
+        isOpen={Boolean(drawerStaff)}
+        onClose={() => setDrawerStaff(null)}
+        staff={drawerStaff}
+        dateStr={selectedDate}
+      />
+
+      {/* Incentive Rules Formula Modal */}
+      <IncentiveRulesModal
+        isOpen={isRulesModalOpen}
+        onClose={() => setIsRulesModalOpen(false)}
+      />
+    </div>
+  );
+}

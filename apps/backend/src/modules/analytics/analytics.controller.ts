@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Query,
+  Param,
   UseGuards,
   ForbiddenException,
 } from '@nestjs/common';
@@ -81,5 +82,33 @@ export class AnalyticsController {
   @ApiResponse({ status: 200, description: 'Management operations metrics retrieved' })
   async getManagementDashboard() {
     return this.analyticsService.getManagementDashboard();
+  }
+
+  @Get('staff-activity')
+  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT)
+  @ApiOperation({
+    summary: 'Team-wide staff daily and monthly activity, performance & incentive metrics',
+  })
+  @ApiResponse({ status: 200, description: 'Staff activity metrics retrieved successfully' })
+  async getStaffDailyActivity(
+    @Query('mode') mode?: 'daily' | 'monthly',
+    @Query('date') date?: string,
+    @Query('month') month?: string,
+    @Query('role') role?: RoleType,
+  ) {
+    return this.analyticsService.getStaffDailyActivity({ mode, date, month, role });
+  }
+
+  @Get('staff-activity/:userId/day-log')
+  @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT)
+  @ApiOperation({
+    summary: 'Granular chronological day log and dossier for a specific staff member',
+  })
+  @ApiResponse({ status: 200, description: 'Staff day log retrieved successfully' })
+  async getStaffDayLog(
+    @Param('userId') userId: string,
+    @Query('date') date?: string,
+  ) {
+    return this.analyticsService.getStaffDayLog(userId, date);
   }
 }

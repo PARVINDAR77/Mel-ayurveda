@@ -30,6 +30,7 @@ import {
   ArchiveRestore,
   Clock,
   RotateCcw,
+  Award,
 } from 'lucide-react';
 import { CreateLeadModal } from '../sales/create-lead-modal';
 import { CreateOrderModal } from '../sales/create-order-modal';
@@ -79,6 +80,7 @@ function SidebarContent({ onClose }: SidebarProps) {
             items: [
               { href: '/admin', label: 'Master Dashboard', icon: LayoutDashboard },
               { href: '/admin/analytics', label: 'Executive Analytics', icon: TrendingUp },
+              { href: '/admin/staff-activity', label: 'Staff Work & Daily Activity', icon: Award },
             ],
           },
           {
@@ -169,6 +171,7 @@ function SidebarContent({ onClose }: SidebarProps) {
             title: 'Operations Core',
             items: [
               { href: '/management', label: 'Operations Dashboard', icon: LayoutDashboard },
+              { href: '/admin/staff-activity', label: 'Staff Daily Performance', icon: Award },
             ],
           },
           {
