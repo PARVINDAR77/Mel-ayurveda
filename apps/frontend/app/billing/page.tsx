@@ -11,6 +11,7 @@ import { Drawer } from '../../components/ui/drawer';
 import { Modal } from '../../components/ui/modal';
 import { ExportButton } from '../../components/ui/export-button';
 import { ExcelColumnDef } from '../../lib/export-excel';
+import { TaxInvoiceDocument } from '../../components/billing/tax-invoice-document';
 import {
   FileText,
   Boxes,
@@ -1778,162 +1779,22 @@ function BillingWorkspaceContent() {
           setInvoiceDetail(null);
         }}
         title="Official GST Tax Invoice & Delivery Bill"
-        width="lg"
+        width="3xl"
       >
         {loadingInvoiceDetail ? (
           <div className="py-20 text-center text-xs text-slate-400">Loading tax bill...</div>
         ) : !invoiceDetail ? (
           <div className="py-20 text-center text-xs text-slate-400">Invoice document not found</div>
         ) : (
-          <div className="space-y-6 text-xs text-slate-700 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-            {/* Print Button Bar */}
-            <div className="flex justify-between items-center bg-slate-100 p-2.5 rounded-xl border border-slate-200">
-              <span className="text-[11px] font-bold text-slate-600">Tax Invoice Ready for Dispatch</span>
-              <Button
-                size="sm"
-                onClick={() => window.print()}
-                className="bg-emerald-800 hover:bg-emerald-900 text-white font-bold inline-flex items-center gap-1.5"
-              >
-                <Printer className="h-3.5 w-3.5" />
-                Print Invoice / Bill Slip
-              </Button>
-            </div>
-
-            {/* Corporate Header */}
-            <div className="flex justify-between items-start border-b border-slate-200 pb-4">
-              <div>
-                <h3 className="text-lg font-black tracking-wider text-emerald-900 uppercase">
-                  MELAYURVEDA INDIA PVT. LTD.
-                </h3>
-                <p className="text-[11px] text-slate-500 mt-0.5">
-                  Corporate HQ: 101 Ayurveda Bhavan, S.G. Highway, Ahmedabad, Gujarat - 380054
-                </p>
-                <p className="text-[11px] font-mono text-slate-600 mt-0.5">
-                  <strong>GSTIN:</strong> 24AABCM1234F1Z5 | <strong>State:</strong> Gujarat (Code 24)
-                </p>
-                <p className="text-[10px] text-emerald-800 font-semibold italic mt-1">
-                  Nature Se Nirog, Ayurveda Se Swasth
-                </p>
-              </div>
-              <div className="text-right">
-                <span className="font-mono text-xs font-black text-slate-900 bg-slate-100 px-2.5 py-1 rounded block">
-                  {invoiceDetail.invoiceNumber}
-                </span>
-                <span className="text-[10px] text-slate-400 block font-mono mt-1">
-                  Issued: {new Date(invoiceDetail.issuedAt).toLocaleDateString('en-IN')}
-                </span>
-                <span className="text-[10px] text-emerald-700 font-bold block mt-0.5">
-                  Order Ref: {invoiceDetail.order?.orderNumber}
-                </span>
-              </div>
-            </div>
-
-            {/* Bill To & Ship To */}
-            <div className="grid grid-cols-2 gap-4 border-b border-slate-200 pb-4 text-xs">
-              <div>
-                <span className="font-bold uppercase tracking-wider text-slate-400 text-[10px] block mb-1">
-                  Patient & Billing Information
-                </span>
-                <span className="font-bold text-slate-900 block">{invoiceDetail.order?.customer?.fullName}</span>
-                <span className="text-slate-600 block">{invoiceDetail.order?.customer?.address || 'Ahmedabad, Gujarat'}</span>
-                <span className="text-slate-600 block">
-                  {invoiceDetail.order?.customer?.city}, {invoiceDetail.order?.customer?.state} - {invoiceDetail.order?.customer?.pincode}
-                </span>
-                <span className="text-slate-600 block font-mono mt-1">Phone: {invoiceDetail.order?.customer?.phoneNumber}</span>
-              </div>
-              <div className="text-right">
-                <span className="font-bold uppercase tracking-wider text-slate-400 text-[10px] block mb-1">
-                  Tax Jurisdiction Details
-                </span>
-                <span className="block text-slate-700">
-                  Place of Supply: <strong>{invoiceDetail.order?.customer?.state || 'Gujarat'}</strong>
-                </span>
-                <span className="block text-slate-700">
-                  Tax Type:{' '}
-                  <strong>
-                    {Number(invoiceDetail.igstAmount) === 0 ? 'Intra-State (CGST + SGST)' : 'Inter-State (IGST)'}
-                  </strong>
-                </span>
-                <span className="block text-slate-700">
-                  Payment Mode: <strong>{invoiceDetail.order?.paymentMode?.replace(/_/g, ' ') || 'COD'}</strong>
-                </span>
-              </div>
-            </div>
-
-            {/* Itemized Table */}
-            <div className="border border-slate-200 rounded-xl overflow-hidden">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-100 text-slate-600 font-bold text-[10px] uppercase">
-                  <tr>
-                    <th className="p-2.5">Prescribed Formulation</th>
-                    <th className="p-2.5 text-center">HSN</th>
-                    <th className="p-2.5 text-center">Qty</th>
-                    <th className="p-2.5 text-right">Rate</th>
-                    <th className="p-2.5 text-right">Taxable</th>
-                    <th className="p-2.5 text-right">Total</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {invoiceDetail.order?.items?.map((item: any, idx: number) => (
-                    <tr key={idx}>
-                      <td className="p-2.5">
-                        <span className="font-bold text-slate-900 block">{item.product?.name}</span>
-                        <span className="text-[10px] text-slate-400 font-mono block">SKU: {item.product?.sku}</span>
-                      </td>
-                      <td className="p-2.5 text-center font-mono text-[11px] text-slate-500">30049011</td>
-                      <td className="p-2.5 text-center font-mono font-bold text-emerald-800">{item.quantity}</td>
-                      <td className="p-2.5 text-right font-mono">₹{Number(item.unitPrice).toFixed(2)}</td>
-                      <td className="p-2.5 text-right font-mono">₹{Number(item.totalPrice).toFixed(2)}</td>
-                      <td className="p-2.5 text-right font-mono font-bold">₹{Number(item.totalPrice).toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Financial Summary */}
-            <div className="flex justify-end">
-              <div className="w-64 space-y-1.5 text-xs text-slate-600 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                <div className="flex justify-between">
-                  <span>Subtotal:</span>
-                  <span className="font-mono">₹{Number(invoiceDetail.order?.subtotal || 0).toFixed(2)}</span>
-                </div>
-                {Number(invoiceDetail.cgstAmount) > 0 && (
-                  <>
-                    <div className="flex justify-between">
-                      <span>CGST (6%):</span>
-                      <span className="font-mono">₹{Number(invoiceDetail.cgstAmount).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>SGST (6%):</span>
-                      <span className="font-mono">₹{Number(invoiceDetail.sgstAmount).toFixed(2)}</span>
-                    </div>
-                  </>
-                )}
-                {Number(invoiceDetail.igstAmount) > 0 && (
-                  <div className="flex justify-between">
-                    <span>IGST (12%):</span>
-                    <span className="font-mono">₹{Number(invoiceDetail.igstAmount).toFixed(2)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-sm font-black text-slate-900 pt-2 border-t border-slate-300">
-                  <span>Grand Total:</span>
-                  <span className="font-mono text-emerald-900">₹{Number(invoiceDetail.grandTotal).toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Declaration & Signatures */}
-            <div className="border-t border-slate-200 pt-4 flex justify-between items-end text-[10px] text-slate-400">
-              <div>
-                <span>This is a computer-generated tax invoice issued under Section 31 of CGST Act.</span>
-                <span className="block mt-0.5">Goods once sold are packed under verified pharmaceutical inspection.</span>
-              </div>
-              <div className="text-right">
-                <span className="font-bold text-slate-700 block text-xs">For MELAYURVEDA INDIA PVT. LTD.</span>
-                <span className="block text-[10px] text-slate-400 mt-6">Authorized Signatory / Billing Desk</span>
-              </div>
-            </div>
+          <div className="p-2 sm:p-4 bg-slate-50 min-h-full">
+            <TaxInvoiceDocument
+              invoice={invoiceDetail}
+              onClose={() => {
+                setSelectedInvoiceId(null);
+                setInvoiceDetail(null);
+              }}
+              showToolbar={true}
+            />
           </div>
         )}
       </Drawer>

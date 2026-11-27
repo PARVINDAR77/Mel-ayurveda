@@ -10,6 +10,7 @@ import { Drawer } from '../../../components/ui/drawer';
 import { Modal } from '../../../components/ui/modal';
 import { ExportButton } from '../../../components/ui/export-button';
 import { ExcelColumnDef } from '../../../lib/export-excel';
+import { TaxInvoiceDocument } from '../../../components/billing/tax-invoice-document';
 import {
   FileText,
   RefreshCw,
@@ -929,163 +930,22 @@ function GSTInvoicingContent() {
           setInvoiceDetail(null);
         }}
         title="Official Tax Invoice (GST Format)"
-        width="lg"
+        width="3xl"
       >
         {loadingDetail ? (
           <div className="py-16 text-center text-xs text-slate-400">Loading tax invoice...</div>
         ) : !invoiceDetail ? (
           <div className="py-16 text-center text-xs text-slate-400">Invoice not found</div>
         ) : (
-          <div className="space-y-6 text-xs text-slate-700 border border-slate-200 bg-white p-5 rounded-lg shadow-sm">
-            {/* Invoice Top Header */}
-            <div className="flex justify-between items-start border-b border-slate-200 pb-4">
-              <div>
-                <h3 className="text-lg font-black tracking-wider text-forest-800 uppercase">
-                  MELAYURVEDA INDIA PVT. LTD.
-                </h3>
-                <p className="text-[11px] text-slate-500 mt-0.5">
-                  Corporate HQ: 101 Ayurveda Bhavan, S.G. Highway, Ahmedabad, Gujarat - 380054
-                </p>
-                <p className="text-[11px] font-mono text-slate-600 mt-0.5">
-                  <strong>GSTIN:</strong> 24AABCM1234F1Z5 | <strong>State:</strong> Gujarat (24)
-                </p>
-              </div>
-              <div className="text-right">
-                <span className="font-mono text-xs font-bold text-slate-900 bg-slate-100 px-2 py-1 rounded block">
-                  {invoiceDetail.invoiceNumber}
-                </span>
-                <span className="text-[10px] text-slate-400 block font-mono mt-1">
-                  Issued: {invoiceDetail.issuedAt ? new Date(invoiceDetail.issuedAt).toLocaleDateString('en-IN') : ''}
-                </span>
-              </div>
-            </div>
-
-            {/* Bill To & Ship To */}
-            <div className="grid grid-cols-2 gap-4 border-b border-slate-200 pb-4 text-xs">
-              <div>
-                <span className="font-bold text-slate-700 uppercase tracking-wider text-[10px] block mb-1">
-                  Bill To / Customer:
-                </span>
-                <p className="font-semibold text-slate-900">{invoiceDetail.order?.customer?.fullName}</p>
-                <p className="text-slate-500 font-mono text-[11px] mt-0.5">
-                  Phone: {invoiceDetail.order?.customer?.phoneNumber}
-                </p>
-                <p className="text-slate-500 mt-0.5">
-                  {[
-                    invoiceDetail.order?.customer?.deliveryAddress,
-                    invoiceDetail.order?.customer?.city,
-                    invoiceDetail.order?.customer?.state,
-                    invoiceDetail.order?.customer?.pincode,
-                  ]
-                    .filter(Boolean)
-                    .join(', ')}
-                </p>
-              </div>
-
-              <div>
-                <span className="font-bold text-slate-700 uppercase tracking-wider text-[10px] block mb-1">
-                  Invoice Details:
-                </span>
-                <p className="font-mono text-slate-800">Order: {invoiceDetail.order?.orderNumber}</p>
-                <p className="font-mono text-slate-800">Payment: {invoiceDetail.order?.paymentMode || 'COD'}</p>
-                <p className="text-slate-800">
-                  Place of Supply: <strong>{invoiceDetail.order?.customer?.state || 'Gujarat'}</strong>
-                </p>
-              </div>
-            </div>
-
-            {/* Itemized Table */}
-            <div>
-              <table className="w-full text-left text-xs border border-slate-200">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-700 font-semibold">
-                  <tr>
-                    <th className="p-2">Description</th>
-                    <th className="p-2 font-mono">HSN</th>
-                    <th className="p-2 text-center">Qty</th>
-                    <th className="p-2 text-right">Rate (₹)</th>
-                    <th className="p-2 text-right">Taxable (₹)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {invoiceDetail.order?.items?.map((it: any) => (
-                    <tr key={it.id}>
-                      <td className="p-2 font-medium text-slate-900">{it.product?.name}</td>
-                      <td className="p-2 font-mono text-slate-500">3004.90</td>
-                      <td className="p-2 text-center font-mono">{it.quantity}</td>
-                      <td className="p-2 text-right font-mono">
-                        {Number(it.unitPrice).toFixed(2)}
-                      </td>
-                      <td className="p-2 text-right font-mono font-medium">
-                        {Number(it.totalPrice).toFixed(2)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Statutory Tax Summary */}
-            <div className="flex justify-end">
-              <div className="w-64 space-y-1.5 text-xs">
-                <div className="flex justify-between text-slate-600">
-                  <span>Subtotal:</span>
-                  <span className="font-mono">
-                    ₹{(Number(invoiceDetail.grandTotal) - Number(invoiceDetail.totalTax)).toFixed(2)}
-                  </span>
-                </div>
-
-                {Number(invoiceDetail.cgstAmount) > 0 ? (
-                  <>
-                    <div className="flex justify-between text-slate-600">
-                      <span>CGST (6%):</span>
-                      <span className="font-mono">₹{Number(invoiceDetail.cgstAmount).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-slate-600">
-                      <span>SGST (6%):</span>
-                      <span className="font-mono">₹{Number(invoiceDetail.sgstAmount).toFixed(2)}</span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex justify-between text-slate-600">
-                    <span>IGST (12%):</span>
-                    <span className="font-mono">₹{Number(invoiceDetail.igstAmount).toFixed(2)}</span>
-                  </div>
-                )}
-
-                <div className="flex justify-between font-bold text-slate-900 pt-2 border-t border-slate-200 text-sm">
-                  <span>Grand Total:</span>
-                  <span className="font-mono text-forest-800">
-                    ₹{Number(invoiceDetail.grandTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Footer Notice */}
-            <div className="pt-3 border-t border-slate-200 text-[10px] text-slate-400 text-center">
-              This is a computer-generated GST tax invoice issued under Rule 48 of CGST Rules, 2017.
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSelectedInvoiceId(null);
-                  setInvoiceDetail(null);
-                }}
-              >
-                Close
-              </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => window.print()}
-                icon={<Printer className="h-3.5 w-3.5" />}
-              >
-                Print Invoice
-              </Button>
-            </div>
+          <div className="p-2 sm:p-4 bg-slate-50 min-h-full">
+            <TaxInvoiceDocument
+              invoice={invoiceDetail}
+              onClose={() => {
+                setSelectedInvoiceId(null);
+                setInvoiceDetail(null);
+              }}
+              showToolbar={true}
+            />
           </div>
         )}
       </Drawer>
