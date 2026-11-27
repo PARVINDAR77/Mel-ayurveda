@@ -24,6 +24,7 @@ import {
   Sparkles,
   ArrowRight,
   ShieldCheck,
+  X,
 } from 'lucide-react';
 
 export default function SuperAdminCustomerFollowupsPage() {
@@ -502,44 +503,41 @@ export default function SuperAdminCustomerFollowupsPage() {
 
       {/* Floating Batch Allocation Toolbar */}
       {selectedIds.size > 0 && (
-        <div className="sticky bottom-4 z-40 p-4 rounded-2xl bg-gradient-to-r from-emerald-950 via-emerald-900 to-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xl border border-emerald-700/50 animate-in slide-in-from-bottom duration-200">
+        <div className="sticky bottom-4 z-40 p-4 rounded-2xl bg-gradient-to-r from-[#041d13] via-[#072a1c] to-[#0a3826] text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xl border border-emerald-500/40 ring-1 ring-amber-400/20 animate-in slide-in-from-bottom duration-200 backdrop-blur-md">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-400 text-emerald-950 font-black flex items-center justify-center text-base shadow-md">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-500 text-slate-950 font-black flex items-center justify-center text-base shadow-md shrink-0">
               {selectedIds.size}
             </div>
             <div>
               <div className="font-extrabold text-sm flex items-center gap-2">
-                <span>{selectedIds.size} Clients Selected for Care Follow-Up</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-800 text-amber-300">
+                <span>{selectedIds.size} Client{selectedIds.size > 1 ? 's' : ''} Selected for Care Follow-Up</span>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-400/20 text-amber-300 border border-amber-400/40">
                   Ready to Assign
                 </span>
               </div>
-              <p className="text-[11px] text-emerald-200/90">
-                Click below to assign this client batch to an executive with campaign objective and directives.
+              <p className="text-[11px] text-emerald-200/90 mt-0.5">
+                Assign this selected client batch to an executive with dedicated campaign directives.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button
+          <div className="flex items-center gap-2.5 shrink-0">
+            <button
               type="button"
-              variant="outline"
-              size="sm"
               onClick={() => setSelectedIds(new Set())}
-              className="border-slate-600 text-white hover:bg-slate-800 text-xs"
+              className="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-200 bg-white/10 hover:bg-white/20 border border-white/20 transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
             >
-              Clear Selection
-            </Button>
-            <Button
+              <X className="w-3.5 h-3.5 text-slate-300" />
+              <span>Clear Selection</span>
+            </button>
+            <button
               type="button"
-              variant="gold"
-              size="sm"
               onClick={() => setIsAssignModalOpen(true)}
-              className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-5 shadow-lg text-xs"
-              icon={<UserCheck className="w-4 h-4 text-slate-950" />}
+              className="px-4 py-2 rounded-xl text-xs font-extrabold text-slate-950 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 hover:brightness-105 transition-all shadow-lg shadow-amber-950/40 border border-amber-200/80 flex items-center gap-2 cursor-pointer active:scale-95"
             >
-              Assign Batch to Executive ➔
-            </Button>
+              <UserCheck className="w-4 h-4 text-slate-950" />
+              <span>Assign Batch to Executive ➔</span>
+            </button>
           </div>
         </div>
       )}
