@@ -27,6 +27,11 @@ import {
   FileText,
   User,
   HeartPulse,
+  Phone,
+  ChevronRight,
+  ArrowRight,
+  X,
+  Check,
 } from 'lucide-react';
 
 export default function CustomerCareFollowUpPage() {
@@ -39,8 +44,17 @@ export default function CustomerCareFollowUpPage() {
   const [search, setSearch] = useState('');
   const [statusTab, setStatusTab] = useState<'PENDING' | 'COMPLETED' | 'ALL'>('PENDING');
 
+  // Active tab on right panel
+  const [rightTab, setRightTab] = useState<'consultation' | 'orders' | 'history'>('consultation');
+
   // Refill Modal state
   const [isRefillModalOpen, setIsRefillModalOpen] = useState(false);
+
+  // Call & Consultation Modal state
+  const [isCallModalOpen, setIsCallModalOpen] = useState(false);
+
+  // Quick action loading state
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   // Consultation Logger Form State
   const [disposition, setDisposition] = useState('CONNECTED_SATISFIED');
@@ -88,6 +102,28 @@ export default function CustomerCareFollowUpPage() {
     fetchFollowUps();
   };
 
+  // Quick 1-click status change (e.g. PENDING -> COMPLETED)
+  const handleQuickStatusChange = async (followUpId: string, newStatus: string, notes?: string) => {
+    try {
+      setIsUpdatingStatus(true);
+      setError(null);
+
+      await apiClient.patch(`/customer-followups/${followUpId}/status`, {
+        status: newStatus,
+        notes: notes || `Follow-up status marked as ${newStatus} by executive.`,
+        disposition: disposition || 'CONNECTED_SATISFIED',
+      });
+
+      setSuccessMsg(`Client follow-up successfully marked as ${newStatus}!`);
+      await fetchFollowUps();
+    } catch (err: any) {
+      setError(getErrorMessage(err));
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  // Full consultation logger submit (marks COMPLETED or RESCHEDULED)
   const handleLogSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedFollowUp) return;
@@ -112,12 +148,13 @@ export default function CustomerCareFollowUpPage() {
       };
 
       await apiClient.post(`/customer-followups/${selectedFollowUp.id}/log`, payload);
-      setSuccessMsg('Consultation notes & patient feedback successfully saved in permanent customer history!');
+      setSuccessMsg('Consultation logged & follow-up marked as completed!');
       setConsultationNotes('');
       setPatientFeedback('');
       setNextFollowUpDate('');
       setRefillRequested(false);
-      fetchFollowUps();
+      setIsCallModalOpen(false);
+      await fetchFollowUps();
     } catch (err: any) {
       setError(getErrorMessage(err));
     } finally {
@@ -161,7 +198,7 @@ export default function CustomerCareFollowUpPage() {
             Customer Wellness Follow-Up & Refill Desk
           </h2>
           <p className="text-xs text-slate-500">
-            Review client medication regimens, past order deliveries, and record consultations for permanent treatment tracking.
+            Review client medication regimens, call clients, record consultations, and confirm completed follow-ups.
           </p>
         </div>
 
@@ -235,23 +272,29 @@ export default function CustomerCareFollowUpPage() {
               {/* Status Tab Filter */}
               <div className="flex items-center gap-1 bg-slate-200/80 p-0.5 rounded-lg text-[11px] font-bold mt-2">
                 <button
+                  type="button"
                   onClick={() => setStatusTab('PENDING')}
-                  className={`flex-1 py-1 rounded-md transition ${statusTab === 'PENDING' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600'
-                    }`}
+                  className={`flex-1 py-1 rounded-md transition cursor-pointer ${
+                    statusTab === 'PENDING' ? 'bg-white text-slate-900 shadow-2xs font-extrabold' : 'text-slate-600'
+                  }`}
                 >
                   Pending
                 </button>
                 <button
+                  type="button"
                   onClick={() => setStatusTab('COMPLETED')}
-                  className={`flex-1 py-1 rounded-md transition ${statusTab === 'COMPLETED' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600'
-                    }`}
+                  className={`flex-1 py-1 rounded-md transition cursor-pointer ${
+                    statusTab === 'COMPLETED' ? 'bg-white text-slate-900 shadow-2xs font-extrabold' : 'text-slate-600'
+                  }`}
                 >
                   Completed
                 </button>
                 <button
+                  type="button"
                   onClick={() => setStatusTab('ALL')}
-                  className={`flex-1 py-1 rounded-md transition ${statusTab === 'ALL' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600'
-                    }`}
+                  className={`flex-1 py-1 rounded-md transition cursor-pointer ${
+                    statusTab === 'ALL' ? 'bg-white text-slate-900 shadow-2xs font-extrabold' : 'text-slate-600'
+                  }`}
                 >
                   All
                 </button>
@@ -291,27 +334,46 @@ export default function CustomerCareFollowUpPage() {
                     <div
                       key={item.id}
                       onClick={() => setSelectedFollowUp(item)}
-                      className={`p-3 rounded-xl border transition cursor-pointer space-y-1.5 ${isSelected
+                      className={`p-3 rounded-xl border transition cursor-pointer space-y-1.5 ${
+                        isSelected
                           ? 'border-emerald-700 bg-emerald-50/70 shadow-sm ring-1 ring-emerald-700'
                           : 'border-slate-100 hover:bg-slate-50'
-                        }`}
+                      }`}
                     >
                       <div className="flex items-center justify-between">
                         <span className="font-mono text-xs font-bold text-slate-900">
                           {cust?.customerCode || 'CLIENT'}
                         </span>
-                        <Badge
-                          variant={
-                            item.status === 'COMPLETED'
-                              ? 'success'
-                              : item.status === 'RESCHEDULED'
-                                ? 'info'
-                                : 'warning'
-                          }
-                          className="text-[9px] px-1.5 py-0"
-                        >
-                          {item.status}
-                        </Badge>
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                              item.status === 'COMPLETED'
+                                ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                                : item.status === 'RESCHEDULED'
+                                ? 'bg-purple-100 text-purple-900 border-purple-300'
+                                : 'bg-amber-100 text-amber-900 border-amber-300'
+                            }`}
+                          >
+                            {item.status}
+                          </span>
+
+                          {/* Quick Done Checkmark on Hover */}
+                          {isPending && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleQuickStatusChange(item.id, 'COMPLETED');
+                              }}
+                              disabled={isUpdatingStatus}
+                              className="text-[10px] font-bold px-1.5 py-0.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded transition shadow-2xs cursor-pointer flex items-center gap-0.5"
+                              title="1-Click Mark Completed"
+                            >
+                              <Check className="w-2.5 h-2.5" />
+                              Done
+                            </button>
+                          )}
+                        </div>
                       </div>
 
                       <div className="font-bold text-xs text-slate-900 truncate">
@@ -335,10 +397,10 @@ export default function CustomerCareFollowUpPage() {
         </div>
 
         {/* Right Column (8 cols): Selected Client Dossier & Consultation Desk */}
-        <div className="lg:col-span-8 space-y-5">
+        <div className="lg:col-span-8 space-y-4">
           {selectedFollowUp && customer ? (
             <>
-              {/* Client Demographics & Contact Bar */}
+              {/* Client Demographics & Primary Action Header */}
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
@@ -347,8 +409,32 @@ export default function CustomerCareFollowUpPage() {
                         {customer.customerCode}
                       </span>
                       <h3 className="text-xl font-black text-slate-900">{customer.fullName}</h3>
+
+                      {/* Interactive Status Dropdown Selector */}
+                      <select
+                        value={selectedFollowUp.status}
+                        onChange={(e) => handleQuickStatusChange(selectedFollowUp.id, e.target.value)}
+                        disabled={isUpdatingStatus}
+                        className={`text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border shadow-2xs cursor-pointer outline-none transition ${
+                          selectedFollowUp.status === 'COMPLETED'
+                            ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                            : selectedFollowUp.status === 'RESCHEDULED'
+                            ? 'bg-purple-100 text-purple-900 border-purple-300'
+                            : selectedFollowUp.status === 'IN_PROGRESS'
+                            ? 'bg-blue-100 text-blue-900 border-blue-300'
+                            : 'bg-amber-100 text-amber-900 border-amber-300'
+                        }`}
+                        title="Change follow-up status directly"
+                      >
+                        <option value="PENDING">⏳ PENDING</option>
+                        <option value="IN_PROGRESS">🔄 IN PROGRESS</option>
+                        <option value="COMPLETED">✅ COMPLETED (CONFIRMED)</option>
+                        <option value="RESCHEDULED">📅 RESCHEDULED</option>
+                        <option value="CANCELLED">❌ CANCELLED</option>
+                      </select>
                     </div>
-                    <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-slate-600">
+
+                    <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-slate-600">
                       <span className="font-mono font-bold text-slate-900">📞 {customer.phoneNumber}</span>
                       {customer.alternatePhone && (
                         <span className="font-mono text-slate-500">Alt: {customer.alternatePhone}</span>
@@ -363,19 +449,46 @@ export default function CustomerCareFollowUpPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <a
-                      href={`tel:${customer.phoneNumber}`}
-                      className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white shadow-sm flex items-center gap-1.5 transition"
+                  {/* Primary Operations Actions: Call, Complete, Refill */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* 1. Call Client Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.open(`tel:${customer.phoneNumber}`);
+                        setIsCallModalOpen(true);
+                      }}
+                      className="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white shadow-sm flex items-center gap-1.5 transition cursor-pointer"
                     >
                       <PhoneCall className="w-3.5 h-3.5" />
                       <span>Call Client</span>
-                    </a>
+                    </button>
+
+                    {/* 2. Direct Confirm / Complete Button */}
+                    {selectedFollowUp.status === 'PENDING' ? (
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => handleQuickStatusChange(selectedFollowUp.id, 'COMPLETED')}
+                        isLoading={isUpdatingStatus}
+                        className="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold shadow-sm text-xs flex items-center gap-1.5 cursor-pointer"
+                        icon={<CheckCircle2 className="w-3.5 h-3.5" />}
+                      >
+                        Mark Completed
+                      </Button>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-300 font-extrabold text-xs">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        Completed
+                      </span>
+                    )}
+
+                    {/* 3. Create Refill Order */}
                     <Button
                       variant="gold"
                       size="sm"
                       onClick={() => setIsRefillModalOpen(true)}
-                      className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black shadow-sm text-xs"
+                      className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black shadow-sm text-xs cursor-pointer"
                       icon={<ShoppingBag className="w-3.5 h-3.5" />}
                     >
                       Create Refill Order
@@ -399,10 +512,227 @@ export default function CustomerCareFollowUpPage() {
                     </p>
                   </div>
                 )}
+              </div>
 
-                {/* Order & Formulation Breakdown Accordion */}
-                <div className="border-t border-slate-100 pt-3 space-y-2">
-                  <div className="flex items-center justify-between">
+              {/* Right Workspace Segmented Tabs */}
+              <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-2xl border border-slate-200 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setRightTab('consultation')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold transition cursor-pointer select-none ${
+                    rightTab === 'consultation'
+                      ? 'bg-emerald-800 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <HeartPulse className="w-3.5 h-3.5" />
+                  <span>Record Consultation & Feedback</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setRightTab('orders')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold transition cursor-pointer select-none ${
+                    rightTab === 'orders'
+                      ? 'bg-emerald-800 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Package className="w-3.5 h-3.5" />
+                  <span>Order History & Regimens ({orders.length})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setRightTab('history')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold transition cursor-pointer select-none ${
+                    rightTab === 'history'
+                      ? 'bg-emerald-800 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <History className="w-3.5 h-3.5" />
+                  <span>Call Logs & History ({selectedFollowUp.logs?.length || 0})</span>
+                </button>
+              </div>
+
+              {/* TAB 1: RECORD CONSULTATION & HEALTH FEEDBACK (DEFAULT FRONT & CENTER) */}
+              {rightTab === 'consultation' && (
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <div className="flex items-center gap-2">
+                      <HeartPulse className="w-4 h-4 text-emerald-700" />
+                      <h4 className="font-extrabold text-xs uppercase tracking-wider text-slate-900">
+                        Record Follow-Up Consultation & Patient Health Feedback
+                      </h4>
+                    </div>
+                    <span className="text-[11px] text-slate-500 font-mono">
+                      Current Status: <strong className="text-emerald-700">{selectedFollowUp.status}</strong>
+                    </span>
+                  </div>
+
+                  <form onSubmit={handleLogSubmit} className="space-y-4 text-xs">
+                    {/* Health Relief Rating Selector */}
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1.5">
+                        Patient Symptom Relief / Treatment Response *
+                      </label>
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setHealthRating('SIGNIFICANT_RELIEF')}
+                          className={`p-2.5 rounded-xl border text-center transition cursor-pointer ${
+                            healthRating === 'SIGNIFICANT_RELIEF'
+                              ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold ring-1 ring-emerald-600'
+                              : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span className="block text-sm">🌟 80-100%</span>
+                          <span className="text-[10px]">Significant</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setHealthRating('MODERATE_RELIEF')}
+                          className={`p-2.5 rounded-xl border text-center transition cursor-pointer ${
+                            healthRating === 'MODERATE_RELIEF'
+                              ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold ring-1 ring-emerald-600'
+                              : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span className="block text-sm">🌿 40-79%</span>
+                          <span className="text-[10px]">Moderate</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setHealthRating('MILD_RELIEF')}
+                          className={`p-2.5 rounded-xl border text-center transition cursor-pointer ${
+                            healthRating === 'MILD_RELIEF'
+                              ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold ring-1 ring-emerald-600'
+                              : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span className="block text-sm">🌱 10-39%</span>
+                          <span className="text-[10px]">Mild Relief</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setHealthRating('NO_CHANGE')}
+                          className={`p-2.5 rounded-xl border text-center transition cursor-pointer ${
+                            healthRating === 'NO_CHANGE'
+                              ? 'border-amber-500 bg-amber-50 text-amber-950 font-bold ring-1 ring-amber-500'
+                              : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span className="block text-sm">⏳ No Change</span>
+                          <span className="text-[10px]">Adjust Dose</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setHealthRating('ADVERSE_CONCERN')}
+                          className={`p-2.5 rounded-xl border text-center transition cursor-pointer ${
+                            healthRating === 'ADVERSE_CONCERN'
+                              ? 'border-red-600 bg-red-50 text-red-950 font-bold ring-1 ring-red-600'
+                              : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span className="block text-sm">⚠️ Sensitivity</span>
+                          <span className="text-[10px]">Doctor Review</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Disposition & Call Duration */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">Call Disposition *</label>
+                        <select
+                          value={disposition}
+                          onChange={(e) => setDisposition(e.target.value)}
+                          className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:border-forest-600"
+                        >
+                          <option value="CONNECTED_SATISFIED">Connected - Patient Highly Satisfied</option>
+                          <option value="CONNECTED_REFILL_WANTED">Connected - Ready for Course Refill</option>
+                          <option value="CONNECTED_DOSAGE_CONCERN">Connected - Customer Inquired on Dosage</option>
+                          <option value="BUSY_CALL_LATER">Customer Busy - Requested Callback</option>
+                          <option value="UNREACHABLE_NO_ANSWER">Ringing - No Answer</option>
+                          <option value="WRONG_NUMBER">Wrong Number</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">Schedule Next Check-In (Optional)</label>
+                        <input
+                          type="date"
+                          value={nextFollowUpDate}
+                          onChange={(e) => setNextFollowUpDate(e.target.value)}
+                          className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:border-forest-600"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Detailed Consultation Notes */}
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">
+                        Consultation Notes & Patient Discussion *
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={consultationNotes}
+                        onChange={(e) => setConsultationNotes(e.target.value)}
+                        required
+                        placeholder="Record patient's experience with the medication, symptom relief observations, questions answered..."
+                        className="w-full rounded-xl border border-slate-300 p-3 text-xs font-medium text-slate-900 focus:outline-none focus:border-forest-600"
+                      />
+                    </div>
+
+                    {/* Refill Checkbox & Action Buttons */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-100">
+                      <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
+                        <input
+                          type="checkbox"
+                          checked={refillRequested}
+                          onChange={(e) => setRefillRequested(e.target.checked)}
+                          className="w-4 h-4 rounded text-emerald-700 cursor-pointer"
+                        />
+                        <span>Client requested monthly medication refill / continuation</span>
+                      </label>
+
+                      <div className="flex items-center gap-2">
+                        {/* Quick complete without detailed notes */}
+                        {selectedFollowUp.status === 'PENDING' && (
+                          <button
+                            type="button"
+                            onClick={() => handleQuickStatusChange(selectedFollowUp.id, 'COMPLETED')}
+                            disabled={isUpdatingStatus}
+                            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer"
+                          >
+                            Quick Mark Done
+                          </button>
+                        )}
+
+                        <Button
+                          type="submit"
+                          variant="primary"
+                          size="sm"
+                          isLoading={isSubmittingLog}
+                          className="bg-emerald-800 hover:bg-emerald-900 text-white font-extrabold px-5 shadow-md text-xs cursor-pointer"
+                        >
+                          Save & Mark Completed ➔
+                        </Button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* TAB 2: ORDER HISTORY & PRESCRIBED FORMULATIONS */}
+              {rightTab === 'orders' && (
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                     <span className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
                       <Package className="w-3.5 h-3.5 text-forest-700" />
                       Order History & Active Prescribed Formulations ({orders.length})
@@ -415,46 +745,45 @@ export default function CustomerCareFollowUpPage() {
                   </div>
 
                   {orders.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-slate-200 p-4 text-center text-xs text-slate-400">
+                    <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center text-xs text-slate-400">
                       No formulation orders booked for this customer yet.
                     </div>
                   ) : (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {orders.map((ord: any) => (
                         <div
                           key={ord.id}
-                          className="rounded-xl border border-slate-200 bg-slate-50/60 p-3.5 space-y-2 text-xs"
+                          className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-2.5 text-xs"
                         >
-                          <div className="flex items-center justify-between pb-1.5 border-b border-slate-200">
+                          <div className="flex items-center justify-between pb-2 border-b border-slate-200">
                             <div className="flex items-center gap-2">
                               <span className="font-mono font-bold text-slate-900">{ord.orderNumber}</span>
-                              <Badge
-                                variant={
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                                   ord.status === 'DELIVERED'
-                                    ? 'success'
+                                    ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
                                     : ord.status === 'CONFIRMED'
-                                      ? 'warning'
-                                      : 'slate'
-                                }
-                                className="text-[10px] px-1.5 py-0"
+                                    ? 'bg-amber-100 text-amber-900 border-amber-300'
+                                    : 'bg-slate-100 text-slate-700 border-slate-300'
+                                }`}
                               >
                                 {ord.status}
-                              </Badge>
-                              <span className="text-[11px] text-slate-500 uppercase">{ord.paymentMode}</span>
+                              </span>
+                              <span className="text-[11px] text-slate-500 uppercase font-mono">{ord.paymentMode}</span>
                             </div>
 
-                            <span className="font-mono font-black text-slate-900">
+                            <span className="font-mono font-black text-slate-900 text-sm">
                               ₹{Number(ord.totalAmount).toLocaleString('en-IN')}
                             </span>
                           </div>
 
                           {/* Line Items */}
                           {ord.items && ord.items.length > 0 && (
-                            <div className="space-y-1">
+                            <div className="space-y-1.5">
                               {ord.items.map((it: any) => (
                                 <div
                                   key={it.id}
-                                  className="flex items-start justify-between bg-white p-2 rounded-lg border border-slate-200"
+                                  className="flex items-start justify-between bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs"
                                 >
                                   <div>
                                     <strong className="text-slate-900 block text-xs">
@@ -474,7 +803,7 @@ export default function CustomerCareFollowUpPage() {
 
                           {/* Delivery Courier Tracking */}
                           {ord.shipment && (
-                            <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-200 font-mono">
+                            <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1.5 border-t border-slate-200 font-mono">
                               <span>Courier: <strong>{ord.shipment.courierPartner}</strong></span>
                               <span>AWB: <strong>{ord.shipment.trackingAwb}</strong></span>
                               <span className="text-emerald-700 font-bold">Status: {ord.shipment.status}</span>
@@ -485,217 +814,217 @@ export default function CustomerCareFollowUpPage() {
                     </div>
                   )}
                 </div>
-              </div>
+              )}
 
-              {/* Consultation Outcome & Notes Logger Card */}
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                  <div className="flex items-center gap-2">
-                    <HeartPulse className="w-4 h-4 text-emerald-700" />
-                    <h4 className="font-extrabold text-xs uppercase tracking-wider text-slate-900">
-                      Record Follow-Up Consultation & Patient Health Feedback
+              {/* TAB 3: PAST CONSULTATION HISTORY */}
+              {rightTab === 'history' && (
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+                      <History className="w-3.5 h-3.5 text-forest-700" />
+                      Past Consultation History ({selectedFollowUp.logs?.length || 0})
                     </h4>
                   </div>
-                  <span className="text-[11px] text-slate-400 font-medium">Logged in permanent history</span>
-                </div>
 
-                <form onSubmit={handleLogSubmit} className="space-y-4 text-xs">
-                  {/* Health Relief Rating Selector */}
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1.5">
-                      Patient Symptom Relief / Treatment Response *
-                    </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setHealthRating('SIGNIFICANT_RELIEF')}
-                        className={`p-2.5 rounded-xl border text-center transition ${healthRating === 'SIGNIFICANT_RELIEF'
-                            ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold ring-1 ring-emerald-600'
-                            : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                          }`}
-                      >
-                        <span className="block text-sm">🌟 80-100%</span>
-                        <span className="text-[10px]">Significant</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setHealthRating('MODERATE_RELIEF')}
-                        className={`p-2.5 rounded-xl border text-center transition ${healthRating === 'MODERATE_RELIEF'
-                            ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold ring-1 ring-emerald-600'
-                            : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                          }`}
-                      >
-                        <span className="block text-sm">🌿 40-79%</span>
-                        <span className="text-[10px]">Moderate</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setHealthRating('MILD_RELIEF')}
-                        className={`p-2.5 rounded-xl border text-center transition ${healthRating === 'MILD_RELIEF'
-                            ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold ring-1 ring-emerald-600'
-                            : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                          }`}
-                      >
-                        <span className="block text-sm">🌱 10-39%</span>
-                        <span className="text-[10px]">Mild Relief</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setHealthRating('NO_CHANGE')}
-                        className={`p-2.5 rounded-xl border text-center transition ${healthRating === 'NO_CHANGE'
-                            ? 'border-amber-500 bg-amber-50 text-amber-950 font-bold ring-1 ring-amber-500'
-                            : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                          }`}
-                      >
-                        <span className="block text-sm">⏳ No Change</span>
-                        <span className="text-[10px]">Adjust Dose</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setHealthRating('ADVERSE_CONCERN')}
-                        className={`p-2.5 rounded-xl border text-center transition ${healthRating === 'ADVERSE_CONCERN'
-                            ? 'border-red-600 bg-red-50 text-red-950 font-bold ring-1 ring-red-600'
-                            : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                          }`}
-                      >
-                        <span className="block text-sm">⚠️ Sensitivity</span>
-                        <span className="text-[10px]">Doctor Review</span>
-                      </button>
+                  {(!selectedFollowUp.logs || selectedFollowUp.logs.length === 0) ? (
+                    <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center text-xs text-slate-400">
+                      No past consultation records logged for this client yet.
                     </div>
-                  </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {selectedFollowUp.logs.map((log: any) => (
+                        <div
+                          key={log.id}
+                          className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 space-y-1.5 text-xs shadow-2xs"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-slate-900">{log.disposition}</span>
+                              {log.healthRating && (
+                                <Badge variant="success" className="text-[10px]">
+                                  {log.healthRating}
+                                </Badge>
+                              )}
+                              {log.refillRequested && (
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                                  Refill Wanted
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              {new Date(log.createdAt).toLocaleString()}
+                            </span>
+                          </div>
 
-                  {/* Disposition & Call Duration */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">Call Disposition *</label>
-                      <select
-                        value={disposition}
-                        onChange={(e) => setDisposition(e.target.value)}
-                        className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:border-forest-600"
-                      >
-                        <option value="CONNECTED_SATISFIED">Connected - Patient Highly Satisfied</option>
-                        <option value="CONNECTED_REFILL_WANTED">Connected - Ready for Course Refill</option>
-                        <option value="CONNECTED_DOSAGE_CONCERN">Connected - Customer Inquired on Dosage</option>
-                        <option value="BUSY_CALL_LATER">Customer Busy - Requested Callback</option>
-                        <option value="UNREACHABLE_NO_ANSWER">Ringing - No Answer</option>
-                        <option value="WRONG_NUMBER">Wrong Number</option>
-                      </select>
-                    </div>
+                          <p className="text-slate-700 font-medium whitespace-pre-line bg-white p-2.5 rounded-lg border border-slate-200">
+                            {log.consultationNotes}
+                          </p>
 
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">Schedule Next Check-In (Optional)</label>
-                      <input
-                        type="date"
-                        value={nextFollowUpDate}
-                        onChange={(e) => setNextFollowUpDate(e.target.value)}
-                        className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:border-forest-600"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Detailed Consultation Notes */}
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">
-                      Consultation Notes & Patient Discussion *
-                    </label>
-                    <textarea
-                      rows={3}
-                      value={consultationNotes}
-                      onChange={(e) => setConsultationNotes(e.target.value)}
-                      required
-                      placeholder="Record patient's experience with the medication, symptom relief observations, questions answered..."
-                      className="w-full rounded-xl border border-slate-300 p-3 text-xs font-medium text-slate-900 focus:outline-none focus:border-forest-600"
-                    />
-                  </div>
-
-                  {/* Refill Checkbox & Submit */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-                    <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
-                      <input
-                        type="checkbox"
-                        checked={refillRequested}
-                        onChange={(e) => setRefillRequested(e.target.checked)}
-                        className="w-4 h-4 rounded text-emerald-700"
-                      />
-                      <span>Client requested monthly medication refill / continuation</span>
-                    </label>
-
-                    <Button
-                      type="submit"
-                      variant="primary"
-                      size="sm"
-                      isLoading={isSubmittingLog}
-                      className="bg-emerald-800 hover:bg-emerald-900 text-white font-extrabold px-5 shadow-md"
-                    >
-                      Save Consultation Notes
-                    </Button>
-                  </div>
-                </form>
-              </div>
-
-              {/* Consultation History Timeline */}
-              {selectedFollowUp.logs && selectedFollowUp.logs.length > 0 && (
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
-                  <h4 className="font-bold text-xs uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
-                    <History className="w-3.5 h-3.5 text-forest-700" />
-                    Past Consultation History ({selectedFollowUp.logs.length})
-                  </h4>
-
-                  <div className="space-y-2">
-                    {selectedFollowUp.logs.map((log: any) => (
-                      <div
-                        key={log.id}
-                        className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 space-y-1.5 text-xs"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-slate-900">{log.disposition}</span>
-                            {log.healthRating && (
-                              <Badge variant="success" className="text-[10px]">
-                                {log.healthRating}
-                              </Badge>
-                            )}
-                            {log.refillRequested && (
-                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                                Refill Wanted
+                          <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono pt-1 border-t border-slate-200">
+                            <span>Caller: {log.caller?.employeeCode || 'Executive'}</span>
+                            {log.nextFollowUpDate && (
+                              <span>
+                                Next Scheduled: {new Date(log.nextFollowUpDate).toLocaleDateString()}
                               </span>
                             )}
                           </div>
-                          <span className="text-[10px] text-slate-400 font-mono">
-                            {new Date(log.createdAt).toLocaleString()}
-                          </span>
                         </div>
-
-                        <p className="text-slate-700 font-medium whitespace-pre-line">
-                          {log.consultationNotes}
-                        </p>
-
-                        <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono pt-1 border-t border-slate-200">
-                          <span>Caller: {log.caller?.employeeCode || 'Executive'}</span>
-                          {log.nextFollowUpDate && (
-                            <span>
-                              Next Scheduled: {new Date(log.nextFollowUpDate).toLocaleDateString()}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </>
           ) : (
-            <div className="rounded-2xl border border-dashed border-slate-300 p-12 text-center text-slate-400">
+            <div className="rounded-2xl border border-dashed border-slate-300 p-16 text-center text-slate-400 bg-white">
               Select a client from the left queue to open their care dossier and consultation workspace.
             </div>
           )}
         </div>
 
       </div>
+
+      {/* Call & Consultation Modal Dialog */}
+      {isCallModalOpen && customer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+            onClick={() => setIsCallModalOpen(false)}
+          />
+
+          <div className="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-[#071912] to-[#0f2e22] text-white p-5 border-b border-emerald-900/60 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 flex items-center justify-center">
+                  <PhoneCall className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Call Consultation: {customer.fullName}</h3>
+                  <p className="text-xs text-emerald-300/80 mt-0.5 font-mono">
+                    {customer.phoneNumber} • {customer.customerCode}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCallModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body Form */}
+            <form onSubmit={handleLogSubmit} className="p-6 space-y-4 text-xs bg-slate-50">
+              {/* Disposition */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Call Disposition / Result *</label>
+                <select
+                  value={disposition}
+                  onChange={(e) => setDisposition(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:border-forest-600"
+                >
+                  <option value="CONNECTED_SATISFIED">Connected - Patient Highly Satisfied</option>
+                  <option value="CONNECTED_REFILL_WANTED">Connected - Ready for Course Refill</option>
+                  <option value="CONNECTED_DOSAGE_CONCERN">Connected - Customer Inquired on Dosage</option>
+                  <option value="BUSY_CALL_LATER">Customer Busy - Requested Callback</option>
+                  <option value="UNREACHABLE_NO_ANSWER">Ringing - No Answer</option>
+                  <option value="WRONG_NUMBER">Wrong Number</option>
+                </select>
+              </div>
+
+              {/* Patient Symptom Relief */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Patient Symptom Relief Rating</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setHealthRating('SIGNIFICANT_RELIEF')}
+                    className={`p-2 rounded-lg border text-center transition cursor-pointer ${
+                      healthRating === 'SIGNIFICANT_RELIEF'
+                        ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold'
+                        : 'border-slate-200 bg-white text-slate-600'
+                    }`}
+                  >
+                    🌟 Significant (80-100%)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHealthRating('MODERATE_RELIEF')}
+                    className={`p-2 rounded-lg border text-center transition cursor-pointer ${
+                      healthRating === 'MODERATE_RELIEF'
+                        ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold'
+                        : 'border-slate-200 bg-white text-slate-600'
+                    }`}
+                  >
+                    🌿 Moderate (40-79%)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHealthRating('NO_CHANGE')}
+                    className={`p-2 rounded-lg border text-center transition cursor-pointer ${
+                      healthRating === 'NO_CHANGE'
+                        ? 'border-amber-500 bg-amber-50 text-amber-950 font-bold'
+                        : 'border-slate-200 bg-white text-slate-600'
+                    }`}
+                  >
+                    ⏳ No Change
+                  </button>
+                </div>
+              </div>
+
+              {/* Consultation Notes */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Consultation Notes *</label>
+                <textarea
+                  rows={3}
+                  value={consultationNotes}
+                  onChange={(e) => setConsultationNotes(e.target.value)}
+                  required
+                  placeholder="Summarize the patient call discussion, symptom relief, dosage clarifications..."
+                  className="w-full rounded-xl border border-slate-300 p-3 text-xs font-medium text-slate-900 focus:outline-none focus:border-forest-600"
+                />
+              </div>
+
+              {/* Refill Checkbox */}
+              <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
+                <input
+                  type="checkbox"
+                  checked={refillRequested}
+                  onChange={(e) => setRefillRequested(e.target.checked)}
+                  className="w-4 h-4 rounded text-emerald-700 cursor-pointer"
+                />
+                <span>Client requested monthly medication refill</span>
+              </label>
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-between pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleQuickStatusChange(selectedFollowUp.id, 'COMPLETED');
+                    setIsCallModalOpen(false);
+                  }}
+                  className="text-xs font-bold text-slate-600 hover:text-slate-900 underline cursor-pointer"
+                >
+                  Quick Mark Done (Skip Notes)
+                </button>
+
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  isLoading={isSubmittingLog}
+                  className="bg-emerald-800 hover:bg-emerald-900 text-white font-extrabold px-5 shadow-md cursor-pointer"
+                >
+                  Save & Confirm Completed ➔
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Refill Order Creation Modal */}
       {customer && (

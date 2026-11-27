@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { BatchAssignCustomerFollowUpDto } from './dto/batch-assign-customer-follow-up.dto';
 import { LogCustomerFollowUpDto } from './dto/log-customer-follow-up.dto';
+import { UpdateFollowUpStatusDto } from './dto/update-follow-up-status.dto';
 import { CustomerFollowUpQueryDto } from './dto/customer-follow-up-query.dto';
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -429,6 +430,65 @@ export class CustomerFollowupsService {
       success: true,
       message: 'Consultation notes and patient health feedback successfully recorded.',
       data: result,
+    };
+  }
+
+  /**
+   * Update follow-up status directly (e.g. PENDING -> COMPLETED, RESCHEDULED, IN_PROGRESS, CANCELLED)
+   */
+  async updateFollowUpStatus(id: string, dto: UpdateFollowUpStatusDto, user: AuthenticatedUser) {
+    const followUp = await this.prisma.customerFollowUp.findUnique({
+      where: { id },
+      include: { customer: true },
+    });
+
+    if (!followUp) {
+      throw new NotFoundException(`Customer follow-up with ID ${id} not found`);
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const isCompleted = dto.status === CustomerFollowUpStatus.COMPLETED;
+
+      const res = await tx.customerFollowUp.update({
+        where: { id },
+        data: {
+          status: dto.status,
+          completedAt: isCompleted ? new Date() : (dto.status === CustomerFollowUpStatus.PENDING ? null : followUp.completedAt),
+        },
+      });
+
+      // If notes or disposition provided, create a consultation log
+      if (dto.notes?.trim() || dto.disposition) {
+        await tx.customerFollowUpLog.create({
+          data: {
+            followUpId: id,
+            callerId: user.id,
+            disposition: dto.disposition?.trim() || `STATUS_${dto.status}`,
+            consultationNotes: dto.notes?.trim() || `Status updated from ${followUp.status} to ${dto.status}`,
+            callDurationSeconds: 60,
+          },
+        });
+      }
+
+      // Record Audit Log
+      await tx.auditLog.create({
+        data: {
+          userId: user.id,
+          action: 'CUSTOMER_FOLLOWUP_STATUS_UPDATED',
+          entityType: 'CustomerFollowUp',
+          entityId: id,
+          oldState: { status: followUp.status },
+          newState: { status: dto.status, notes: dto.notes, disposition: dto.disposition },
+        },
+      });
+
+      return res;
+    });
+
+    return {
+      success: true,
+      message: `Follow-up status successfully changed to ${dto.status}.`,
+      data: updated,
     };
   }
 }

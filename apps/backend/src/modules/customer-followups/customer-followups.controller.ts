@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Body,
   Param,
   Query,
@@ -11,6 +12,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { CustomerFollowupsService } from './customer-followups.service';
 import { BatchAssignCustomerFollowUpDto } from './dto/batch-assign-customer-follow-up.dto';
 import { LogCustomerFollowUpDto } from './dto/log-customer-follow-up.dto';
+import { UpdateFollowUpStatusDto } from './dto/update-follow-up-status.dto';
 import { CustomerFollowUpQueryDto } from './dto/customer-follow-up-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -81,5 +83,17 @@ export class CustomerFollowupsController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.service.logConsultation(id, dto, user);
+  }
+
+  @Patch(':id/status')
+  @Roles(RoleType.FOLLOWUP_EXECUTIVE, RoleType.SALESPERSON, RoleType.SUPER_ADMIN, RoleType.MANAGEMENT)
+  @ApiOperation({ summary: 'Update customer follow-up status (e.g. PENDING to COMPLETED, RESCHEDULED, etc.)' })
+  @ApiResponse({ status: 200, description: 'Follow-up status updated successfully' })
+  async updateStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateFollowUpStatusDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.service.updateFollowUpStatus(id, dto, user);
   }
 }
