@@ -35,6 +35,7 @@ interface DataTableProps<T> {
   totalRecords?: number;
   exportConfig?: DataTableExportConfig<T>;
   actions?: React.ReactNode;
+  hideToolbar?: boolean;
 }
 
 export function DataTable<T extends Record<string, any>>({
@@ -48,18 +49,57 @@ export function DataTable<T extends Record<string, any>>({
   pageSize = 10,
   exportConfig,
   actions,
+  hideToolbar = false,
 }: DataTableProps<T>) {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Filter data based on search term
+  // Filter data based on search term & date matching across all records
   const filteredData = React.useMemo(() => {
-    if (!searchTerm || !searchKey) return data;
-    const term = searchTerm.toLowerCase();
+    if (!searchTerm) return data;
+    const term = searchTerm.toLowerCase().trim();
     return data.filter((item) => {
-      const val = item[searchKey as string];
-      if (val === undefined || val === null) return false;
-      return String(val).toLowerCase().includes(term);
+      // 1. Check primary searchKey
+      if (searchKey) {
+        const val = item[searchKey as string];
+        if (val !== undefined && val !== null && String(val).toLowerCase().includes(term)) {
+          return true;
+        }
+      }
+      // 2. Check any standard timestamp / date fields on the item
+      const dateFields = [
+        'createdAt',
+        'updatedAt',
+        'issuedAt',
+        'calledAt',
+        'scheduledTime',
+        'orderDate',
+        'date',
+        'created_at',
+      ];
+      for (const df of dateFields) {
+        const dVal = item[df];
+        if (dVal) {
+          const d = new Date(dVal);
+          if (!isNaN(d.getTime())) {
+            const iso = d.toISOString().split('T')[0]; // 2026-11-27
+            const enIn = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).toLowerCase(); // 27 nov 2026
+            const numSlash = d.toLocaleDateString('en-IN').toLowerCase(); // 27/11/2026
+            const monthName = d.toLocaleDateString('en-US', { month: 'long' }).toLowerCase(); // november
+            const shortMonth = d.toLocaleDateString('en-US', { month: 'short' }).toLowerCase(); // nov
+            if (
+              iso.includes(term) ||
+              enIn.includes(term) ||
+              numSlash.includes(term) ||
+              monthName.includes(term) ||
+              shortMonth.includes(term)
+            ) {
+              return true;
+            }
+          }
+        }
+      }
+      return false;
     });
   }, [data, searchTerm, searchKey]);
 
@@ -72,7 +112,7 @@ export function DataTable<T extends Record<string, any>>({
 
   return (
     <div className="w-full space-y-3">
-      {(searchKey || exportConfig || actions) && (
+      {!hideToolbar && (searchKey || exportConfig || actions) && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex-1 max-w-sm">
             {searchKey && (

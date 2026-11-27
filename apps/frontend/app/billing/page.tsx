@@ -74,6 +74,7 @@ function BillingWorkspaceContent() {
   // Billing Queue State
   const [billingQueue, setBillingQueue] = useState<any[]>([]);
   const [queueSearch, setQueueSearch] = useState('');
+  const [queueDateFilter, setQueueDateFilter] = useState('');
   const [isLoadingQueue, setIsLoadingQueue] = useState(true);
 
   // Stock Inventory State
@@ -84,6 +85,7 @@ function BillingWorkspaceContent() {
   // Issued Invoices State
   const [invoices, setInvoices] = useState<any[]>([]);
   const [invoiceSearch, setInvoiceSearch] = useState('');
+  const [invoiceDateFilter, setInvoiceDateFilter] = useState('');
   const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
 
   // Bill Generation Modal State
@@ -130,12 +132,13 @@ function BillingWorkspaceContent() {
     }
   };
 
-  const fetchBillingQueue = async () => {
+  const fetchBillingQueue = async (customSearch = queueSearch, customDate = queueDateFilter) => {
     try {
       setIsLoadingQueue(true);
       setError(null);
       const params = new URLSearchParams();
-      if (queueSearch) params.append('search', queueSearch);
+      if (customSearch) params.append('search', customSearch);
+      if (customDate) params.append('date', customDate);
       const res = await apiClient.get(`/invoices/billing-queue?${params.toString()}`);
       setBillingQueue(res.data?.data || res.data || []);
     } catch (err: any) {
@@ -312,74 +315,152 @@ function BillingWorkspaceContent() {
   };
 
   // -------------------------------------------------------------
+  // DATE MATCHING HELPERS
+  // -------------------------------------------------------------
+  const matchesDateText = (dateValue: any, query: string): boolean => {
+    if (!dateValue || !query) return false;
+    const d = new Date(dateValue);
+    if (isNaN(d.getTime())) return false;
+    const q = query.toLowerCase().trim();
+    const iso = d.toISOString().split('T')[0]; // 2026-11-27
+    const enIn = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).toLowerCase(); // 27 nov 2026
+    const numSlash = d.toLocaleDateString('en-IN').toLowerCase(); // 27/11/2026
+    const monthName = d.toLocaleDateString('en-US', { month: 'long' }).toLowerCase(); // november
+    const shortMonth = d.toLocaleDateString('en-US', { month: 'short' }).toLowerCase(); // nov
+    const day = String(d.getDate()).padStart(2, '0');
+    const year = String(d.getFullYear());
+
+    return (
+      iso.includes(q) ||
+      enIn.includes(q) ||
+      numSlash.includes(q) ||
+      monthName.includes(q) ||
+      shortMonth.includes(q) ||
+      `${day} ${shortMonth}`.includes(q) ||
+      `${shortMonth} ${year}`.includes(q)
+    );
+  };
+
+  const isSameDay = (dateValue: any, targetYmd: string): boolean => {
+    if (!dateValue || !targetYmd) return true;
+    const d = new Date(dateValue);
+    if (isNaN(d.getTime())) return false;
+    return d.toISOString().split('T')[0] === targetYmd;
+  };
+
+  // -------------------------------------------------------------
   // BILLING QUEUE COLUMNS
   // -------------------------------------------------------------
   const queueColumns: Column<any>[] = [
     {
       key: 'orderNumber',
       header: 'Order Reference',
+      className: 'whitespace-nowrap min-w-[160px]',
       render: (order) => (
-        <div>
-          <span className="font-mono text-xs font-bold text-slate-900 block">{order.orderNumber}</span>
-          <span className="text-[10px] text-slate-400 font-mono">
-            {new Date(order.createdAt).toLocaleDateString('en-IN', {
-              day: '2-digit',
-              month: 'short',
-              year: 'numeric',
-            })}
+        <div className="space-y-1">
+          <span className="font-mono text-xs font-black text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 whitespace-nowrap inline-block shadow-2xs">
+            {order.orderNumber}
           </span>
+          <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-600">
+            <Calendar className="h-3 w-3 text-emerald-700 shrink-0" />
+            <span>
+              {new Date(order.createdAt).toLocaleDateString('en-IN', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+              })}
+            </span>
+          </div>
         </div>
       ),
     },
     {
       key: 'customer',
       header: 'Patient Details',
+      className: 'min-w-[190px]',
       render: (order) => (
         <div>
-          <span className="font-bold text-xs text-slate-800 block">{order.customer?.fullName || 'N/A'}</span>
-          <span className="text-[11px] font-mono text-slate-500 block flex items-center gap-1">
-            <Phone className="h-3 w-3 text-slate-400" />
-            {order.customer?.phoneNumber || 'N/A'}
-          </span>
-          <span className="text-[10px] text-slate-500 block">
-            {order.customer?.city ? `${order.customer.city}, ` : ''}
-            {order.customer?.state || 'Gujarat'} {order.customer?.pincode ? `(${order.customer.pincode})` : ''}
-          </span>
+          <span className="font-bold text-xs text-slate-900 block">{order.customer?.fullName || 'N/A'}</span>
+          <div className="flex items-center gap-1 text-[11px] font-mono text-slate-600 mt-0.5 whitespace-nowrap">
+            <Phone className="h-3 w-3 text-slate-400 shrink-0" />
+            <span>{order.customer?.phoneNumber || 'N/A'}</span>
+          </div>
+          <div className="flex items-center gap-1 text-[10px] text-slate-500 mt-0.5">
+            <MapPin className="h-3 w-3 text-slate-400 shrink-0" />
+            <span className="truncate">
+              {[order.customer?.city, order.customer?.state].filter(Boolean).join(', ')} {order.customer?.pincode ? `(${order.customer.pincode})` : ''}
+            </span>
+          </div>
         </div>
       ),
     },
     {
       key: 'items',
       header: 'Formulation Prescription',
-      render: (order) => (
-        <div className="space-y-1">
-          {order.items?.map((item: any, idx: number) => (
-            <div key={idx} className="flex items-center gap-1.5 text-xs text-slate-700">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0" />
-              <span className="font-medium text-slate-800">{item.product?.name || 'Ayurvedic Medicine'}</span>
-              <span className="text-[11px] font-mono font-bold text-emerald-800">×{item.quantity}</span>
-              <span className="text-[10px] font-mono text-slate-400">(@ ₹{Number(item.unitPrice).toLocaleString('en-IN')})</span>
+      className: 'min-w-[300px]',
+      render: (order) => {
+        let cleanNotes = '';
+        if (order.notes) {
+          cleanNotes = order.notes
+            .split('|')
+            .map((s: string) => s.trim())
+            .filter(
+              (s: string) =>
+                !s.startsWith('[LEAD:') &&
+                !s.startsWith('Booking Date:') &&
+                !s.startsWith('Booking Agent:') &&
+                !s.startsWith('[LEAD_CUSTOMER:')
+            )
+            .join(' | ');
+        }
+        return (
+          <div className="space-y-1.5 py-0.5">
+            <div className="bg-slate-50/90 rounded-lg p-2 border border-slate-200/80 space-y-1">
+              {order.items?.map((item: any, idx: number) => (
+                <div key={idx} className="flex items-center justify-between gap-2 text-xs">
+                  <span className="font-semibold text-slate-800 flex items-center gap-1.5 truncate">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0" />
+                    <span className="truncate">{item.product?.name || 'Ayurvedic Medicine'}</span>
+                  </span>
+                  <div className="flex items-center gap-1 shrink-0 font-mono text-[11px]">
+                    <span className="font-bold text-emerald-800">×{item.quantity}</span>
+                    <span className="text-slate-400">(@ ₹{Number(item.unitPrice).toLocaleString('en-IN')})</span>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      ),
+            {cleanNotes && (
+              <p className="text-[10px] text-slate-500 italic line-clamp-1">
+                📝 &quot;{cleanNotes}&quot;
+              </p>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: 'financials',
       header: 'Tax & Grand Total',
+      className: 'whitespace-nowrap min-w-[170px]',
       render: (order) => {
         const isGujarat = (order.customer?.state || '').trim().toLowerCase() === 'gujarat';
+        const mode = order.paymentMode || 'CASH_ON_DELIVERY';
+        let paymentBadgeVariant: any = 'success';
+        if (mode === 'HOLD') paymentBadgeVariant = 'warning';
+        else if (mode === 'PREPAID') paymentBadgeVariant = 'info';
+        else if (mode === 'FACE_TO_FACE') paymentBadgeVariant = 'role';
+
         return (
-          <div>
-            <span className="font-mono text-xs font-black text-slate-900 block">
+          <div className="space-y-1">
+            <span className="font-mono text-sm font-black text-slate-900 block">
               ₹{Number(order.totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </span>
-            <span className="text-[10px] font-mono text-slate-500 block">
+            <span className="text-[10px] font-mono font-medium text-slate-500 block">
               Tax: ₹{Number(order.taxAmount).toFixed(2)} ({isGujarat ? 'CGST+SGST 12%' : 'IGST 12%'})
             </span>
-            <span className="text-[10px] font-semibold text-emerald-700 block">
-              {order.paymentMode?.replace(/_/g, ' ') || 'COD'}
-            </span>
+            <Badge variant={paymentBadgeVariant} className="text-[10px] px-1.5 py-0.2">
+              {mode.replace(/_/g, ' ')}
+            </Badge>
           </div>
         );
       },
@@ -387,54 +468,70 @@ function BillingWorkspaceContent() {
     {
       key: 'approvalStatus',
       header: 'Workflow Stage',
+      className: 'whitespace-nowrap min-w-[160px]',
       render: () => (
-        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-          <Clock className="h-3 w-3 text-amber-600" /> Approved • Awaiting Bill
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 shadow-2xs whitespace-nowrap">
+          <Clock className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+          <span>Approved • Awaiting Bill</span>
         </span>
       ),
     },
     {
       key: 'actions',
       header: 'Billing Operations',
-      className: 'text-right',
+      className: 'text-right whitespace-nowrap min-w-[200px]',
       render: (order) => (
         <Button
           size="sm"
           onClick={() => setSelectedOrderForBilling(order)}
-          className="bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs shadow-sm inline-flex items-center gap-1.5"
+          className="bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs px-3.5 py-1.5 rounded-xl shadow-sm inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 transition"
         >
           <FileText className="h-3.5 w-3.5" />
-          Create Bill & Dispatch
+          <span>Create Bill & Dispatch</span>
         </Button>
       ),
     },
   ];
 
   // -------------------------------------------------------------
-  // BILLING QUEUE FILTER (REAL-TIME INSTANT SEARCH)
+  // BILLING QUEUE FILTER (REAL-TIME INSTANT SEARCH & DATE FILTER)
   // -------------------------------------------------------------
   const filteredBillingQueue = useMemo(() => {
-    if (!queueSearch.trim()) return billingQueue;
-    const q = queueSearch.toLowerCase().trim();
-    return billingQueue.filter((ord: any) => {
-      const orderNum = (ord.orderNumber || '').toLowerCase();
-      const patientName = (ord.customer?.fullName || '').toLowerCase();
-      const phone = (ord.customer?.phoneNumber || '').toLowerCase();
-      const altPhone = (ord.customer?.alternatePhone || '').toLowerCase();
-      const city = (ord.customer?.city || '').toLowerCase();
-      const notes = (ord.notes || '').toLowerCase();
-      const items = (ord.items || []).map((it: any) => (it.product?.name || '').toLowerCase()).join(' ');
-      return (
-        orderNum.includes(q) ||
-        patientName.includes(q) ||
-        phone.includes(q) ||
-        altPhone.includes(q) ||
-        city.includes(q) ||
-        notes.includes(q) ||
-        items.includes(q)
-      );
-    });
-  }, [billingQueue, queueSearch]);
+    let result = billingQueue;
+
+    // Filter by specific date if date picker is active
+    if (queueDateFilter) {
+      result = result.filter((ord: any) => isSameDay(ord.createdAt || ord.updatedAt, queueDateFilter));
+    }
+
+    // Filter by search term (matches text fields AND any parsed date)
+    if (queueSearch.trim()) {
+      const q = queueSearch.toLowerCase().trim();
+      result = result.filter((ord: any) => {
+        const orderNum = (ord.orderNumber || '').toLowerCase();
+        const patientName = (ord.customer?.fullName || '').toLowerCase();
+        const phone = (ord.customer?.phoneNumber || '').toLowerCase();
+        const altPhone = (ord.customer?.alternatePhone || '').toLowerCase();
+        const city = (ord.customer?.city || '').toLowerCase();
+        const notes = (ord.notes || '').toLowerCase();
+        const items = (ord.items || []).map((it: any) => (it.product?.name || '').toLowerCase()).join(' ');
+        const matchesDate = matchesDateText(ord.createdAt, q) || matchesDateText(ord.updatedAt, q);
+
+        return (
+          orderNum.includes(q) ||
+          patientName.includes(q) ||
+          phone.includes(q) ||
+          altPhone.includes(q) ||
+          city.includes(q) ||
+          notes.includes(q) ||
+          items.includes(q) ||
+          matchesDate
+        );
+      });
+    }
+
+    return result;
+  }, [billingQueue, queueSearch, queueDateFilter]);
 
   // -------------------------------------------------------------
   // STOCK INVENTORY COLUMNS WITH ACTIONS (ADD / REMOVE / HISTORY)
@@ -453,11 +550,13 @@ function BillingWorkspaceContent() {
     {
       key: 'sku',
       header: 'SKU & Code',
-      render: (inv) => <span className="font-mono text-xs font-bold text-slate-800">{inv.product?.sku || 'SKU-000'}</span>,
+      className: 'whitespace-nowrap min-w-[130px]',
+      render: (inv) => <span className="font-mono text-xs font-bold text-slate-800 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">{inv.product?.sku || 'SKU-000'}</span>,
     },
     {
       key: 'product',
       header: 'Formulation Name & Disease',
+      className: 'min-w-[220px]',
       render: (inv) => (
         <div>
           <span className="font-bold text-xs text-slate-900 block">{inv.product?.name}</span>
@@ -468,6 +567,7 @@ function BillingWorkspaceContent() {
     {
       key: 'pricing',
       header: 'Pricing & Tax',
+      className: 'whitespace-nowrap min-w-[140px]',
       render: (inv) => (
         <div className="text-xs">
           <span className="font-mono text-slate-900 font-bold block">₹{Number(inv.product?.sellingPrice || 0).toLocaleString('en-IN')}</span>
@@ -479,6 +579,7 @@ function BillingWorkspaceContent() {
     {
       key: 'stockLevels',
       header: 'Warehouse Stock',
+      className: 'whitespace-nowrap min-w-[200px]',
       render: (inv) => {
         const isLowStock = inv.availableQuantity <= inv.lowStockThreshold;
         return (
@@ -502,6 +603,7 @@ function BillingWorkspaceContent() {
     {
       key: 'status',
       header: 'Stock Readiness',
+      className: 'whitespace-nowrap min-w-[140px]',
       render: (inv) => {
         if (inv.availableQuantity <= 0) {
           return <Badge variant="danger">Out of Stock</Badge>;
@@ -515,12 +617,12 @@ function BillingWorkspaceContent() {
     {
       key: 'actions',
       header: 'Stock Actions',
-      className: 'text-right',
+      className: 'text-right whitespace-nowrap min-w-[240px]',
       render: (inv) => (
-        <div className="flex items-center justify-end gap-1.5">
+        <div className="flex items-center justify-end gap-1.5 whitespace-nowrap shrink-0">
           <button
             onClick={() => openManageStockModal(inv, 'ADD')}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-800 text-white hover:bg-emerald-900 shadow-2xs transition cursor-pointer"
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-800 text-white hover:bg-emerald-900 shadow-2xs transition cursor-pointer whitespace-nowrap shrink-0"
             title="Add Units / Batch Restock"
           >
             <Plus className="h-3 w-3" />
@@ -528,7 +630,7 @@ function BillingWorkspaceContent() {
           </button>
           <button
             onClick={() => openManageStockModal(inv, 'REMOVE')}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white text-rose-700 hover:bg-rose-50 border border-rose-200 shadow-2xs transition cursor-pointer"
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white text-rose-700 hover:bg-rose-50 border border-rose-200 shadow-2xs transition cursor-pointer whitespace-nowrap shrink-0"
             title="Remove / Deduct Damaged or Expired Units"
           >
             <Minus className="h-3 w-3" />
@@ -536,7 +638,7 @@ function BillingWorkspaceContent() {
           </button>
           <button
             onClick={() => openStockHistory(inv)}
-            className="p-1 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-slate-200 shadow-2xs transition cursor-pointer"
+            className="p-1 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-slate-200 shadow-2xs transition cursor-pointer whitespace-nowrap shrink-0"
             title="Inspect Stock Movement Ledger"
           >
             <History className="h-3.5 w-3.5" />
@@ -547,76 +649,102 @@ function BillingWorkspaceContent() {
   ];
 
   // -------------------------------------------------------------
-  // ISSUED INVOICES COLUMNS (WITH REAL-TIME INSTANT SEARCH)
+  // ISSUED INVOICES COLUMNS (WITH REAL-TIME INSTANT SEARCH & DATE FILTER)
   // -------------------------------------------------------------
   const filteredInvoices = useMemo(() => {
-    if (!invoiceSearch.trim()) return invoices;
-    const q = invoiceSearch.toLowerCase().trim();
-    return invoices.filter((inv: any) => {
-      const invNum = (inv.invoiceNumber || '').toLowerCase();
-      const orderNum = (inv.order?.orderNumber || '').toLowerCase();
-      const patient = (inv.order?.customer?.fullName || '').toLowerCase();
-      const phone = (inv.order?.customer?.phoneNumber || '').toLowerCase();
-      const city = (inv.order?.customer?.city || '').toLowerCase();
-      const state = (inv.order?.customer?.state || '').toLowerCase();
-      return (
-        invNum.includes(q) ||
-        orderNum.includes(q) ||
-        patient.includes(q) ||
-        phone.includes(q) ||
-        city.includes(q) ||
-        state.includes(q)
-      );
-    });
-  }, [invoices, invoiceSearch]);
+    let result = invoices;
+
+    if (invoiceDateFilter) {
+      result = result.filter((inv: any) => isSameDay(inv.issuedAt || inv.createdAt, invoiceDateFilter));
+    }
+
+    if (invoiceSearch.trim()) {
+      const q = invoiceSearch.toLowerCase().trim();
+      result = result.filter((inv: any) => {
+        const invNum = (inv.invoiceNumber || '').toLowerCase();
+        const orderNum = (inv.order?.orderNumber || '').toLowerCase();
+        const patient = (inv.order?.customer?.fullName || '').toLowerCase();
+        const phone = (inv.order?.customer?.phoneNumber || '').toLowerCase();
+        const city = (inv.order?.customer?.city || '').toLowerCase();
+        const state = (inv.order?.customer?.state || '').toLowerCase();
+        const matchesDate = matchesDateText(inv.issuedAt, q) || matchesDateText(inv.createdAt, q);
+
+        return (
+          invNum.includes(q) ||
+          orderNum.includes(q) ||
+          patient.includes(q) ||
+          phone.includes(q) ||
+          city.includes(q) ||
+          state.includes(q) ||
+          matchesDate
+        );
+      });
+    }
+
+    return result;
+  }, [invoices, invoiceSearch, invoiceDateFilter]);
 
   const invoiceColumns: Column<any>[] = [
     {
       key: 'invoiceNumber',
       header: 'GST Invoice #',
+      className: 'whitespace-nowrap min-w-[170px]',
       render: (inv) => (
-        <div>
-          <span className="font-mono text-xs font-bold text-slate-900 block">{inv.invoiceNumber}</span>
-          <span className="text-[10px] text-slate-400 font-mono">
-            Issued: {new Date(inv.issuedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} • {new Date(inv.issuedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+        <div className="space-y-1">
+          <span className="font-mono text-xs font-black text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 whitespace-nowrap inline-block shadow-2xs">
+            {inv.invoiceNumber}
           </span>
+          <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-600">
+            <Calendar className="h-3 w-3 text-emerald-700 shrink-0" />
+            <span>
+              {new Date(inv.issuedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+            </span>
+          </div>
         </div>
       ),
     },
     {
       key: 'orderNumber',
       header: 'Order Code',
-      render: (inv) => <span className="font-mono text-xs font-bold text-slate-800">{inv.order?.orderNumber || 'N/A'}</span>,
+      className: 'whitespace-nowrap min-w-[140px]',
+      render: (inv) => (
+        <span className="font-mono text-xs font-bold text-slate-800 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
+          {inv.order?.orderNumber || 'N/A'}
+        </span>
+      ),
     },
     {
       key: 'customer',
       header: 'Customer Details',
+      className: 'min-w-[190px]',
       render: (inv) => (
         <div>
           <span className="font-bold text-xs text-slate-900 block">{inv.order?.customer?.fullName || 'N/A'}</span>
-          <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-mono">
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-600 font-mono mt-0.5">
             {inv.order?.customer?.phoneNumber && <span>📞 {inv.order.customer.phoneNumber}</span>}
-            {inv.order?.customer?.city && <span>• {inv.order.customer.city}</span>}
-            {inv.order?.customer?.state && <span>({inv.order.customer.state})</span>}
           </div>
+          <span className="text-[10px] text-slate-500 block truncate mt-0.5">
+            {[inv.order?.customer?.city, inv.order?.customer?.state].filter(Boolean).join(', ')}
+          </span>
         </div>
       ),
     },
     {
       key: 'taxBifurcation',
       header: 'GST Breakdown',
+      className: 'whitespace-nowrap min-w-[170px]',
       render: (inv) => {
         const isIntra = Number(inv.igstAmount) === 0;
         return (
-          <div className="text-[11px] font-mono text-slate-600">
+          <div className="text-[11px] font-mono text-slate-700 space-y-0.5">
             {isIntra ? (
-              <span>
+              <span className="block font-medium">
                 CGST: ₹{Number(inv.cgstAmount).toFixed(2)} | SGST: ₹{Number(inv.sgstAmount).toFixed(2)}
               </span>
             ) : (
-              <span>IGST: ₹{Number(inv.igstAmount).toFixed(2)}</span>
+              <span className="block font-medium">IGST: ₹{Number(inv.igstAmount).toFixed(2)}</span>
             )}
-            <span className="block text-[10px] text-slate-400">Total Tax: ₹{Number(inv.totalTax).toFixed(2)}</span>
+            <span className="block text-[10px] text-slate-500 font-semibold">Total Tax: ₹{Number(inv.totalTax).toFixed(2)}</span>
           </div>
         );
       },
@@ -624,8 +752,9 @@ function BillingWorkspaceContent() {
     {
       key: 'grandTotal',
       header: 'Invoice Amount',
+      className: 'whitespace-nowrap min-w-[140px]',
       render: (inv) => (
-        <span className="font-mono text-xs font-black text-slate-900">
+        <span className="font-mono text-sm font-black text-slate-900 block">
           ₹{Number(inv.grandTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
         </span>
       ),
@@ -633,25 +762,27 @@ function BillingWorkspaceContent() {
     {
       key: 'status',
       header: 'Fulfillment State',
+      className: 'whitespace-nowrap min-w-[150px]',
       render: (inv) => (
-        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-          <Truck className="h-3 w-3 text-emerald-600" /> Billed • Dispatched
+        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shadow-2xs whitespace-nowrap">
+          <Truck className="h-3 w-3 text-emerald-600 shrink-0" />
+          <span>Billed • Dispatched</span>
         </span>
       ),
     },
     {
       key: 'actions',
       header: 'Actions',
-      className: 'text-right',
+      className: 'text-right whitespace-nowrap min-w-[150px]',
       render: (inv) => (
         <Button
           size="sm"
           variant="outline"
           onClick={() => openInvoiceDetail(inv.id)}
-          className="text-xs font-semibold inline-flex items-center gap-1"
+          className="text-xs font-semibold inline-flex items-center gap-1 whitespace-nowrap shrink-0 shadow-2xs"
         >
           <Eye className="h-3.5 w-3.5" />
-          View & Print Bill
+          <span>View & Print Bill</span>
         </Button>
       ),
     },
@@ -725,50 +856,12 @@ function BillingWorkspaceContent() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <ExportButton
-            data={
-              activeTab === 'QUEUE'
-                ? filteredBillingQueue
-                : activeTab === 'STOCK'
-                ? filteredStock
-                : filteredInvoices
-            }
-            columns={
-              activeTab === 'QUEUE'
-                ? billingQueueExportColumns
-                : activeTab === 'STOCK'
-                ? stockExportColumns
-                : billingInvoicesExportColumns
-            }
-            fileName={
-              activeTab === 'QUEUE'
-                ? 'Melayurveda_Billing_Queue'
-                : activeTab === 'STOCK'
-                ? 'Melayurveda_Warehouse_Stock'
-                : 'Melayurveda_Billing_History_Invoices'
-            }
-            sheetName={
-              activeTab === 'QUEUE'
-                ? 'Awaiting Invoicing'
-                : activeTab === 'STOCK'
-                ? 'Warehouse Inventory'
-                : 'Issued GST Invoices'
-            }
-            label={
-              activeTab === 'QUEUE'
-                ? 'Export Billing Queue'
-                : activeTab === 'STOCK'
-                ? 'Export Stock List'
-                : 'Export Billing History'
-            }
-          />
-
+        <div className="flex items-center gap-2 shrink-0">
           <Button
             variant={activeTab === 'INVOICES' ? 'primary' : 'outline'}
             size="sm"
             onClick={() => setActiveTab('INVOICES')}
-            className={activeTab === 'INVOICES' ? 'bg-emerald-800 text-white font-bold shadow-xs' : 'text-slate-700 font-semibold'}
+            className={activeTab === 'INVOICES' ? 'bg-emerald-800 text-white font-bold shadow-xs whitespace-nowrap' : 'text-slate-700 font-semibold whitespace-nowrap'}
             icon={<History className="h-3.5 w-3.5" />}
           >
             Billing History ({stats.totalInvoicesCount ?? invoices.length})
@@ -778,6 +871,7 @@ function BillingWorkspaceContent() {
             variant="outline"
             size="sm"
             onClick={refreshAll}
+            className="whitespace-nowrap shadow-2xs"
             icon={<RefreshCw className="h-3.5 w-3.5" />}
           >
             Refresh Desk
@@ -929,37 +1023,112 @@ function BillingWorkspaceContent() {
       {activeTab === 'QUEUE' && (
         <div className="space-y-4">
           <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">Approved Orders Ready for GST Invoicing</h3>
-                <p className="text-xs text-slate-500">
-                  These formulation orders have passed medical sign-off and approval. Generate the official GST invoice to release each order into the Dispatch Queue.
-                </p>
-              </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Approved Orders Ready for GST Invoicing</h3>
+              <p className="text-xs text-slate-500">
+                These formulation orders have passed medical sign-off and approval. Generate the official GST invoice to release each order into the Dispatch Queue.
+              </p>
+            </div>
 
-              <div className="relative w-full sm:w-72">
-                <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search by order #, patient name, phone..."
-                  value={queueSearch}
-                  onChange={(e) => setQueueSearch(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && fetchBillingQueue()}
-                  className="w-full pl-9 pr-8 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-700"
-                />
-                {queueSearch && (
+            {/* Unified Search, Date Filter & Export Control Bar */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-slate-50/80 p-3 rounded-2xl border border-slate-200/80">
+              <div className="flex flex-wrap items-center gap-2 flex-1">
+                {/* Search Text Input */}
+                <div className="relative min-w-[260px] flex-1 max-w-md">
+                  <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by order #, patient, phone, city, medicine, or date..."
+                    value={queueSearch}
+                    onChange={(e) => setQueueSearch(e.target.value)}
+                    className="w-full pl-9 pr-8 py-2 text-xs rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-700 shadow-2xs font-medium"
+                  />
+                  {queueSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setQueueSearch('')}
+                      className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                      title="Clear Search"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Date Picker Input */}
+                <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-300 shadow-2xs">
+                  <Calendar className="h-3.5 w-3.5 text-emerald-700 shrink-0" />
+                  <span className="text-[11px] font-bold text-slate-700">Date:</span>
+                  <input
+                    type="date"
+                    value={queueDateFilter}
+                    onChange={(e) => setQueueDateFilter(e.target.value)}
+                    className="text-xs text-slate-800 bg-transparent focus:outline-none cursor-pointer font-semibold"
+                  />
+                  {queueDateFilter && (
+                    <button
+                      type="button"
+                      onClick={() => setQueueDateFilter('')}
+                      className="text-slate-400 hover:text-slate-600 ml-1 cursor-pointer"
+                      title="Clear Date"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Quick Date Pills */}
+                <div className="flex items-center gap-1">
                   <button
                     type="button"
-                    onClick={() => {
-                      setQueueSearch('');
-                      fetchBillingQueue();
-                    }}
-                    className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                    title="Clear Search"
+                    onClick={() => setQueueDateFilter('')}
+                    className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition cursor-pointer ${
+                      !queueDateFilter
+                        ? 'bg-emerald-800 text-white shadow-xs'
+                        : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
+                    }`}
                   >
-                    <X className="h-3.5 w-3.5" />
+                    All Dates
                   </button>
-                )}
+                  <button
+                    type="button"
+                    onClick={() => setQueueDateFilter(new Date().toISOString().split('T')[0])}
+                    className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition cursor-pointer ${
+                      queueDateFilter === new Date().toISOString().split('T')[0]
+                        ? 'bg-emerald-800 text-white shadow-xs'
+                        : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
+                    }`}
+                  >
+                    Today
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setQueueDateFilter(new Date(Date.now() - 86400000).toISOString().split('T')[0])
+                    }
+                    className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition cursor-pointer ${
+                      queueDateFilter === new Date(Date.now() - 86400000).toISOString().split('T')[0]
+                        ? 'bg-emerald-800 text-white shadow-xs'
+                        : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
+                    }`}
+                  >
+                    Yesterday
+                  </button>
+                </div>
+              </div>
+
+              {/* Right: Export & Entry Count */}
+              <div className="flex items-center gap-2 justify-end shrink-0">
+                <ExportButton
+                  data={filteredBillingQueue}
+                  columns={billingQueueExportColumns}
+                  fileName="Melayurveda_Billing_Queue"
+                  sheetName="Awaiting Invoicing"
+                  label="Export to Excel"
+                />
+                <span className="text-xs font-mono font-bold text-slate-700 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs whitespace-nowrap">
+                  Showing {filteredBillingQueue.length} of {billingQueue.length} orders
+                </span>
               </div>
             </div>
 
@@ -968,11 +1137,7 @@ function BillingWorkspaceContent() {
               data={filteredBillingQueue}
               isLoading={isLoadingQueue}
               emptyMessage="No approved orders currently awaiting billing. All caught up!"
-              exportConfig={{
-                fileName: 'Melayurveda_Billing_Queue',
-                sheetName: 'Awaiting Invoicing',
-                columns: billingQueueExportColumns,
-              }}
+              hideToolbar={true}
             />
           </div>
         </div>
@@ -982,32 +1147,44 @@ function BillingWorkspaceContent() {
       {activeTab === 'STOCK' && (
         <div className="space-y-4">
           <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">Warehouse Stock & Batch Inventory Management</h3>
-                <p className="text-xs text-slate-500">
-                  Full inventory control: add factory stock batches, write off damaged or expired items, calibrate count, and track chronological movements.
-                </p>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Warehouse Stock & Batch Inventory Management</h3>
+              <p className="text-xs text-slate-500">
+                Full inventory control: add factory stock batches, write off damaged or expired items, calibrate count, and track chronological movements.
+              </p>
+            </div>
+
+            {/* Unified Search & Quick Restock Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/80 p-3 rounded-2xl border border-slate-200/80">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Filter stock by name, SKU, target ailment..."
+                  value={stockSearch}
+                  onChange={(e) => setStockSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-700 shadow-2xs font-medium"
+                />
               </div>
 
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <div className="relative flex-1 sm:w-64">
-                  <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Filter stock by name, SKU, ailment..."
-                    value={stockSearch}
-                    onChange={(e) => setStockSearch(e.target.value)}
-                    className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-700"
-                  />
-                </div>
+              <div className="flex items-center gap-2 justify-end shrink-0">
                 <button
                   onClick={openGeneralRestockModal}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-800 text-white hover:bg-emerald-900 shadow-sm transition shrink-0 cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-800 text-white hover:bg-emerald-900 shadow-sm transition shrink-0 cursor-pointer"
                 >
                   <PlusCircle className="h-4 w-4" />
                   <span>+ Quick Restock</span>
                 </button>
+                <ExportButton
+                  data={filteredStock}
+                  columns={stockExportColumns}
+                  fileName="Melayurveda_Warehouse_Stock"
+                  sheetName="Warehouse Inventory"
+                  label="Export to Excel"
+                />
+                <span className="text-xs font-mono font-bold text-slate-700 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs whitespace-nowrap">
+                  Showing {filteredStock.length} SKUs
+                </span>
               </div>
             </div>
 
@@ -1016,11 +1193,7 @@ function BillingWorkspaceContent() {
               data={filteredStock}
               isLoading={isLoadingStock}
               emptyMessage="No inventory records found."
-              exportConfig={{
-                fileName: 'Melayurveda_Warehouse_Stock',
-                sheetName: 'Warehouse Inventory',
-                columns: stockExportColumns,
-              }}
+              hideToolbar={true}
             />
           </div>
         </div>
@@ -1030,36 +1203,115 @@ function BillingWorkspaceContent() {
       {activeTab === 'INVOICES' && (
         <div className="space-y-4">
           <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <History className="h-4 w-4 text-emerald-700" />
-                  Statutory Billing History & GST Invoices Ledger
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Historical archive of all issued GST tax bills and commercial invoices. Track chronological billing records, print tax invoices, and verify dispatch transitions.
-                </p>
-              </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <History className="h-4 w-4 text-emerald-700" />
+                Statutory Billing History & GST Invoices Ledger
+              </h3>
+              <p className="text-xs text-slate-500">
+                Historical archive of all issued GST tax bills and commercial invoices. Track chronological billing records, print tax invoices, and verify dispatch transitions.
+              </p>
+            </div>
 
-              <div className="relative w-full sm:w-72">
-                <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search billing history by invoice #, order #, patient..."
-                  value={invoiceSearch}
-                  onChange={(e) => setInvoiceSearch(e.target.value)}
-                  className="w-full pl-9 pr-8 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-700"
-                />
-                {invoiceSearch && (
+            {/* Unified Search, Date Filter & Export Control Bar for Invoices */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-slate-50/80 p-3 rounded-2xl border border-slate-200/80">
+              <div className="flex flex-wrap items-center gap-2 flex-1">
+                {/* Search Text Input */}
+                <div className="relative min-w-[260px] flex-1 max-w-md">
+                  <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search billing history by invoice #, order #, patient, phone, or date..."
+                    value={invoiceSearch}
+                    onChange={(e) => setInvoiceSearch(e.target.value)}
+                    className="w-full pl-9 pr-8 py-2 text-xs rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-700 shadow-2xs font-medium"
+                  />
+                  {invoiceSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setInvoiceSearch('')}
+                      className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                      title="Clear Search"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Date Picker Input */}
+                <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-300 shadow-2xs">
+                  <Calendar className="h-3.5 w-3.5 text-emerald-700 shrink-0" />
+                  <span className="text-[11px] font-bold text-slate-700">Date:</span>
+                  <input
+                    type="date"
+                    value={invoiceDateFilter}
+                    onChange={(e) => setInvoiceDateFilter(e.target.value)}
+                    className="text-xs text-slate-800 bg-transparent focus:outline-none cursor-pointer font-semibold"
+                  />
+                  {invoiceDateFilter && (
+                    <button
+                      type="button"
+                      onClick={() => setInvoiceDateFilter('')}
+                      className="text-slate-400 hover:text-slate-600 ml-1 cursor-pointer"
+                      title="Clear Date"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Quick Date Pills */}
+                <div className="flex items-center gap-1">
                   <button
                     type="button"
-                    onClick={() => setInvoiceSearch('')}
-                    className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                    title="Clear Search"
+                    onClick={() => setInvoiceDateFilter('')}
+                    className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition cursor-pointer ${
+                      !invoiceDateFilter
+                        ? 'bg-emerald-800 text-white shadow-xs'
+                        : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
+                    }`}
                   >
-                    <X className="h-3.5 w-3.5" />
+                    All Dates
                   </button>
-                )}
+                  <button
+                    type="button"
+                    onClick={() => setInvoiceDateFilter(new Date().toISOString().split('T')[0])}
+                    className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition cursor-pointer ${
+                      invoiceDateFilter === new Date().toISOString().split('T')[0]
+                        ? 'bg-emerald-800 text-white shadow-xs'
+                        : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
+                    }`}
+                  >
+                    Today
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setInvoiceDateFilter(new Date(Date.now() - 86400000).toISOString().split('T')[0])
+                    }
+                    className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition cursor-pointer ${
+                      invoiceDateFilter === new Date(Date.now() - 86400000).toISOString().split('T')[0]
+                        ? 'bg-emerald-800 text-white shadow-xs'
+                        : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
+                    }`}
+                  >
+                    Yesterday
+                  </button>
+                </div>
+              </div>
+
+              {/* Right: Export & Entry Count */}
+              <div className="flex items-center gap-2 justify-end shrink-0">
+                <ExportButton
+                  data={filteredInvoices}
+                  columns={billingInvoicesExportColumns}
+                  fileName="Melayurveda_Billing_History_Invoices"
+                  sheetName="Issued GST Invoices"
+                  label="Export to Excel"
+                />
+                <span className="text-xs font-mono font-bold text-slate-700 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs whitespace-nowrap">
+                  Showing {filteredInvoices.length} of {invoices.length} bills
+                </span>
               </div>
             </div>
 
@@ -1068,11 +1320,7 @@ function BillingWorkspaceContent() {
               data={filteredInvoices}
               isLoading={isLoadingInvoices}
               emptyMessage="No GST tax invoices issued yet in billing history."
-              exportConfig={{
-                fileName: 'Melayurveda_Billing_History_Invoices',
-                sheetName: 'Issued GST Invoices',
-                columns: billingInvoicesExportColumns,
-              }}
+              hideToolbar={true}
             />
           </div>
         </div>

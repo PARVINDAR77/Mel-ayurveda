@@ -270,12 +270,26 @@ export class InvoicesService {
   /**
    * Retrieves confirmed orders awaiting billing (Approved, but no invoice yet)
    */
-  async getBillingQueue(page = 1, limit = 50, search?: string) {
+  async getBillingQueue(page = 1, limit = 50, search?: string, date?: string) {
     const skip = (page - 1) * limit;
     const where: any = {
       status: { in: [OrderStatus.CONFIRMED, OrderStatus.PROCESSING] },
       invoice: null,
     };
+
+    if (date && date.trim()) {
+      const d = new Date(date.trim());
+      if (!isNaN(d.getTime())) {
+        const startOfDay = new Date(d);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(d);
+        endOfDay.setHours(23, 59, 59, 999);
+        where.createdAt = {
+          gte: startOfDay,
+          lte: endOfDay,
+        };
+      }
+    }
 
     if (search && search.trim()) {
       const q = search.trim();
