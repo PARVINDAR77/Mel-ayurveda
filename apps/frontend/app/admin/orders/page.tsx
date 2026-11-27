@@ -13,6 +13,7 @@ import { EditOrderModal } from '../../../components/orders/edit-order-modal';
 import { DecideOrderModal } from '../../../components/orders/decide-order-modal';
 import { ExportButton } from '../../../components/ui/export-button';
 import { ExcelColumnDef } from '../../../lib/export-excel';
+import { OFFICIAL_SALES_ORDERS_EXPORT_COLUMNS } from '../../../lib/official-sales-export';
 import {
   Package,
   PlusCircle,
@@ -506,23 +507,8 @@ export default function SuperAdminOrdersPage() {
     },
   ];
 
-  const adminOrdersExportColumns: ExcelColumnDef[] = [
-    { header: 'Order Reference', accessor: 'orderNumber' },
-    { header: 'Order Date', accessor: (o: any) => o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-IN') : '' },
-    { header: 'Patient Name', accessor: 'customer.fullName' },
-    { header: 'Contact Phone', accessor: 'customer.phoneNumber' },
-    { header: 'Shipping Address', accessor: 'shippingAddress' },
-    { header: 'City', accessor: 'customer.city' },
-    { header: 'State', accessor: 'customer.state' },
-    { header: 'Prescribed Items', accessor: (o: any) => o.items?.map((it: any) => `${it.product?.name || it.productName || 'Item'} (x${it.quantity})`).join(', ') || '' },
-    { header: 'Subtotal (₹)', accessor: (o: any) => Number(o.subtotal || 0) },
-    { header: 'Tax (₹)', accessor: (o: any) => Number(o.taxAmount || 0) },
-    { header: 'Grand Total (₹)', accessor: (o: any) => Number(o.grandTotal || 0) },
-    { header: 'Payment Method', accessor: 'paymentMethod' },
-    { header: 'Approval Status', accessor: 'approvalStatus' },
-    { header: 'Workflow Stage', accessor: 'status' },
-    { header: 'Sales Consultant', accessor: (o: any) => o.assignedUser?.fullName || o.creator?.fullName || 'Direct Ingestion' },
-  ];
+  // Official 27-column Melayurveda Sales Excel Export Template
+  const adminOrdersExportColumns: ExcelColumnDef[] = OFFICIAL_SALES_ORDERS_EXPORT_COLUMNS;
 
   return (
     <div className="space-y-6">

@@ -28,17 +28,17 @@ export function ExportButton<T = any>({
 }: ExportButtonProps<T>) {
   const [isExporting, setIsExporting] = useState(false);
 
-  const handleExport = () => {
+  const handleExport = async () => {
     setIsExporting(true);
     try {
-      exportToExcel({
+      await exportToExcel({
         data,
         columns,
         fileName,
         sheetName,
       });
     } finally {
-      setTimeout(() => setIsExporting(false), 400);
+      setIsExporting(false);
     }
   };
 

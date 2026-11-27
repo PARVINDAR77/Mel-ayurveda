@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 export interface ExcelColumnDef<T = any> {
   header: string;
@@ -16,29 +16,46 @@ export interface ExportToExcelOptions<T = any> {
 /**
  * Universal Excel (.xlsx) Exporter for Melayurveda CRM
  * Features:
- * - Generates clean native Microsoft Excel .xlsx workbooks
+ * - Generates clean native Microsoft Excel .xlsx workbooks using ExcelJS
+ * - Exact official theme styling (Office Blue header fill #4F81BD, bold font, light cell borders)
+ * - Supports duplicate header names (e.g. repeated 'QUANITY' columns)
  * - Handles nested paths ('customer.fullName', 'order.orderNumber')
  * - Supports custom computed formatter functions
- * - Computes dynamic auto-column widths so text is never truncated
  * - Client-side download with zero server delay
  */
-export function exportToExcel<T = any>({
+export async function exportToExcel<T = any>({
   data,
   columns,
   fileName,
-  sheetName = 'Melayurveda Export',
-}: ExportToExcelOptions<T>): boolean {
+  sheetName = 'Sales Export',
+}: ExportToExcelOptions<T>): Promise<boolean> {
   try {
     if (!data || data.length === 0) {
       alert('No data records available to export.');
       return false;
     }
 
-    // 1. Transform objects into row arrays matching column definitions (supports identical header names like QUANITY)
-    const headers = columns.map((col) => col.header);
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Melayurveda CRM';
+    workbook.lastModifiedBy = 'Melayurveda System';
+    workbook.created = new Date();
+    workbook.modified = new Date();
 
-    const dataRows = data.map((item) => {
-      return columns.map((col) => {
+    const cleanSheetName = (sheetName || 'Sheet1').replace(/[*?:/\\\[\]]/g, '').substring(0, 31);
+    const worksheet = workbook.addWorksheet(cleanSheetName, {
+      views: [{ showGridLines: true }],
+    });
+
+    // 1. Setup Columns with precise widths
+    worksheet.columns = columns.map((col, idx) => ({
+      header: col.header,
+      key: `col_${idx}`,
+      width: col.width || Math.min(Math.max((col.header || '').length + 4, 14), 45),
+    }));
+
+    // 2. Transform objects into row value arrays matching column definitions
+    data.forEach((item) => {
+      const rowValues = columns.map((col) => {
         let value: any;
 
         if (typeof col.accessor === 'function') {
@@ -48,7 +65,6 @@ export function exportToExcel<T = any>({
             value = '';
           }
         } else if (typeof col.accessor === 'string' && col.accessor.includes('.')) {
-          // Resolve deep nested paths like 'customer.fullName'
           const parts = col.accessor.split('.');
           let current: any = item;
           for (const part of parts) {
@@ -63,15 +79,18 @@ export function exportToExcel<T = any>({
           value = item[col.accessor as keyof T];
         }
 
-        // Clean formatting for Excel cells
+        // Formatting
         if (value === null || value === undefined) {
           return '';
         } else if (value instanceof Date) {
-          return value.toLocaleString('en-IN');
+          const d = value;
+          const day = String(d.getDate()).padStart(2, '0');
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const year = d.getFullYear();
+          return `${day}-${month}-${year}`;
         } else if (typeof value === 'boolean') {
           return value ? 'YES' : 'NO';
         } else if (typeof value === 'object') {
-          // If array of items (e.g. order items), format as readable comma string
           if (Array.isArray(value)) {
             return value
               .map((v) => (v?.name || v?.product?.name ? `${v.name || v.product.name} (x${v.quantity || 1})` : JSON.stringify(v)))
@@ -79,45 +98,90 @@ export function exportToExcel<T = any>({
           } else {
             return JSON.stringify(value);
           }
-        } else {
-          return value;
         }
-      });
-    });
-
-    // 2. Create Sheet from Array of Arrays (AOA) preserving all 27 distinct columns
-    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
-
-    // 3. Calculate dynamic column widths (wch) based on cell lengths
-    const colWidths = columns.map((col, colIdx) => {
-      if (col.width) return { wch: col.width };
-
-      let maxLen = (col.header || '').length;
-      dataRows.forEach((row) => {
-        const valStr = String(row[colIdx] ?? '');
-        if (valStr.length > maxLen) {
-          maxLen = valStr.length;
-        }
+        return value;
       });
 
-      // Clamp column width between 12 and 48 characters
-      return { wch: Math.min(Math.max(maxLen + 3, 12), 48) };
+      worksheet.addRow(rowValues);
     });
 
-    worksheet['!cols'] = colWidths;
+    // 3. Style Header Row (Row 1) - Exact Match to Official Template
+    const headerRow = worksheet.getRow(1);
+    headerRow.height = 30; // Prominent header row height
 
-    // 4. Create Workbook and Append Sheet
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName.substring(0, 31)); // Excel limits sheet name to 31 chars
+    headerRow.eachCell({ includeEmpty: true }, (cell) => {
+      // Official Accent Blue background fill
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF4F81BD' }, // Exact Excel Template Theme Blue (#4F81BD)
+      };
+      // Crisp bold typography
+      cell.font = {
+        name: 'Calibri',
+        size: 11,
+        bold: true,
+        color: { argb: 'FF000000' }, // Bold black text
+      };
+      // Centered alignment with text wrapping
+      cell.alignment = {
+        vertical: 'middle',
+        horizontal: 'center',
+        wrapText: true,
+      };
+      // Distinct cell grid borders
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FF1F497D' } },
+        left: { style: 'thin', color: { argb: 'FF1F497D' } },
+        bottom: { style: 'medium', color: { argb: 'FF1F497D' } },
+        right: { style: 'thin', color: { argb: 'FF1F497D' } },
+      };
+    });
 
-    // 5. Trigger download with date stamp
+    // 4. Style Data Rows (Row 2 onwards) with thin borders and readable alignment
+    const rowCount = worksheet.rowCount;
+    for (let r = 2; r <= rowCount; r++) {
+      const dataRow = worksheet.getRow(r);
+      dataRow.height = 22;
+      dataRow.eachCell({ includeEmpty: true }, (cell) => {
+        cell.font = {
+          name: 'Calibri',
+          size: 10,
+          color: { argb: 'FF1A202C' },
+        };
+        cell.alignment = {
+          vertical: 'middle',
+          horizontal: typeof cell.value === 'number' ? 'right' : 'left',
+        };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+          left: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+          bottom: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+          right: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+        };
+      });
+    }
+
+    // 5. Generate buffer and trigger client download
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+
     const dateStamp = new Date().toISOString().split('T')[0];
     const safeFileName = fileName.replace(/[^a-zA-Z0-9_-]/g, '_');
-    XLSX.writeFile(workbook, `${safeFileName}_${dateStamp}.xlsx`);
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${safeFileName}_${dateStamp}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(link);
 
     return true;
   } catch (err: any) {
-    console.error('Failed to export Excel file:', err);
+    console.error('Failed to export Excel file with ExcelJS:', err);
     alert(`Export failed: ${err.message || 'Unknown error generating spreadsheet'}`);
     return false;
   }

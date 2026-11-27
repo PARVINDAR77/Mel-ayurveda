@@ -11,6 +11,7 @@ import { CreateOrderModal } from '../../../components/sales/create-order-modal';
 import { ScheduleFollowUpModal } from '../../../components/sales/schedule-follow-up-modal';
 import { ExportButton } from '../../../components/ui/export-button';
 import { ExcelColumnDef } from '../../../lib/export-excel';
+import { OFFICIAL_SALES_LEADS_EXPORT_COLUMNS } from '../../../lib/official-sales-export';
 import {
   UserPlus,
   RefreshCw,
@@ -208,18 +209,8 @@ export default function MyAssignedLeadsPage() {
     },
   ];
 
-  const leadsExportColumns: ExcelColumnDef[] = [
-    { header: 'Lead Reference', accessor: 'leadNumber' },
-    { header: 'Patient Name', accessor: 'customerName' },
-    { header: 'Contact Phone', accessor: 'primaryPhone' },
-    { header: 'Alternate Phone', accessor: 'alternatePhone' },
-    { header: 'City', accessor: 'city' },
-    { header: 'State', accessor: 'state' },
-    { header: 'Primary Ailment', accessor: 'primaryAilment' },
-    { header: 'Status / Stage', accessor: 'stage' },
-    { header: 'Lead Source', accessor: (l: any) => l.source?.name || 'Inbound Direct' },
-    { header: 'Assigned Date', accessor: (l: any) => l.createdAt ? new Date(l.createdAt).toLocaleDateString('en-IN') : '' },
-  ];
+  // Official 27-column Melayurveda Sales Excel Export Template
+  const leadsExportColumns: ExcelColumnDef[] = OFFICIAL_SALES_LEADS_EXPORT_COLUMNS;
 
   return (
     <div className="space-y-6">
