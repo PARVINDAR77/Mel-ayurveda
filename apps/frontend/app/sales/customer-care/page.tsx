@@ -7,7 +7,6 @@ import { apiClient, getErrorMessage } from '../../../lib/api-client';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../../components/ui/card';
-import { CreateOrderModal } from '../../../components/sales/create-order-modal';
 import { ExportButton } from '../../../components/ui/export-button';
 import { ExcelColumnDef } from '../../../lib/export-excel';
 import {
@@ -19,7 +18,6 @@ import {
   Package,
   MapPin,
   Sparkles,
-  ShoppingBag,
   RefreshCw,
   Search,
   Activity,
@@ -46,9 +44,6 @@ export default function CustomerCareFollowUpPage() {
 
   // Active tab on right panel
   const [rightTab, setRightTab] = useState<'consultation' | 'orders' | 'history'>('consultation');
-
-  // Refill Modal state
-  const [isRefillModalOpen, setIsRefillModalOpen] = useState(false);
 
   // Call & Consultation Modal state
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
@@ -487,17 +482,6 @@ export default function CustomerCareFollowUpPage() {
                         Completed
                       </span>
                     )}
-
-                    {/* 3. Create Refill Order */}
-                    <Button
-                      variant="gold"
-                      size="sm"
-                      onClick={() => setIsRefillModalOpen(true)}
-                      className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black shadow-sm text-xs cursor-pointer"
-                      icon={<ShoppingBag className="w-3.5 h-3.5" />}
-                    >
-                      Create Refill Order
-                    </Button>
                   </div>
                 </div>
 
@@ -1026,29 +1010,6 @@ export default function CustomerCareFollowUpPage() {
             </form>
           </div>
         </div>
-      )}
-
-      {/* Refill Order Creation Modal */}
-      {customer && (
-        <CreateOrderModal
-          isOpen={isRefillModalOpen}
-          onClose={() => setIsRefillModalOpen(false)}
-          onOrderCreated={() => {
-            setIsRefillModalOpen(false);
-            setSuccessMsg('Refill order successfully created! Forwarded to Approval Desk.');
-            fetchFollowUps();
-          }}
-          lead={{
-            id: customer.convertedFromId,
-            customerName: customer.fullName,
-            phoneNumber: customer.phoneNumber,
-            alternatePhone: customer.alternatePhone,
-            address: customer.address,
-            city: customer.city,
-            state: customer.state,
-            pincode: customer.pincode,
-          }}
-        />
       )}
     </div>
   );
