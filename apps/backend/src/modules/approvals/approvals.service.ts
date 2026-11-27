@@ -222,13 +222,89 @@ export class ApprovalsService {
       return true;
     });
 
+    // Fetch latest linked formulation orders for all leads in the queue to show exact prescribed medicines
+    const leadIds = deduplicated.map((r) => r.leadId).filter(Boolean) as string[];
+    const phoneNumbers = deduplicated.map((r) => r.lead?.phoneNumber).filter(Boolean) as string[];
+    const phoneDigitsList = phoneNumbers.map((p) => p.replace(/\D/g, '').slice(-10)).filter(Boolean);
+
+    const ordersByLeadId = new Map<string, any>();
+    if (leadIds.length > 0) {
+      const orders = await this.prisma.order.findMany({
+        where: {
+          OR: [
+            { customer: { convertedFromId: { in: leadIds } } },
+            ...leadIds.map((lid) => ({ notes: { contains: lid } })),
+            ...(phoneNumbers.length > 0 ? [{ customer: { phoneNumber: { in: phoneNumbers } } }] : []),
+            ...(phoneDigitsList.length > 0 ? [{ customer: { phoneNumber: { in: phoneDigitsList } } }] : []),
+          ],
+        },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          items: {
+            include: {
+              product: {
+                select: {
+                  id: true,
+                  sku: true,
+                  name: true,
+                  dosageForm: true,
+                  sellingPrice: true,
+                  mrpPrice: true,
+                  targetDisease: true,
+                },
+              },
+            },
+          },
+          customer: {
+            select: {
+              id: true,
+              fullName: true,
+              phoneNumber: true,
+              city: true,
+              state: true,
+              convertedFromId: true,
+            },
+          },
+        },
+      });
+
+      // Map orders to leads accurately
+      for (const order of orders) {
+        // 1. Direct convertedFromId match
+        if (order.customer?.convertedFromId && !ordersByLeadId.has(order.customer.convertedFromId)) {
+          ordersByLeadId.set(order.customer.convertedFromId, order);
+        }
+        // 2. Note [LEAD:xxx] match
+        for (const lid of leadIds) {
+          if (!ordersByLeadId.has(lid) && order.notes?.includes(lid)) {
+            ordersByLeadId.set(lid, order);
+          }
+        }
+        // 3. Customer phone match
+        for (const r of deduplicated) {
+          if (r.leadId && !ordersByLeadId.has(r.leadId) && r.lead?.phoneNumber) {
+            const cleanLeadPhone = r.lead.phoneNumber.replace(/\D/g, '').slice(-10);
+            const cleanCustPhone = order.customer?.phoneNumber?.replace(/\D/g, '').slice(-10);
+            if (cleanLeadPhone && cleanCustPhone && cleanLeadPhone === cleanCustPhone) {
+              ordersByLeadId.set(r.leadId, order);
+            }
+          }
+        }
+      }
+    }
+
+    const enriched = deduplicated.map((r) => ({
+      ...r,
+      order: r.leadId ? ordersByLeadId.get(r.leadId) || null : null,
+    }));
+
     return {
-      data: deduplicated,
+      data: enriched,
       meta: {
         page,
         limit,
-        total: deduplicated.length,
-        totalPages: Math.ceil(deduplicated.length / limit),
+        total: enriched.length,
+        totalPages: Math.ceil(enriched.length / limit),
       },
     };
   }

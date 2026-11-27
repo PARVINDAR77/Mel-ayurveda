@@ -194,8 +194,9 @@ export default function ApprovalQueuePage() {
     {
       key: 'leadCode',
       header: 'Lead Code',
+      className: 'whitespace-nowrap min-w-[130px]',
       render: (item) => (
-        <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+        <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 whitespace-nowrap inline-block">
           {item.lead?.leadCode || item.leadId?.slice(0, 8)}
         </span>
       ),
@@ -203,14 +204,15 @@ export default function ApprovalQueuePage() {
     {
       key: 'customer',
       header: 'Customer Details',
+      className: 'min-w-[180px]',
       render: (item) => (
         <div>
           <span className="font-semibold text-slate-900">{item.lead?.customerName || 'Customer'}</span>
-          <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono mt-0.5">
-            <Phone className="h-3 w-3 text-slate-400" />
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono mt-0.5 whitespace-nowrap">
+            <Phone className="h-3 w-3 text-slate-400 shrink-0" />
             <span>{item.lead?.phoneNumber}</span>
           </div>
-          <span className="text-[11px] text-slate-400">
+          <span className="text-[11px] text-slate-400 block mt-0.5">
             {[item.lead?.city, item.lead?.state].filter(Boolean).join(', ')}
           </span>
         </div>
@@ -218,45 +220,120 @@ export default function ApprovalQueuePage() {
     },
     {
       key: 'condition',
-      header: 'Prescribed Condition / Therapy',
-      render: (item) => (
-        <div>
-          <span className="font-medium text-slate-800 text-xs block">
-            {item.lead?.productInterest || 'Ayurvedic Treatment'}
-          </span>
-          {item.officerNotes && (
-            <span className="text-[11px] font-semibold text-emerald-900 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block mt-1">
-              💊 {item.officerNotes}
-            </span>
-          )}
-          {item.lead?.pendingReviews?.[0] && !item.officerNotes && (
-            <span className="text-[11px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 inline-block mt-0.5">
-              Panel 03: {item.lead.pendingReviews[0].reason}
-            </span>
-          )}
-        </div>
-      ),
+      header: 'Prescribed Formulations / Therapy',
+      className: 'min-w-[320px]',
+      render: (item) => {
+        const order = item.order;
+        const hasOrderItems = order?.items && order.items.length > 0;
+
+        // Clean customer / dosage notes if present (strip internal technical markers)
+        let cleanCustomerNotes = '';
+        if (order?.notes) {
+          cleanCustomerNotes = order.notes
+            .split('|')
+            .map((s: string) => s.trim())
+            .filter(
+              (s: string) =>
+                !s.startsWith('[LEAD:') &&
+                !s.startsWith('Booking Date:') &&
+                !s.startsWith('Booking Agent:') &&
+                !s.startsWith('[LEAD_CUSTOMER:')
+            )
+            .join(' | ');
+        }
+
+        return (
+          <div className="space-y-1.5 py-0.5">
+            {/* Condition Header / Lead Product Concern */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {order?.orderNumber && (
+                <span className="text-[10px] font-mono font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 shrink-0">
+                  {order.orderNumber}
+                </span>
+              )}
+              <span className="font-semibold text-slate-800 text-xs">
+                {order?.items?.[0]?.product?.targetDisease || item.lead?.productInterest || 'Ayurvedic Treatment'}
+              </span>
+            </div>
+
+            {/* Prescribed Formulation Medicines List */}
+            {hasOrderItems ? (
+              <div className="bg-slate-50/90 rounded-lg p-2 border border-slate-200/80 space-y-1">
+                {order.items.map((it: any, idx: number) => (
+                  <div key={idx} className="flex items-center justify-between gap-2 text-xs">
+                    <span className="font-semibold text-slate-800 flex items-center gap-1.5 truncate">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0" />
+                      <span className="truncate">{it.product?.name || 'Formulation Kit'}</span>
+                    </span>
+                    <div className="flex items-center gap-1 shrink-0 font-mono text-[11px]">
+                      <span className="font-bold text-emerald-800">×{it.quantity}</span>
+                      <span className="text-slate-400">(@ ₹{Number(it.unitPrice).toLocaleString('en-IN')})</span>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Pricing & Payment Mode Row */}
+                <div className="border-t border-slate-200/70 pt-1 flex items-center justify-between text-[11px] font-mono">
+                  <span className="text-slate-500">
+                    Total: <strong className="text-slate-900 font-bold">₹{Number(order.totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                  </span>
+                  <span className="text-emerald-700 font-bold uppercase text-[10px] bg-emerald-100/70 px-1.5 py-0.5 rounded">
+                    {order.paymentMode?.replace(/_/g, ' ') || 'COD'}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="text-[11px] text-slate-600 bg-amber-50/70 border border-amber-200/70 rounded px-2 py-1">
+                <span>📋 Inquiry: <strong className="text-slate-800">{item.lead?.productInterest || 'General Consultation'}</strong></span>
+              </div>
+            )}
+
+            {/* Special Instructions or Delivery Notes */}
+            {cleanCustomerNotes && (
+              <p className="text-[11px] text-slate-600 italic line-clamp-2">
+                📝 &quot;{cleanCustomerNotes}&quot;
+              </p>
+            )}
+
+            {/* Officer note or Review reason if set (and not duplicate) */}
+            {item.officerNotes && !item.officerNotes.startsWith('Prescription Order') && (
+              <span className="text-[11px] font-medium text-emerald-900 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block">
+                💬 {item.officerNotes}
+              </span>
+            )}
+
+            {item.lead?.pendingReviews?.[0]?.reason && (
+              <span className="text-[10px] font-medium text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 inline-block">
+                ⚠️ Review Note: {item.lead.pendingReviews[0].reason}
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: 'status',
       header: 'Status',
+      className: 'whitespace-nowrap min-w-[140px]',
       render: (item) => <Badge variant="leadStatus">{item.lead?.status || 'APPROVAL_REQUESTED'}</Badge>,
     },
     {
       key: 'priority',
       header: 'Priority',
+      className: 'whitespace-nowrap min-w-[90px]',
       render: (item) => <Badge variant="priority">{item.lead?.priority || 'NORMAL'}</Badge>,
     },
     {
       key: 'officer',
       header: 'Desk Lock',
+      className: 'whitespace-nowrap min-w-[130px]',
       render: (item) => {
         if (!item.officerId) {
           return <Badge variant="info">Unclaimed FIFO</Badge>;
         }
         return (
-          <div className="flex items-center gap-1 text-xs text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-mono">
-            <Lock className="h-3 w-3 text-amber-600" />
+          <div className="flex items-center gap-1 text-xs text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-mono whitespace-nowrap">
+            <Lock className="h-3 w-3 text-amber-600 shrink-0" />
             <span>{item.officer?.employeeCode || 'Claimed'}</span>
           </div>
         );
@@ -265,12 +342,13 @@ export default function ApprovalQueuePage() {
     {
       key: 'createdAt',
       header: 'Forwarded',
+      className: 'whitespace-nowrap min-w-[110px]',
       render: (item) => {
         const timeDiffHours = (new Date().getTime() - new Date(item.createdAt).getTime()) / (1000 * 60 * 60);
         return (
-          <div className="text-xs text-slate-500">
+          <div className="text-xs text-slate-500 whitespace-nowrap">
             <div className="flex items-center gap-1">
-              <Calendar className="h-3 w-3 text-slate-400" />
+              <Calendar className="h-3 w-3 text-slate-400 shrink-0" />
               <span>{new Date(item.createdAt).toLocaleDateString()}</span>
             </div>
             <span className="text-[10px] block font-mono text-slate-400">
@@ -283,15 +361,16 @@ export default function ApprovalQueuePage() {
     {
       key: 'actions',
       header: 'Actions',
-      className: 'text-right',
+      className: 'text-right whitespace-nowrap min-w-[280px]',
       render: (item) => {
         return (
-          <div className="flex items-center justify-end gap-1.5">
+          <div className="flex items-center justify-end gap-1.5 whitespace-nowrap shrink-0">
             <Button
               variant="outline"
               size="sm"
               onClick={() => openDossier(item.id)}
               icon={<Eye className="h-3 w-3" />}
+              className="text-[11px] px-2.5 py-1 h-7 whitespace-nowrap shrink-0"
             >
               Dossier
             </Button>
@@ -301,7 +380,7 @@ export default function ApprovalQueuePage() {
               size="sm"
               onClick={() => handleQuickApprove(item)}
               isLoading={isDeciding}
-              className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium"
+              className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-[11px] px-2.5 py-1 h-7 whitespace-nowrap shrink-0"
               icon={<CheckCircle2 className="h-3 w-3" />}
             >
               Approve & Clear
@@ -314,6 +393,7 @@ export default function ApprovalQueuePage() {
                 onClick={() => handleClaim(item.id)}
                 isLoading={isClaiming === item.id}
                 icon={<Lock className="h-3 w-3" />}
+                className="text-[11px] px-2.5 py-1 h-7 whitespace-nowrap shrink-0"
               >
                 Claim
               </Button>
@@ -323,6 +403,7 @@ export default function ApprovalQueuePage() {
                 size="sm"
                 onClick={() => openDecideModal(item)}
                 icon={<ShieldCheck className="h-3 w-3" />}
+                className="text-[11px] px-2.5 py-1 h-7 whitespace-nowrap shrink-0"
               >
                 Sign-Off
               </Button>

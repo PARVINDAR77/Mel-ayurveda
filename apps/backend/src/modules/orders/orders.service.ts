@@ -82,19 +82,8 @@ export class OrdersService {
       });
     }
 
-    // Determine target customer name safely, preventing agent profile autofill from overriding lead patient name
-    const agentFullName = `${user.firstName || ''} ${user.lastName || ''}`.trim().toLowerCase();
-    const enteredName = dto.customerName?.trim() || '';
-    let targetCustomerName = leadRecord?.customerName || enteredName || 'Valued Patient';
-
-    if (enteredName) {
-      if (agentFullName && enteredName.toLowerCase() === agentFullName && leadRecord?.customerName) {
-        // Form autofill erroneously populated the logged-in agent's name. Revert to lead's real patient name!
-        targetCustomerName = leadRecord.customerName;
-      } else {
-        targetCustomerName = enteredName;
-      }
-    }
+    // Determine target customer name safely, prioritizing lead's registered patient name to avoid autofill mixups
+    let targetCustomerName = leadRecord?.customerName?.trim() || dto.customerName?.trim() || 'Valued Patient';
 
     if (!customer && (dto.phoneNumber || dto.leadId || leadRecord)) {
       const rawPhone = dto.phoneNumber || leadRecord?.phoneNumber;
@@ -288,7 +277,13 @@ export class OrdersService {
           const existingApproval = await tx.approvalRequest.findFirst({
             where: { leadId: dto.leadId, decision: null },
           });
-          const noteText = `Prescription Order ${orderNumber} created with ${dto.items.length} formulation kit(s). Total: ₹${order.totalAmount}. Patient: ${targetCustomerName}. Awaiting clinical sign-off.`;
+          const formulationSummary = orderItemsData
+            .map((it) => {
+              const p = productMap.get(it.productId);
+              return `${p?.name || 'Formulation'} (×${it.quantity})`;
+            })
+            .join(', ');
+          const noteText = `Formulations: ${formulationSummary} | Order ${orderNumber} (₹${order.totalAmount})`;
           if (!existingApproval) {
             await tx.approvalRequest.create({
               data: {
