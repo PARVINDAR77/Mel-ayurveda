@@ -75,17 +75,39 @@ export class CustomerFollowupsService {
       const createdItems = [];
 
       for (const cust of customers) {
-        const followUp = await tx.customerFollowUp.create({
-          data: {
+        // If customer already has an existing pending follow-up, reassign/update it to avoid duplicates
+        const existingPending = await tx.customerFollowUp.findFirst({
+          where: {
             customerId: cust.id,
-            assignedToId: executive.id,
-            assignedById: user.id,
-            scheduledTime: scheduledDate,
-            campaignObjective: dto.campaignObjective.trim(),
-            adminDirectives: dto.adminDirectives?.trim() || null,
             status: CustomerFollowUpStatus.PENDING,
           },
         });
+
+        let followUp;
+        if (existingPending) {
+          followUp = await tx.customerFollowUp.update({
+            where: { id: existingPending.id },
+            data: {
+              assignedToId: executive.id,
+              assignedById: user.id,
+              scheduledTime: scheduledDate,
+              campaignObjective: dto.campaignObjective.trim(),
+              adminDirectives: dto.adminDirectives?.trim() || null,
+            },
+          });
+        } else {
+          followUp = await tx.customerFollowUp.create({
+            data: {
+              customerId: cust.id,
+              assignedToId: executive.id,
+              assignedById: user.id,
+              scheduledTime: scheduledDate,
+              campaignObjective: dto.campaignObjective.trim(),
+              adminDirectives: dto.adminDirectives?.trim() || null,
+              status: CustomerFollowUpStatus.PENDING,
+            },
+          });
+        }
         createdItems.push(followUp);
       }
 
@@ -169,7 +191,7 @@ export class CustomerFollowupsService {
         where,
         skip,
         take: limit,
-        orderBy: [{ scheduledTime: 'asc' }, { createdAt: 'desc' }],
+        orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
         include: {
           customer: {
             include: {
@@ -269,7 +291,7 @@ export class CustomerFollowupsService {
         where,
         skip,
         take: limit,
-        orderBy: [{ scheduledTime: 'asc' }, { createdAt: 'desc' }],
+        orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
         include: {
           customer: {
             include: {
@@ -415,6 +437,21 @@ export class CustomerFollowupsService {
         },
       });
 
+      // If completed, also close any older stale pending duplicate follow-ups for this customer
+      if (nextStatus === CustomerFollowUpStatus.COMPLETED) {
+        await tx.customerFollowUp.updateMany({
+          where: {
+            customerId: followUp.customerId,
+            id: { not: followUp.id },
+            status: CustomerFollowUpStatus.PENDING,
+          },
+          data: {
+            status: CustomerFollowUpStatus.COMPLETED,
+            completedAt: new Date(),
+          },
+        });
+      }
+
       // 3. Record Audit Log
       await tx.auditLog.create({
         data: {
@@ -484,6 +521,21 @@ export class CustomerFollowupsService {
             healthRating: (dto.healthRating as any) || null,
             consultationNotes: dto.notes?.trim() || `Status updated from ${followUp.status} to ${dto.status}`,
             callDurationSeconds: 60,
+          },
+        });
+      }
+
+      // If completed, also close any older stale pending duplicate follow-ups for this customer
+      if (isCompleted) {
+        await tx.customerFollowUp.updateMany({
+          where: {
+            customerId: followUp.customerId,
+            id: { not: id },
+            status: CustomerFollowUpStatus.PENDING,
+          },
+          data: {
+            status: CustomerFollowUpStatus.COMPLETED,
+            completedAt: new Date(),
           },
         });
       }

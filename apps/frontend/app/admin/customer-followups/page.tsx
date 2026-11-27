@@ -104,10 +104,38 @@ export default function SuperAdminCustomerFollowupsPage() {
     setSelectedIds(new Set(slice));
   };
 
-  // Mapping customer follow-up status
-  const followUpMap = new Map();
+  // Mapping customer follow-up status: Select canonical follow-up with logs & latest update
+  const customerFollowUpsGroup = new Map<string, any[]>();
   followUps.forEach((f) => {
-    followUpMap.set(f.customerId, f);
+    if (!customerFollowUpsGroup.has(f.customerId)) {
+      customerFollowUpsGroup.set(f.customerId, []);
+    }
+    customerFollowUpsGroup.get(f.customerId)!.push(f);
+  });
+
+  const followUpMap = new Map();
+  customerFollowUpsGroup.forEach((list, custId) => {
+    // Sort so:
+    // 1. Follow-up with consultation logs comes first
+    // 2. Most recently completed or updated comes first
+    list.sort((a, b) => {
+      const logsA = a.logs?.length || 0;
+      const logsB = b.logs?.length || 0;
+      if (logsA !== logsB) return logsB - logsA; // prioritize having consultation logs!
+
+      const timeA = new Date(a.completedAt || a.updatedAt || a.createdAt).getTime();
+      const timeB = new Date(b.completedAt || b.updatedAt || b.createdAt).getTime();
+      return timeB - timeA;
+    });
+
+    const canonical = list[0];
+    // Also aggregate all logs across duplicate records for full history in dossier
+    const allLogs = list.flatMap((item) => item.logs || []).sort(
+      (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    canonical.logs = allLogs;
+    canonical.allFollowUps = list;
+    followUpMap.set(custId, canonical);
   });
 
   const filteredCustomers = customers.filter((cust) => {
