@@ -363,14 +363,14 @@ export default function CustomerCareFollowUpPage() {
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleQuickStatusChange(item.id, 'COMPLETED');
+                                setSelectedFollowUp(item);
+                                setIsCallModalOpen(true);
                               }}
-                              disabled={isUpdatingStatus}
-                              className="text-[10px] font-bold px-1.5 py-0.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded transition shadow-2xs cursor-pointer flex items-center gap-0.5"
-                              title="1-Click Mark Completed"
+                              className="text-[10px] font-bold px-2 py-0.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-md transition shadow-2xs cursor-pointer flex items-center gap-1"
+                              title="Enter details & mark completed"
                             >
                               <Check className="w-2.5 h-2.5" />
-                              Done
+                              Complete
                             </button>
                           )}
                         </div>
@@ -413,7 +413,13 @@ export default function CustomerCareFollowUpPage() {
                       {/* Interactive Status Dropdown Selector */}
                       <select
                         value={selectedFollowUp.status}
-                        onChange={(e) => handleQuickStatusChange(selectedFollowUp.id, e.target.value)}
+                        onChange={(e) => {
+                          if (e.target.value === 'COMPLETED') {
+                            setIsCallModalOpen(true);
+                          } else {
+                            handleQuickStatusChange(selectedFollowUp.id, e.target.value);
+                          }
+                        }}
                         disabled={isUpdatingStatus}
                         className={`text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border shadow-2xs cursor-pointer outline-none transition ${
                           selectedFollowUp.status === 'COMPLETED'
@@ -464,13 +470,12 @@ export default function CustomerCareFollowUpPage() {
                       <span>Call Client</span>
                     </button>
 
-                    {/* 2. Direct Confirm / Complete Button */}
+                    {/* 2. Direct Confirm / Complete Button (Opens Mandatory Details Form) */}
                     {selectedFollowUp.status === 'PENDING' ? (
                       <Button
                         variant="primary"
                         size="sm"
-                        onClick={() => handleQuickStatusChange(selectedFollowUp.id, 'COMPLETED')}
-                        isLoading={isUpdatingStatus}
+                        onClick={() => setIsCallModalOpen(true)}
                         className="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold shadow-sm text-xs flex items-center gap-1.5 cursor-pointer"
                         icon={<CheckCircle2 className="w-3.5 h-3.5" />}
                       >
@@ -702,26 +707,14 @@ export default function CustomerCareFollowUpPage() {
                       </label>
 
                       <div className="flex items-center gap-2">
-                        {/* Quick complete without detailed notes */}
-                        {selectedFollowUp.status === 'PENDING' && (
-                          <button
-                            type="button"
-                            onClick={() => handleQuickStatusChange(selectedFollowUp.id, 'COMPLETED')}
-                            disabled={isUpdatingStatus}
-                            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer"
-                          >
-                            Quick Mark Done
-                          </button>
-                        )}
-
                         <Button
                           type="submit"
                           variant="primary"
                           size="sm"
                           isLoading={isSubmittingLog}
-                          className="bg-emerald-800 hover:bg-emerald-900 text-white font-extrabold px-5 shadow-md text-xs cursor-pointer"
+                          className="bg-emerald-800 hover:bg-emerald-900 text-white font-extrabold px-6 shadow-md text-xs cursor-pointer"
                         >
-                          Save & Mark Completed ➔
+                          Save Mandatory Details & Mark Completed ➔
                         </Button>
                       </div>
                     </div>
@@ -897,29 +890,37 @@ export default function CustomerCareFollowUpPage() {
             <div className="bg-gradient-to-r from-[#071912] to-[#0f2e22] text-white p-5 border-b border-emerald-900/60 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 flex items-center justify-center">
-                  <PhoneCall className="w-5 h-5" />
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">Call Consultation: {customer.fullName}</h3>
+                  <h3 className="text-base font-bold text-white">Confirm Follow-Up: Mandatory Details</h3>
                   <p className="text-xs text-emerald-300/80 mt-0.5 font-mono">
-                    {customer.phoneNumber} • {customer.customerCode}
+                    {customer.fullName} • {customer.phoneNumber} • {customer.customerCode}
                   </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsCallModalOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
+            </div>
+
+            {/* Mandatory Instruction Alert Banner */}
+            <div className="bg-amber-50 border-b border-amber-200 px-6 py-2.5 flex items-center gap-2 text-xs text-amber-900 font-bold">
+              <AlertCircle className="w-4 h-4 text-amber-700 shrink-0" />
+              <span>Mandatory: Please record patient treatment response & notes to confirm completion.</span>
             </div>
 
             {/* Modal Body Form */}
             <form onSubmit={handleLogSubmit} className="p-6 space-y-4 text-xs bg-slate-50">
               {/* Disposition */}
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Call Disposition / Result *</label>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Call Disposition / Outcome <span className="text-rose-600 font-black">*</span>
+                </label>
                 <select
                   value={disposition}
                   onChange={(e) => setDisposition(e.target.value)}
@@ -936,15 +937,17 @@ export default function CustomerCareFollowUpPage() {
 
               {/* Patient Symptom Relief */}
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Patient Symptom Relief Rating</label>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Patient Symptom Relief / Response <span className="text-rose-600 font-black">*</span>
+                </label>
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
                     onClick={() => setHealthRating('SIGNIFICANT_RELIEF')}
-                    className={`p-2 rounded-lg border text-center transition cursor-pointer ${
+                    className={`p-2.5 rounded-lg border text-center transition cursor-pointer ${
                       healthRating === 'SIGNIFICANT_RELIEF'
-                        ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold'
-                        : 'border-slate-200 bg-white text-slate-600'
+                        ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold ring-1 ring-emerald-600'
+                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                     }`}
                   >
                     🌟 Significant (80-100%)
@@ -952,10 +955,10 @@ export default function CustomerCareFollowUpPage() {
                   <button
                     type="button"
                     onClick={() => setHealthRating('MODERATE_RELIEF')}
-                    className={`p-2 rounded-lg border text-center transition cursor-pointer ${
+                    className={`p-2.5 rounded-lg border text-center transition cursor-pointer ${
                       healthRating === 'MODERATE_RELIEF'
-                        ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold'
-                        : 'border-slate-200 bg-white text-slate-600'
+                        ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold ring-1 ring-emerald-600'
+                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                     }`}
                   >
                     🌿 Moderate (40-79%)
@@ -963,26 +966,28 @@ export default function CustomerCareFollowUpPage() {
                   <button
                     type="button"
                     onClick={() => setHealthRating('NO_CHANGE')}
-                    className={`p-2 rounded-lg border text-center transition cursor-pointer ${
+                    className={`p-2.5 rounded-lg border text-center transition cursor-pointer ${
                       healthRating === 'NO_CHANGE'
-                        ? 'border-amber-500 bg-amber-50 text-amber-950 font-bold'
-                        : 'border-slate-200 bg-white text-slate-600'
+                        ? 'border-amber-500 bg-amber-50 text-amber-950 font-bold ring-1 ring-amber-500'
+                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                     }`}
                   >
-                    ⏳ No Change
+                    ⏳ No Change / Adjust
                   </button>
                 </div>
               </div>
 
               {/* Consultation Notes */}
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Consultation Notes *</label>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Consultation Notes & Patient Discussion <span className="text-rose-600 font-black">*</span>
+                </label>
                 <textarea
                   rows={3}
                   value={consultationNotes}
                   onChange={(e) => setConsultationNotes(e.target.value)}
                   required
-                  placeholder="Summarize the patient call discussion, symptom relief, dosage clarifications..."
+                  placeholder="Record patient's experience with the medication, symptom relief observations, questions answered..."
                   className="w-full rounded-xl border border-slate-300 p-3 text-xs font-medium text-slate-900 focus:outline-none focus:border-forest-600"
                 />
               </div>
@@ -995,20 +1000,17 @@ export default function CustomerCareFollowUpPage() {
                   onChange={(e) => setRefillRequested(e.target.checked)}
                   className="w-4 h-4 rounded text-emerald-700 cursor-pointer"
                 />
-                <span>Client requested monthly medication refill</span>
+                <span>Client requested monthly medication refill / continuation</span>
               </label>
 
               {/* Modal Footer */}
               <div className="flex items-center justify-between pt-3 border-t border-slate-200">
                 <button
                   type="button"
-                  onClick={() => {
-                    handleQuickStatusChange(selectedFollowUp.id, 'COMPLETED');
-                    setIsCallModalOpen(false);
-                  }}
-                  className="text-xs font-bold text-slate-600 hover:text-slate-900 underline cursor-pointer"
+                  onClick={() => setIsCallModalOpen(false)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition cursor-pointer"
                 >
-                  Quick Mark Done (Skip Notes)
+                  Cancel
                 </button>
 
                 <Button
@@ -1016,9 +1018,9 @@ export default function CustomerCareFollowUpPage() {
                   variant="primary"
                   size="sm"
                   isLoading={isSubmittingLog}
-                  className="bg-emerald-800 hover:bg-emerald-900 text-white font-extrabold px-5 shadow-md cursor-pointer"
+                  className="bg-emerald-800 hover:bg-emerald-900 text-white font-extrabold px-6 shadow-md cursor-pointer"
                 >
-                  Save & Confirm Completed ➔
+                  Save Details & Complete Follow-Up ➔
                 </Button>
               </div>
             </form>

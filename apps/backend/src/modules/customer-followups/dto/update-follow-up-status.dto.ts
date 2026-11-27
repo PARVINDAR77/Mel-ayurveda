@@ -27,4 +27,12 @@ export class UpdateFollowUpStatusDto {
   @IsOptional()
   @IsString()
   disposition?: string;
+
+  @ApiPropertyOptional({
+    description: 'Patient symptom relief scale assessed during consultation',
+    example: 'SIGNIFICANT_RELIEF',
+  })
+  @IsOptional()
+  @IsString()
+  healthRating?: string;
 }

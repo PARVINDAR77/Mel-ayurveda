@@ -446,6 +446,13 @@ export class CustomerFollowupsService {
       throw new NotFoundException(`Customer follow-up with ID ${id} not found`);
     }
 
+    // MANDATORY REQUIREMENT: If marking as COMPLETED, consultation notes are mandatory
+    if (dto.status === CustomerFollowUpStatus.COMPLETED && (!dto.notes || !dto.notes.trim())) {
+      throw new BadRequestException(
+        'Consultation notes and patient feedback are mandatory to mark this follow-up as COMPLETED.',
+      );
+    }
+
     const updated = await this.prisma.$transaction(async (tx) => {
       const isCompleted = dto.status === CustomerFollowUpStatus.COMPLETED;
 
@@ -464,6 +471,7 @@ export class CustomerFollowupsService {
             followUpId: id,
             callerId: user.id,
             disposition: dto.disposition?.trim() || `STATUS_${dto.status}`,
+            healthRating: (dto.healthRating as any) || null,
             consultationNotes: dto.notes?.trim() || `Status updated from ${followUp.status} to ${dto.status}`,
             callDurationSeconds: 60,
           },
