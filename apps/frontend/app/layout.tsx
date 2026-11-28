@@ -7,6 +7,9 @@ import { LiveNotificationToast } from '../components/layout/live-notification-to
 export const metadata: Metadata = {
   title: 'MELAYURVEDA CRM – Enterprise Lead & Operations System',
   description: 'Enterprise Ayurvedic CRM System for MELAYURVEDA INDIA PVT. LTD.',
+  icons: {
+    icon: '/icon.png',
+  },
 };
 
 export default function RootLayout({
