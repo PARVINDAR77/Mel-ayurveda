@@ -107,7 +107,7 @@ export class FollowUpsService {
    */
   async getMyFollowUps(query: FollowUpQueryDto, user: AuthenticatedUser) {
     const page = Math.max(1, Number(query.page) || 1);
-    const limit = Math.max(1, Math.min(100, Number(query.limit) || 20));
+    const limit = Math.max(1, Math.min(200, Number(query.limit) || 100));
     const skip = (page - 1) * limit;
 
     const now = new Date();
@@ -134,8 +134,23 @@ export class FollowUpsService {
       where.assignedToId = query.assignedToId;
     }
 
-    if (query.status && query.status !== FollowUpFilterStatus.ALL) {
+    // Tab-based section filtering
+    if (query.tab === 'VERIFICATION_CANCELLED') {
+      where.reminderNotes = { contains: '[Approval Officer' };
+      where.status = { not: FollowUpStatus.CANCELLED };
+    } else if (query.tab === 'SCHEDULED' || query.tab === 'ACTIVE') {
+      where.status = FollowUpStatus.SCHEDULED;
+    } else if (query.tab === 'OVERDUE') {
+      where.status = FollowUpStatus.OVERDUE;
+    } else if (query.tab === 'COMPLETED') {
+      where.status = FollowUpStatus.COMPLETED;
+    } else if (query.tab === 'ALL' || query.status === FollowUpFilterStatus.ALL) {
+      // return all
+    } else if (query.status) {
       where.status = query.status as FollowUpStatus;
+    } else {
+      // By default: prioritize active and scheduled follow-ups so completed history doesn't hide them
+      where.status = { in: [FollowUpStatus.SCHEDULED, FollowUpStatus.OVERDUE] };
     }
 
     if (query.range) {
@@ -149,14 +164,29 @@ export class FollowUpsService {
       }
     }
 
-    const [total, followUps, dueTodayCount, overdueCount, completedTodayCount] =
+    if (query.search && query.search.trim()) {
+      const s = query.search.trim();
+      where.OR = [
+        { reminderNotes: { contains: s, mode: 'insensitive' } },
+        { lead: { customerName: { contains: s, mode: 'insensitive' } } },
+        { lead: { phoneNumber: { contains: s } } },
+        { lead: { leadCode: { contains: s, mode: 'insensitive' } } },
+      ];
+    }
+
+    const baseUserFilter = user.role === RoleType.SALESPERSON ? { assignedToId: user.id } : query.assignedToId ? { assignedToId: query.assignedToId } : {};
+
+    const [total, followUps, verificationCancelledCount, dueTodayCount, overdueCount, completedTodayCount, activeScheduledCount, allCount] =
       await Promise.all([
         this.prisma.followUp.count({ where }),
         this.prisma.followUp.findMany({
           where,
           skip,
           take: limit,
-          orderBy: { scheduledTime: 'asc' },
+          orderBy: [
+            { createdAt: 'desc' },
+            { scheduledTime: 'asc' },
+          ],
           include: {
             lead: {
               select: {
@@ -176,22 +206,39 @@ export class FollowUpsService {
         }),
         this.prisma.followUp.count({
           where: {
-            ...(user.role === RoleType.SALESPERSON ? { assignedToId: user.id } : query.assignedToId ? { assignedToId: query.assignedToId } : {}),
+            ...baseUserFilter,
+            status: { in: [FollowUpStatus.SCHEDULED, FollowUpStatus.OVERDUE] },
+            reminderNotes: { contains: '[Approval Officer' },
+          },
+        }),
+        this.prisma.followUp.count({
+          where: {
+            ...baseUserFilter,
             status: { in: [FollowUpStatus.SCHEDULED, FollowUpStatus.OVERDUE] },
             scheduledTime: { gte: startOfToday, lte: endOfToday },
           },
         }),
         this.prisma.followUp.count({
           where: {
-            ...(user.role === RoleType.SALESPERSON ? { assignedToId: user.id } : query.assignedToId ? { assignedToId: query.assignedToId } : {}),
+            ...baseUserFilter,
             status: FollowUpStatus.OVERDUE,
           },
         }),
         this.prisma.followUp.count({
           where: {
-            ...(user.role === RoleType.SALESPERSON ? { assignedToId: user.id } : query.assignedToId ? { assignedToId: query.assignedToId } : {}),
+            ...baseUserFilter,
             status: FollowUpStatus.COMPLETED,
-            completedAt: { gte: startOfToday, lte: endOfToday },
+          },
+        }),
+        this.prisma.followUp.count({
+          where: {
+            ...baseUserFilter,
+            status: FollowUpStatus.SCHEDULED,
+          },
+        }),
+        this.prisma.followUp.count({
+          where: {
+            ...baseUserFilter,
           },
         }),
       ]);
@@ -211,9 +258,12 @@ export class FollowUpsService {
         totalPages: Math.ceil(total / limit),
       },
       summary: {
+        verificationCancelledCount,
         dueTodayCount,
         overdueCount,
         completedTodayCount,
+        activeScheduledCount,
+        allCount,
       },
     };
   }

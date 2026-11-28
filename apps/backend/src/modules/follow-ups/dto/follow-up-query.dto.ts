@@ -40,6 +40,16 @@ export class FollowUpQueryDto {
   @IsString()
   assignedToId?: string;
 
+  @ApiPropertyOptional({ description: 'Filter tab: VERIFICATION_CANCELLED, ACTIVE, SCHEDULED, OVERDUE, COMPLETED, ALL' })
+  @IsOptional()
+  @IsString()
+  tab?: string;
+
+  @ApiPropertyOptional({ description: 'Search query across customer name, phone, lead code, notes' })
+  @IsOptional()
+  @IsString()
+  search?: string;
+
   @ApiPropertyOptional({ description: 'Page number for pagination', default: 1 })
   @IsOptional()
   page?: number;

@@ -140,6 +140,7 @@ function SidebarContent({ onClose }: SidebarProps) {
               { href: '/sales/orders', label: 'My Booked Orders', icon: Package },
               { href: '/sales/customer-care', label: 'Follow-Up Care Desk', icon: HeartHandshake },
               { href: '/sales/follow-ups', label: 'Follow-up Agenda', icon: CalendarClock },
+              { href: '/sales/follow-ups?tab=VERIFICATION_CANCELLED', label: 'Verification Cancelled', icon: RotateCcw },
             ],
           },
         ];
@@ -364,6 +365,8 @@ function SidebarContent({ onClose }: SidebarProps) {
                       isActive = !currentTab || currentTab === 'queue';
                     } else if (item.href === '/management/invoices') {
                       isActive = !currentTab || currentTab === 'history';
+                    } else if (item.href === '/sales/follow-ups') {
+                      isActive = !currentTab || currentTab !== 'VERIFICATION_CANCELLED';
                     } else {
                       isActive = true;
                     }
