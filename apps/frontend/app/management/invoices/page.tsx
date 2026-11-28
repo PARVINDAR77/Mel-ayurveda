@@ -244,7 +244,7 @@ function GSTInvoicingContent() {
     {
       key: 'invoiceNumber',
       header: 'Invoice Number',
-      className: 'whitespace-nowrap min-w-[170px]',
+      className: 'whitespace-nowrap w-[130px]',
       render: (item) => (
         <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded border border-slate-200">
           {item.invoiceNumber}
@@ -254,7 +254,7 @@ function GSTInvoicingContent() {
     {
       key: 'orderNumber',
       header: 'Order Reference',
-      className: 'whitespace-nowrap min-w-[150px]',
+      className: 'whitespace-nowrap w-[110px]',
       render: (item) => (
         <span className="font-mono font-semibold text-slate-700 text-xs">
           {item.order?.orderNumber}
@@ -264,7 +264,7 @@ function GSTInvoicingContent() {
     {
       key: 'customer',
       header: 'Billed To (Patient)',
-      className: 'min-w-[180px]',
+      className: 'min-w-[140px]',
       render: (item) => (
         <div>
           <span className="font-semibold text-slate-900 block">{item.order?.customer?.fullName}</span>
@@ -280,12 +280,12 @@ function GSTInvoicingContent() {
     {
       key: 'supplyType',
       header: 'Supply Type',
-      className: 'whitespace-nowrap min-w-[140px]',
+      className: 'whitespace-nowrap w-[130px]',
       render: (item) => {
         const isIntraState = Number(item.cgstAmount) > 0 || Number(item.sgstAmount) > 0;
         return (
           <Badge variant={isIntraState ? 'info' : 'warning'}>
-            {isIntraState ? 'Intra-State (Gujarat)' : 'Inter-State (IGST)'}
+            {isIntraState ? 'Intra-State' : 'Inter-State'}
           </Badge>
         );
       },
@@ -293,7 +293,7 @@ function GSTInvoicingContent() {
     {
       key: 'taxSplit',
       header: 'GST Breakdown',
-      className: 'whitespace-nowrap min-w-[180px]',
+      className: 'whitespace-nowrap w-[140px]',
       render: (item) => (
         <div className="text-xs font-mono">
           {Number(item.cgstAmount) > 0 ? (
@@ -315,7 +315,7 @@ function GSTInvoicingContent() {
     {
       key: 'grandTotal',
       header: 'Invoice Total',
-      className: 'whitespace-nowrap min-w-[130px]',
+      className: 'whitespace-nowrap w-[110px]',
       render: (item) => (
         <span className="font-mono font-bold text-slate-900 text-sm">
           ₹{Number(item.grandTotal).toLocaleString('en-IN')}
@@ -325,7 +325,7 @@ function GSTInvoicingContent() {
     {
       key: 'issuedAt',
       header: 'Issued Date',
-      className: 'whitespace-nowrap min-w-[120px]',
+      className: 'whitespace-nowrap w-[100px]',
       render: (item) => (
         <span className="text-xs text-slate-500 font-mono">
           {item.issuedAt ? new Date(item.issuedAt).toLocaleDateString('en-IN') : 'N/A'}
@@ -335,7 +335,7 @@ function GSTInvoicingContent() {
     {
       key: 'actions',
       header: 'Actions',
-      className: 'text-right whitespace-nowrap min-w-[140px]',
+      className: 'text-right whitespace-nowrap w-[110px]',
       render: (item) => (
         <Button
           variant="outline"
@@ -354,7 +354,7 @@ function GSTInvoicingContent() {
     {
       key: 'orderNumber',
       header: 'Order Reference',
-      className: 'whitespace-nowrap min-w-[160px]',
+      className: 'whitespace-nowrap w-[130px]',
       render: (order) => (
         <div className="space-y-1">
           <span className="font-mono text-xs font-black text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 whitespace-nowrap inline-block shadow-2xs">
@@ -376,7 +376,7 @@ function GSTInvoicingContent() {
     {
       key: 'customer',
       header: 'Patient Details',
-      className: 'min-w-[190px]',
+      className: 'min-w-[140px]',
       render: (order) => (
         <div>
           <span className="font-bold text-xs text-slate-900 block">{order.customer?.fullName || 'N/A'}</span>
@@ -396,7 +396,7 @@ function GSTInvoicingContent() {
     {
       key: 'items',
       header: 'Formulation Prescription',
-      className: 'min-w-[260px]',
+      className: 'min-w-[200px]',
       render: (order) => (
         <div className="space-y-1">
           {order.items?.map((item: any, idx: number) => (
@@ -416,7 +416,7 @@ function GSTInvoicingContent() {
     {
       key: 'totals',
       header: 'Tax & Grand Total',
-      className: 'whitespace-nowrap min-w-[150px]',
+      className: 'whitespace-nowrap w-[130px]',
       render: (order) => {
         const isHold = order.notes?.toUpperCase().includes('HOLD') || order.status === 'HOLD';
         return (
@@ -445,7 +445,7 @@ function GSTInvoicingContent() {
     {
       key: 'actions',
       header: 'Billing Action',
-      className: 'text-right whitespace-nowrap min-w-[160px]',
+      className: 'text-right whitespace-nowrap w-[150px]',
       render: (order) => (
         <Button
           variant="primary"

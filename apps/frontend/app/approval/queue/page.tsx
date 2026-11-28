@@ -318,19 +318,19 @@ export default function ApprovalQueuePage() {
     {
       key: 'status',
       header: 'Status',
-      className: 'whitespace-nowrap min-w-[140px]',
+      className: 'whitespace-nowrap w-[110px]',
       render: (item) => <Badge variant="leadStatus">{item.lead?.status || 'APPROVAL_REQUESTED'}</Badge>,
     },
     {
       key: 'priority',
       header: 'Priority',
-      className: 'whitespace-nowrap min-w-[90px]',
+      className: 'whitespace-nowrap w-[80px]',
       render: (item) => <Badge variant="priority">{item.lead?.priority || 'NORMAL'}</Badge>,
     },
     {
       key: 'officer',
       header: 'Desk Lock',
-      className: 'whitespace-nowrap min-w-[130px]',
+      className: 'whitespace-nowrap w-[110px]',
       render: (item) => {
         if (!item.officerId) {
           return <Badge variant="info">Unclaimed FIFO</Badge>;
@@ -346,7 +346,7 @@ export default function ApprovalQueuePage() {
     {
       key: 'createdAt',
       header: 'Forwarded',
-      className: 'whitespace-nowrap min-w-[110px]',
+      className: 'whitespace-nowrap w-[95px]',
       render: (item) => {
         const timeDiffHours = (new Date().getTime() - new Date(item.createdAt).getTime()) / (1000 * 60 * 60);
         return (
@@ -365,16 +365,17 @@ export default function ApprovalQueuePage() {
     {
       key: 'actions',
       header: 'Actions',
-      className: 'text-right whitespace-nowrap min-w-[280px]',
+      className: 'text-right whitespace-nowrap w-[240px]',
       render: (item) => {
         return (
-          <div className="flex items-center justify-end gap-1.5 whitespace-nowrap shrink-0">
+          <div className="flex items-center justify-end gap-1 whitespace-nowrap shrink-0">
             <Button
               variant="outline"
               size="sm"
               onClick={() => openDossier(item.id)}
               icon={<Eye className="h-3 w-3" />}
-              className="text-[11px] px-2.5 py-1 h-7 whitespace-nowrap shrink-0"
+              className="text-[11px] px-2 py-1 h-7 whitespace-nowrap shrink-0"
+              title="Inspect Clinical Dossier"
             >
               Dossier
             </Button>
@@ -384,10 +385,10 @@ export default function ApprovalQueuePage() {
               size="sm"
               onClick={() => setCancellingItem(item)}
               icon={<RotateCcw className="h-3 w-3 text-amber-600" />}
-              className="text-[11px] px-2.5 py-1 h-7 whitespace-nowrap shrink-0 border-amber-300 text-amber-800 hover:bg-amber-50 cursor-pointer font-medium"
+              className="text-[11px] px-2 py-1 h-7 whitespace-nowrap shrink-0 border-amber-300 text-amber-800 hover:bg-amber-50 cursor-pointer font-medium"
               title="Client cancelled during verification call - Route follow-up to sales"
             >
-              Client Cancelled
+              Cancel Deal
             </Button>
 
             <Button
@@ -398,7 +399,7 @@ export default function ApprovalQueuePage() {
               className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-[11px] px-2.5 py-1 h-7 whitespace-nowrap shrink-0"
               icon={<CheckCircle2 className="h-3 w-3" />}
             >
-              Approve & Clear
+              Approve
             </Button>
 
             {!item.officerId ? (
@@ -408,7 +409,7 @@ export default function ApprovalQueuePage() {
                 onClick={() => handleClaim(item.id)}
                 isLoading={isClaiming === item.id}
                 icon={<Lock className="h-3 w-3" />}
-                className="text-[11px] px-2.5 py-1 h-7 whitespace-nowrap shrink-0"
+                className="text-[11px] px-2 py-1 h-7 whitespace-nowrap shrink-0"
               >
                 Claim
               </Button>
@@ -418,7 +419,7 @@ export default function ApprovalQueuePage() {
                 size="sm"
                 onClick={() => openDecideModal(item)}
                 icon={<ShieldCheck className="h-3 w-3" />}
-                className="text-[11px] px-2.5 py-1 h-7 whitespace-nowrap shrink-0"
+                className="text-[11px] px-2 py-1 h-7 whitespace-nowrap shrink-0"
               >
                 Sign-Off
               </Button>

@@ -114,6 +114,7 @@ export default function FollowUpsAgendaPage() {
     {
       key: 'status',
       header: 'Status & Category',
+      className: 'whitespace-nowrap w-[130px]',
       render: (item) => {
         const isApprovalCancelled = item.reminderNotes?.includes('[Approval Officer');
         const isOverdue =
@@ -121,7 +122,7 @@ export default function FollowUpsAgendaPage() {
           (item.status === 'SCHEDULED' && new Date(item.scheduledTime) < new Date());
 
         return (
-          <div className="space-y-1.5 min-w-[130px]">
+          <div className="space-y-1.5 w-[130px]">
             {isApprovalCancelled ? (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
                 <RotateCcw className="w-3 h-3 text-amber-700 shrink-0" /> Verification Cancelled
@@ -139,8 +140,9 @@ export default function FollowUpsAgendaPage() {
     {
       key: 'customer',
       header: 'Customer Details',
+      className: 'min-w-[130px]',
       render: (item) => (
-        <div className="min-w-[160px]">
+        <div>
           <span className="font-bold text-slate-900 block text-xs">
             {item.lead?.customerName || 'Customer'}
           </span>
@@ -170,11 +172,12 @@ export default function FollowUpsAgendaPage() {
     {
       key: 'scheduledTime',
       header: 'Scheduled Callback',
+      className: 'whitespace-nowrap w-[130px]',
       render: (item) => {
         const dateObj = new Date(item.scheduledTime);
         const isPast = item.status !== 'COMPLETED' && dateObj < new Date();
         return (
-          <div className={`text-xs min-w-[130px] ${isPast ? 'text-red-700 font-bold' : 'text-slate-800'}`}>
+          <div className={`text-xs ${isPast ? 'text-red-700 font-bold' : 'text-slate-800'}`}>
             <div className="flex items-center gap-1 font-mono">
               <Calendar className="h-3 w-3 text-slate-400" />
               <span>{dateObj.toLocaleDateString('en-IN')}</span>
@@ -226,7 +229,7 @@ export default function FollowUpsAgendaPage() {
     {
       key: 'actions',
       header: 'Actions',
-      className: 'text-right min-w-[140px]',
+      className: 'text-right whitespace-nowrap w-[120px]',
       render: (item) => (
         <div className="flex items-center justify-end gap-1.5">
           <Link href={`/sales/calling?leadId=${item.leadId}`}>
@@ -505,18 +508,16 @@ export default function FollowUpsAgendaPage() {
       )}
 
       {/* Main Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
-        <DataTable
-          columns={columns}
-          data={filteredFollowUps}
-          isLoading={isLoading}
-          emptyMessage={
-            activeTab === 'VERIFICATION_CANCELLED'
-              ? 'No verification-cancelled deals found! Great job maintaining deal momentum.'
-              : 'No follow-ups found in this agenda view.'
-          }
-        />
-      </div>
+      <DataTable
+        columns={columns}
+        data={filteredFollowUps}
+        isLoading={isLoading}
+        emptyMessage={
+          activeTab === 'VERIFICATION_CANCELLED'
+            ? 'No verification-cancelled deals found! Great job maintaining deal momentum.'
+            : 'No follow-ups found in this agenda view.'
+        }
+      />
     </div>
   );
 }

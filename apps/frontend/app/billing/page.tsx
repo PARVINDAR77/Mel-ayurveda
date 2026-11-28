@@ -356,7 +356,7 @@ function BillingWorkspaceContent() {
     {
       key: 'orderNumber',
       header: 'Order Reference',
-      className: 'whitespace-nowrap min-w-[160px]',
+      className: 'whitespace-nowrap w-[130px]',
       render: (order) => (
         <div className="space-y-1">
           <span className="font-mono text-xs font-black text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 whitespace-nowrap inline-block shadow-2xs">
@@ -378,7 +378,7 @@ function BillingWorkspaceContent() {
     {
       key: 'customer',
       header: 'Patient Details',
-      className: 'min-w-[190px]',
+      className: 'min-w-[140px]',
       render: (order) => (
         <div>
           <span className="font-bold text-xs text-slate-900 block">{order.customer?.fullName || 'N/A'}</span>
@@ -398,7 +398,7 @@ function BillingWorkspaceContent() {
     {
       key: 'items',
       header: 'Formulation Prescription',
-      className: 'min-w-[300px]',
+      className: 'min-w-[200px]',
       render: (order) => {
         let cleanNotes = '';
         if (order.notes) {
@@ -442,7 +442,7 @@ function BillingWorkspaceContent() {
     {
       key: 'financials',
       header: 'Tax & Grand Total',
-      className: 'whitespace-nowrap min-w-[170px]',
+      className: 'whitespace-nowrap w-[130px]',
       render: (order) => {
         const isGujarat = (order.customer?.state || '').trim().toLowerCase() === 'gujarat';
         const mode = order.paymentMode || 'CASH_ON_DELIVERY';
@@ -469,18 +469,18 @@ function BillingWorkspaceContent() {
     {
       key: 'approvalStatus',
       header: 'Workflow Stage',
-      className: 'whitespace-nowrap min-w-[160px]',
+      className: 'whitespace-nowrap w-[130px]',
       render: () => (
         <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 shadow-2xs whitespace-nowrap">
           <Clock className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-          <span>Approved • Awaiting Bill</span>
+          <span>Approved • Bill</span>
         </span>
       ),
     },
     {
       key: 'actions',
       header: 'Billing Operations',
-      className: 'text-right whitespace-nowrap min-w-[200px]',
+      className: 'text-right whitespace-nowrap w-[170px]',
       render: (order) => (
         <Button
           size="sm"
@@ -551,13 +551,13 @@ function BillingWorkspaceContent() {
     {
       key: 'sku',
       header: 'SKU & Code',
-      className: 'whitespace-nowrap min-w-[130px]',
+      className: 'whitespace-nowrap w-[110px]',
       render: (inv) => <span className="font-mono text-xs font-bold text-slate-800 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">{inv.product?.sku || 'SKU-000'}</span>,
     },
     {
       key: 'product',
       header: 'Formulation Name & Disease',
-      className: 'min-w-[220px]',
+      className: 'min-w-[170px]',
       render: (inv) => (
         <div>
           <span className="font-bold text-xs text-slate-900 block">{inv.product?.name}</span>
@@ -568,7 +568,7 @@ function BillingWorkspaceContent() {
     {
       key: 'pricing',
       header: 'Pricing & Tax',
-      className: 'whitespace-nowrap min-w-[140px]',
+      className: 'whitespace-nowrap w-[120px]',
       render: (inv) => (
         <div className="text-xs">
           <span className="font-mono text-slate-900 font-bold block">₹{Number(inv.product?.sellingPrice || 0).toLocaleString('en-IN')}</span>
@@ -580,7 +580,7 @@ function BillingWorkspaceContent() {
     {
       key: 'stockLevels',
       header: 'Warehouse Stock',
-      className: 'whitespace-nowrap min-w-[200px]',
+      className: 'whitespace-nowrap w-[160px]',
       render: (inv) => {
         const isLowStock = inv.availableQuantity <= inv.lowStockThreshold;
         return (
@@ -689,7 +689,7 @@ function BillingWorkspaceContent() {
     {
       key: 'invoiceNumber',
       header: 'GST Invoice #',
-      className: 'whitespace-nowrap min-w-[170px]',
+      className: 'whitespace-nowrap w-[130px]',
       render: (inv) => (
         <div className="space-y-1">
           <span className="font-mono text-xs font-black text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 whitespace-nowrap inline-block shadow-2xs">
@@ -707,7 +707,7 @@ function BillingWorkspaceContent() {
     {
       key: 'orderNumber',
       header: 'Order Code',
-      className: 'whitespace-nowrap min-w-[140px]',
+      className: 'whitespace-nowrap w-[110px]',
       render: (inv) => (
         <span className="font-mono text-xs font-bold text-slate-800 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
           {inv.order?.orderNumber || 'N/A'}
@@ -717,7 +717,7 @@ function BillingWorkspaceContent() {
     {
       key: 'customer',
       header: 'Customer Details',
-      className: 'min-w-[190px]',
+      className: 'min-w-[140px]',
       render: (inv) => (
         <div>
           <span className="font-bold text-xs text-slate-900 block">{inv.order?.customer?.fullName || 'N/A'}</span>
@@ -733,7 +733,7 @@ function BillingWorkspaceContent() {
     {
       key: 'taxBifurcation',
       header: 'GST Breakdown',
-      className: 'whitespace-nowrap min-w-[170px]',
+      className: 'whitespace-nowrap w-[130px]',
       render: (inv) => {
         const isIntra = Number(inv.igstAmount) === 0;
         return (
@@ -753,7 +753,7 @@ function BillingWorkspaceContent() {
     {
       key: 'grandTotal',
       header: 'Invoice Amount',
-      className: 'whitespace-nowrap min-w-[140px]',
+      className: 'whitespace-nowrap w-[110px]',
       render: (inv) => (
         <span className="font-mono text-sm font-black text-slate-900 block">
           ₹{Number(inv.grandTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
@@ -763,7 +763,7 @@ function BillingWorkspaceContent() {
     {
       key: 'status',
       header: 'Fulfillment State',
-      className: 'whitespace-nowrap min-w-[150px]',
+      className: 'whitespace-nowrap w-[130px]',
       render: (inv) => (
         <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shadow-2xs whitespace-nowrap">
           <Truck className="h-3 w-3 text-emerald-600 shrink-0" />
@@ -774,7 +774,7 @@ function BillingWorkspaceContent() {
     {
       key: 'actions',
       header: 'Actions',
-      className: 'text-right whitespace-nowrap min-w-[150px]',
+      className: 'text-right whitespace-nowrap w-[110px]',
       render: (inv) => (
         <Button
           size="sm"

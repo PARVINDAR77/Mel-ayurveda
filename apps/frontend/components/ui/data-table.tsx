@@ -44,6 +44,8 @@ interface DataTableProps<T> {
   importConfig?: DataTableImportConfig;
   actions?: React.ReactNode;
   hideToolbar?: boolean;
+  minWidth?: string;
+  tableClassName?: string;
 }
 
 export function DataTable<T extends Record<string, any>>({
@@ -59,6 +61,8 @@ export function DataTable<T extends Record<string, any>>({
   importConfig,
   actions,
   hideToolbar = false,
+  minWidth,
+  tableClassName,
 }: DataTableProps<T>) {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -169,8 +173,8 @@ export function DataTable<T extends Record<string, any>>({
       )}
 
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[950px] text-left text-sm">
+        <div className="overflow-x-auto custom-scrollbar">
+          <table className={clsx('w-full text-left text-sm', minWidth || 'min-w-full', tableClassName)}>
             <thead className="bg-slate-50/80 text-xs font-semibold uppercase tracking-wider text-slate-600 border-b border-slate-200">
               <tr>
                 {columns.map((col) => (

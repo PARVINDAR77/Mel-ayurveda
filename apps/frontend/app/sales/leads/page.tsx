@@ -91,9 +91,9 @@ export default function MyAssignedLeadsPage() {
     {
       key: 'leadCode',
       header: 'Lead Code',
-      className: 'whitespace-nowrap min-w-[130px]',
+      className: 'whitespace-nowrap w-[115px]',
       render: (item) => (
-        <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 whitespace-nowrap inline-block">
+        <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 whitespace-nowrap inline-block text-xs">
           {item.leadCode}
         </span>
       ),
@@ -101,10 +101,10 @@ export default function MyAssignedLeadsPage() {
     {
       key: 'customerName',
       header: 'Customer Name',
-      className: 'min-w-[180px]',
+      className: 'min-w-[130px]',
       render: (item) => (
         <div>
-          <span className="font-semibold text-slate-900">{item.customerName}</span>
+          <span className="font-semibold text-slate-900 text-xs">{item.customerName}</span>
           <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono mt-0.5 whitespace-nowrap">
             <span>{item.phoneNumber}</span>
             {item.alternatePhone && (
@@ -117,7 +117,7 @@ export default function MyAssignedLeadsPage() {
     {
       key: 'productInterest',
       header: 'Clinical Concern / Notes',
-      className: 'min-w-[180px] max-w-[240px]',
+      className: 'min-w-[140px]',
       render: (item) => (
         <div>
           <span className="font-medium text-slate-800 text-xs">{item.productInterest || 'Ayurvedic Consultation'}</span>
@@ -130,7 +130,7 @@ export default function MyAssignedLeadsPage() {
     {
       key: 'location',
       header: 'Location',
-      className: 'whitespace-nowrap min-w-[140px]',
+      className: 'whitespace-nowrap w-[120px]',
       render: (item) => (
         <div className="flex items-center gap-1 text-xs text-slate-500 whitespace-nowrap shrink-0">
           <MapPin className="h-3 w-3 text-slate-400 shrink-0" />
@@ -141,19 +141,19 @@ export default function MyAssignedLeadsPage() {
     {
       key: 'priority',
       header: 'Priority',
-      className: 'whitespace-nowrap min-w-[90px]',
+      className: 'whitespace-nowrap w-[80px]',
       render: (item) => <Badge variant="priority">{item.priority}</Badge>,
     },
     {
       key: 'status',
       header: 'Status',
-      className: 'whitespace-nowrap min-w-[130px]',
+      className: 'whitespace-nowrap w-[110px]',
       render: (item) => <Badge variant="leadStatus">{item.status}</Badge>,
     },
     {
       key: 'actions',
       header: 'Actions',
-      className: 'text-right whitespace-nowrap min-w-[310px]',
+      className: 'text-right whitespace-nowrap w-[240px]',
       render: (item) => (
         <div className="flex items-center justify-end gap-1.5 whitespace-nowrap shrink-0">
           {item.status !== 'APPROVAL_REQUESTED' && item.status !== 'APPROVED' && item.status !== 'CONVERTED' ? (
@@ -170,7 +170,7 @@ export default function MyAssignedLeadsPage() {
                 icon={<ShoppingBag className="h-3 w-3 text-amber-300" />}
                 title="Convinced Customer - Prescribe Formulations & Send for Approval"
               >
-                Send for Approval
+                Approval
               </Button>
 
               {/* Schedule Follow-up Callback */}
