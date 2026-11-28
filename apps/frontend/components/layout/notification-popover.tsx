@@ -40,7 +40,7 @@ export function NotificationPopover() {
           setIsOpen(!isOpen);
           if (!isOpen) fetchNotifications();
         }}
-        className="relative rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition focus:outline-none"
+        className="relative rounded-lg p-2 text-slate-300 hover:bg-white/10 hover:text-white transition focus:outline-none"
         title="Notifications"
       >
         <Bell className="h-5 w-5" />
