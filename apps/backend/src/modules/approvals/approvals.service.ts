@@ -11,8 +11,9 @@ import { DecideApprovalDto, SendBackTarget } from './dto/decide-approval.dto';
 import { ApprovalQueueQueryDto, ApprovalQueueFilter } from './dto/approval-queue-query.dto';
 import { SubmitApprovalDto } from './dto/submit-approval.dto';
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
-import { ApprovalDecision, LeadStatus, RoleType, PendingDecision, NotificationType, OrderStatus } from '@prisma/client';
+import { ApprovalDecision, LeadStatus, RoleType, PendingDecision, NotificationType, OrderStatus, FollowUpStatus } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ClientCancelFollowupDto } from './dto/client-cancel-followup.dto';
 
 @Injectable()
 export class ApprovalsService {
@@ -728,6 +729,333 @@ export class ApprovalsService {
       inReview,
       approvedToday,
       rejectedToday,
+    };
+  }
+
+  /**
+   * Record customer cancellation during medical verification call and automatically route follow-up to sales
+   */
+  async clientCancelFollowup(
+    id: string,
+    dto: ClientCancelFollowupDto,
+    user: AuthenticatedUser,
+  ) {
+    const request = await this.prisma.approvalRequest.findUnique({
+      where: { id },
+      include: {
+        lead: {
+          include: {
+            assignedTo: {
+              select: { id: true, employeeCode: true, firstName: true, lastName: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!request) {
+      throw new NotFoundException(`Approval request with ID ${id} not found`);
+    }
+
+    if (request.decision !== null) {
+      throw new ConflictException(
+        `Approval request ${id} has already been resolved with decision ${request.decision}`,
+      );
+    }
+
+    const scheduledDate = new Date(dto.scheduledTime);
+    if (isNaN(scheduledDate.getTime())) {
+      throw new BadRequestException('Invalid scheduled callback timestamp format');
+    }
+
+    // Determine target salesperson: lead's assignedToId or linked order's createdById or user.id
+    let targetSalespersonId = request.lead.assignedToId;
+
+    const rawPhone = request.lead.phoneNumber || '';
+    const digits = rawPhone.replace(/\D/g, '').slice(-10);
+
+    const linkedDraftOrder = await this.prisma.order.findFirst({
+      where: {
+        status: OrderStatus.DRAFT,
+        OR: [
+          { customer: { convertedFromId: request.leadId } },
+          { notes: { contains: request.leadId } },
+          { notes: { contains: request.lead.leadCode } },
+          ...(rawPhone ? [{ customer: { phoneNumber: rawPhone } }] : []),
+          ...(digits ? [{ customer: { phoneNumber: { contains: digits } } }] : []),
+        ],
+      },
+      include: {
+        createdBy: true,
+      },
+    });
+
+    if (!targetSalespersonId && linkedDraftOrder?.createdById) {
+      targetSalespersonId = linkedDraftOrder.createdById;
+    }
+
+    if (!targetSalespersonId) {
+      targetSalespersonId = user.id;
+    }
+
+    const fullReminderNotes = `[Approval Officer Cancellation Feedback: ${dto.cancellationReason}] ${dto.clientFeedback}${
+      dto.officerInternalNotes ? ` | Advice: ${dto.officerInternalNotes}` : ''
+    }`;
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      // 1. Create FollowUp record assigned to the salesperson
+      const followUp = await tx.followUp.create({
+        data: {
+          leadId: request.leadId,
+          assignedToId: targetSalespersonId!,
+          scheduledTime: scheduledDate,
+          status: FollowUpStatus.SCHEDULED,
+          reminderNotes: fullReminderNotes.slice(0, 500),
+        },
+      });
+
+      // 2. Update ApprovalRequest
+      const updatedRequest = await tx.approvalRequest.update({
+        where: { id },
+        data: {
+          decision: ApprovalDecision.CANCELLED_FOLLOWUP,
+          decisionReason: dto.cancellationReason,
+          officerNotes: dto.officerInternalNotes?.trim() || dto.clientFeedback.trim(),
+          cancellationReason: dto.cancellationReason,
+          cancellationNotes: dto.clientFeedback.trim(),
+          followUpId: followUp.id,
+          decidedAt: new Date(),
+          officerId: request.officerId || user.id,
+        },
+        include: {
+          officer: {
+            select: { id: true, employeeCode: true, firstName: true, lastName: true },
+          },
+          followUp: true,
+        },
+      });
+
+      // Synchronize any duplicate open approval requests for this lead
+      await tx.approvalRequest.updateMany({
+        where: { leadId: request.leadId, decision: null, id: { not: id } },
+        data: {
+          decision: ApprovalDecision.CANCELLED_FOLLOWUP,
+          decisionReason: dto.cancellationReason,
+          officerNotes: dto.officerInternalNotes?.trim() || dto.clientFeedback.trim(),
+          cancellationReason: dto.cancellationReason,
+          cancellationNotes: dto.clientFeedback.trim(),
+          decidedAt: new Date(),
+          officerId: request.officerId || user.id,
+        },
+      });
+
+      // 3. Update Lead status to FOLLOW_UP_REQUIRED
+      await tx.lead.update({
+        where: { id: request.leadId },
+        data: {
+          status: LeadStatus.FOLLOW_UP_REQUIRED,
+          assignedToId: targetSalespersonId,
+        },
+      });
+
+      // 4. Cancel draft orders with cancellation notes
+      if (linkedDraftOrder) {
+        await tx.order.update({
+          where: { id: linkedDraftOrder.id },
+          data: {
+            status: OrderStatus.CANCELLED,
+            notes: `${linkedDraftOrder.notes || ''}\n[CANCELLED IN VERIFICATION: ${dto.cancellationReason}] ${dto.clientFeedback}`.trim(),
+          },
+        });
+      }
+
+      // 5. Lead status history
+      await tx.leadStatusHistory.create({
+        data: {
+          leadId: request.leadId,
+          fromStatus: request.lead.status,
+          toStatus: LeadStatus.FOLLOW_UP_REQUIRED,
+          changedById: user.id,
+          reason: `Verification Cancelled by Client: ${dto.cancellationReason} - Follow-up routed to salesperson`,
+        },
+      });
+
+      // 6. Audit log
+      await tx.auditLog.create({
+        data: {
+          userId: user.id,
+          action: 'APPROVAL_CLIENT_CANCELLED_FOLLOWUP',
+          entityType: 'ApprovalRequest',
+          entityId: request.id,
+          newState: {
+            leadCode: request.lead.leadCode,
+            cancellationReason: dto.cancellationReason,
+            feedback: dto.clientFeedback,
+            assignedToId: targetSalespersonId,
+            scheduledTime: scheduledDate.toISOString(),
+            followUpId: followUp.id,
+          },
+        },
+      });
+
+      return {
+        success: true,
+        approvalRequest: updatedRequest,
+        followUp,
+      };
+    });
+
+    // 7. Dispatch real-time live notification to the salesperson
+    try {
+      if (targetSalespersonId) {
+        await this.notificationsService.createNotification({
+          userId: targetSalespersonId,
+          title: `⚠️ Verification Cancelled: ${request.lead.customerName || request.lead.leadCode}`,
+          message: `Client cancelled order during verification (${dto.cancellationReason}): "${dto.clientFeedback}". Scheduled callback added to your agenda.`,
+          type: NotificationType.FOLLOWUP_ASSIGNED,
+          link: '/sales/follow-ups',
+        });
+      }
+    } catch (notifErr) {
+      this.logger.warn(`Failed to dispatch salesperson follow-up notification: ${notifErr}`);
+    }
+
+    return result;
+  }
+
+  /**
+   * Retrieve all verification-cancelled deals routed to sales follow-up
+   */
+  async getCancellationsQueue(query: { page?: number; limit?: number; search?: string; reason?: string }) {
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 50;
+    const skip = (page - 1) * limit;
+
+    const where: any = {
+      decision: ApprovalDecision.CANCELLED_FOLLOWUP,
+    };
+
+    if (query.reason && query.reason !== 'ALL') {
+      where.cancellationReason = query.reason;
+    }
+
+    if (query.search && query.search.trim()) {
+      const s = query.search.trim();
+      where.lead = {
+        OR: [
+          { customerName: { contains: s, mode: 'insensitive' } },
+          { phoneNumber: { contains: s } },
+          { leadCode: { contains: s, mode: 'insensitive' } },
+        ],
+      };
+    }
+
+    const [total, requests] = await Promise.all([
+      this.prisma.approvalRequest.count({ where }),
+      this.prisma.approvalRequest.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { decidedAt: 'desc' },
+        include: {
+          lead: {
+            include: {
+              assignedTo: {
+                select: { id: true, employeeCode: true, firstName: true, lastName: true },
+              },
+            },
+          },
+          officer: {
+            select: { id: true, employeeCode: true, firstName: true, lastName: true },
+          },
+          followUp: {
+            include: {
+              assignedTo: {
+                select: { id: true, employeeCode: true, firstName: true, lastName: true },
+              },
+            },
+          },
+        },
+      }),
+    ]);
+
+    // Attach latest order and prescribed items
+    const leadIds = requests.map((r) => r.leadId).filter(Boolean);
+    const phoneNumbers = requests.map((r) => r.lead?.phoneNumber).filter(Boolean);
+
+    const orders = await this.prisma.order.findMany({
+      where: {
+        OR: [
+          { customer: { convertedFromId: { in: leadIds } } },
+          ...leadIds.map((lid) => ({ notes: { contains: lid } })),
+          ...(phoneNumbers.length > 0 ? [{ customer: { phoneNumber: { in: phoneNumbers } } }] : []),
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        customer: true,
+        items: {
+          include: {
+            product: { select: { id: true, sku: true, name: true, sellingPrice: true } },
+          },
+        },
+      },
+    });
+
+    const ordersByLeadId = new Map<string, any>();
+    for (const o of orders) {
+      if (o.customer?.convertedFromId && !ordersByLeadId.has(o.customer.convertedFromId)) {
+        ordersByLeadId.set(o.customer.convertedFromId, o);
+      }
+      for (const lid of leadIds) {
+        if (o.notes?.includes(lid) && !ordersByLeadId.has(lid)) {
+          ordersByLeadId.set(lid, o);
+        }
+      }
+    }
+
+    const enriched = requests.map((req) => ({
+      ...req,
+      order: ordersByLeadId.get(req.leadId) || null,
+    }));
+
+    return {
+      data: enriched,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  /**
+   * Retrieve metrics for verification-cancellation recoveries
+   */
+  async getCancellationsMetrics() {
+    const [totalCancelled, pendingCallbacks, completedCallbacks] = await Promise.all([
+      this.prisma.approvalRequest.count({
+        where: { decision: ApprovalDecision.CANCELLED_FOLLOWUP },
+      }),
+      this.prisma.followUp.count({
+        where: {
+          approvalRequests: { some: { decision: ApprovalDecision.CANCELLED_FOLLOWUP } },
+          status: FollowUpStatus.SCHEDULED,
+        },
+      }),
+      this.prisma.followUp.count({
+        where: {
+          approvalRequests: { some: { decision: ApprovalDecision.CANCELLED_FOLLOWUP } },
+          status: FollowUpStatus.COMPLETED,
+        },
+      }),
+    ]);
+
+    return {
+      totalCancelled,
+      pendingCallbacks,
+      completedCallbacks,
     };
   }
 }

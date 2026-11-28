@@ -16,6 +16,8 @@ import {
   AlertCircle,
   Clock,
   Calendar,
+  RotateCcw,
+  AlertTriangle,
 } from 'lucide-react';
 
 export default function FollowUpsAgendaPage() {
@@ -56,13 +58,23 @@ export default function FollowUpsAgendaPage() {
       key: 'status',
       header: 'Status',
       render: (item) => {
+        const isApprovalCancelled = item.reminderNotes?.includes('[Approval Officer');
         const isOverdue =
           item.status === 'OVERDUE' ||
           (item.status === 'SCHEDULED' && new Date(item.scheduledTime) < new Date());
         return (
-          <Badge variant={isOverdue ? 'danger' : 'warning'}>
-            {isOverdue ? 'OVERDUE' : item.status}
-          </Badge>
+          <div className="space-y-1">
+            {isApprovalCancelled && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                <RotateCcw className="w-2.5 h-2.5 text-amber-700" /> Verification Cancelled
+              </span>
+            )}
+            <div>
+              <Badge variant={isOverdue ? 'danger' : 'warning'}>
+                {isOverdue ? 'OVERDUE' : item.status}
+              </Badge>
+            </div>
+          </div>
         );
       },
     },
@@ -101,11 +113,27 @@ export default function FollowUpsAgendaPage() {
     {
       key: 'reminderNotes',
       header: 'Consultation Agenda Notes',
-      render: (item) => (
-        <span className="text-xs text-slate-700">
-          {item.reminderNotes || 'Follow up with customer'}
-        </span>
-      ),
+      render: (item) => {
+        const isApprovalCancelled = item.reminderNotes?.includes('[Approval Officer');
+        if (isApprovalCancelled) {
+          return (
+            <div className="bg-amber-50/90 border border-amber-200 rounded-lg p-2 max-w-sm">
+              <span className="font-bold text-amber-900 text-[11px] block flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
+                Objection in Verification:
+              </span>
+              <p className="text-slate-800 text-xs italic mt-0.5 line-clamp-3">
+                {item.reminderNotes}
+              </p>
+            </div>
+          );
+        }
+        return (
+          <span className="text-xs text-slate-700">
+            {item.reminderNotes || 'Follow up with customer'}
+          </span>
+        );
+      },
     },
     {
       key: 'actions',

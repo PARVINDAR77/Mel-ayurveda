@@ -98,6 +98,7 @@ function SidebarContent({ onClose }: SidebarProps) {
             title: 'Clinical Approvals',
             items: [
               { href: '/approval/queue', label: 'Final Approval Queue', icon: CheckCircle2 },
+              { href: '/approval/follow-ups', label: 'Verification Follow-ups', icon: HeartHandshake },
             ],
           },
           {
@@ -161,6 +162,7 @@ function SidebarContent({ onClose }: SidebarProps) {
             items: [
               { href: '/approval', label: 'Approval Dashboard', icon: LayoutDashboard },
               { href: '/approval/queue', label: 'Verification Queue', icon: CheckCircle2 },
+              { href: '/approval/follow-ups', label: 'Verification Follow-ups', icon: HeartHandshake },
               { href: '/approval/orders', label: 'Formulation Orders', icon: Package },
               { href: '/approval/history', label: 'Sign-off History', icon: History },
             ],

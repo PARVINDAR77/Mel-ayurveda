@@ -13,6 +13,7 @@ import { ApprovalsService } from './approvals.service';
 import { DecideApprovalDto } from './dto/decide-approval.dto';
 import { ApprovalQueueQueryDto, ApprovalQueueFilter } from './dto/approval-queue-query.dto';
 import { SubmitApprovalDto } from './dto/submit-approval.dto';
+import { ClientCancelFollowupDto } from './dto/client-cancel-followup.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -64,6 +65,27 @@ export class ApprovalsController {
     return this.approvalsService.getMetrics();
   }
 
+  @Get('cancellations-queue')
+  @Roles(RoleType.APPROVAL_OFFICER, RoleType.SUPER_ADMIN, RoleType.MANAGEMENT)
+  @ApiOperation({ summary: 'Retrieve verification-cancelled deals routed to sales follow-up' })
+  @ApiResponse({ status: 200, description: 'Cancelled approval requests returned' })
+  async getCancellationsQueue(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('search') search?: string,
+    @Query('reason') reason?: string,
+  ) {
+    return this.approvalsService.getCancellationsQueue({ page, limit, search, reason });
+  }
+
+  @Get('cancellations-metrics')
+  @Roles(RoleType.APPROVAL_OFFICER, RoleType.SUPER_ADMIN, RoleType.MANAGEMENT)
+  @ApiOperation({ summary: 'Retrieve verification-cancellation recovery metrics' })
+  @ApiResponse({ status: 200, description: 'Cancellation metrics returned' })
+  async getCancellationsMetrics() {
+    return this.approvalsService.getCancellationsMetrics();
+  }
+
   @Get('lead/:leadId')
   @Roles(RoleType.APPROVAL_OFFICER, RoleType.SUPER_ADMIN, RoleType.MANAGEMENT, RoleType.PENDING_REVIEWER, RoleType.SALESPERSON)
   @ApiOperation({ summary: 'Retrieve approval request history for a specific lead' })
@@ -104,5 +126,19 @@ export class ApprovalsController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.approvalsService.decideApproval(id, dto, user);
+  }
+
+  @Post(':id/client-cancel-followup')
+  @Roles(RoleType.APPROVAL_OFFICER, RoleType.SUPER_ADMIN)
+  @ApiOperation({
+    summary: 'Record customer cancellation during verification and route follow-up to sales',
+  })
+  @ApiResponse({ status: 200, description: 'Follow-up created and assigned to salesperson' })
+  async clientCancelFollowup(
+    @Param('id') id: string,
+    @Body() dto: ClientCancelFollowupDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.approvalsService.clientCancelFollowup(id, dto, user);
   }
 }

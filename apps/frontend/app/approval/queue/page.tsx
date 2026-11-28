@@ -9,6 +9,7 @@ import { Modal } from '../../../components/ui/modal';
 import { Drawer } from '../../../components/ui/drawer';
 import { EditOrderModal } from '../../../components/orders/edit-order-modal';
 import { DecideOrderModal } from '../../../components/orders/decide-order-modal';
+import { ApprovalCancellationModal } from '../../../components/approval/approval-cancellation-modal';
 import { ExportButton } from '../../../components/ui/export-button';
 import { ExcelColumnDef } from '../../../lib/export-excel';
 import {
@@ -64,6 +65,9 @@ export default function ApprovalQueuePage() {
   const [editingOrder, setEditingOrder] = useState<any | null>(null);
   const [decidingOrder, setDecidingOrder] = useState<any | null>(null);
   const [decidingOrderAction, setDecidingOrderAction] = useState<'CONFIRM' | 'REQUEST_RECTIFICATION' | 'REJECT'>('CONFIRM');
+
+  // Client Cancellation & Follow-Up Modal
+  const [cancellingItem, setCancellingItem] = useState<any | null>(null);
 
   const fetchQueue = async () => {
     try {
@@ -373,6 +377,17 @@ export default function ApprovalQueuePage() {
               className="text-[11px] px-2.5 py-1 h-7 whitespace-nowrap shrink-0"
             >
               Dossier
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCancellingItem(item)}
+              icon={<RotateCcw className="h-3 w-3 text-amber-600" />}
+              className="text-[11px] px-2.5 py-1 h-7 whitespace-nowrap shrink-0 border-amber-300 text-amber-800 hover:bg-amber-50 cursor-pointer font-medium"
+              title="Client cancelled during verification call - Route follow-up to sales"
+            >
+              Client Cancelled
             </Button>
 
             <Button
@@ -813,6 +828,20 @@ export default function ApprovalQueuePage() {
               >
                 Close Dossier
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const item = dossierData;
+                  setDossierId(null);
+                  setDossierData(null);
+                  setCancellingItem(item);
+                }}
+                icon={<RotateCcw className="h-3.5 w-3.5 text-amber-600" />}
+                className="border-amber-300 text-amber-800 hover:bg-amber-50 cursor-pointer"
+              >
+                Client Cancelled (Send Follow-up)
+              </Button>
               {!dossierData.officerId ? (
                 <Button
                   variant="primary"
@@ -1082,6 +1111,18 @@ export default function ApprovalQueuePage() {
           }}
         />
       )}
+
+      {/* Client Cancellation & Sales Follow-Up Routing Modal */}
+      <ApprovalCancellationModal
+        isOpen={Boolean(cancellingItem)}
+        onClose={() => setCancellingItem(null)}
+        approvalItem={cancellingItem}
+        onSuccess={() => {
+          setSuccessMsg('Deal cancelled in verification. Follow-up routed to salesperson successfully!');
+          fetchQueue();
+          setTimeout(() => setSuccessMsg(null), 4000);
+        }}
+      />
     </div>
   );
 }
