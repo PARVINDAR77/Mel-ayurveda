@@ -329,7 +329,7 @@ export default function LeadAssignmentsAdminPage() {
             icon={<Plus className="h-3.5 w-3.5" />}
             className="bg-emerald-800 hover:bg-emerald-900 text-white"
           >
-            + Add Manual Lead
+            Add Manual Lead
           </Button>
 
           <Button

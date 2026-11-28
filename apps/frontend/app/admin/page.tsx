@@ -149,18 +149,15 @@ export default function AdminDashboardPage() {
       {/* Top Banner / Actions Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/90 pb-5">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-800">
-            <span className="font-mono text-xs font-bold text-amber-900 bg-amber-50 px-2.5 py-0.5 rounded-md border border-amber-300 uppercase tracking-wider">
-              MEL-ADM-001
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+            <span className="font-semibold text-emerald-900 tracking-wide uppercase text-[11px]">Operations & Commercial</span>
+            <span className="text-slate-300">/</span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-900 border border-emerald-300/80">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Live Tele-Sales Deck
             </span>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-300">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              Executive Mission Control
-            </span>
-            <span className="text-slate-300 hidden md:inline">•</span>
-            <span className="text-slate-500 hidden md:inline italic font-serif">Nature Se Nirog, Swasth</span>
           </div>
-          <h2 className="mt-1.5 text-2xl sm:text-3xl font-extrabold text-[#0f3822] tracking-tight">
+          <h2 className="mt-1 text-2xl sm:text-3xl font-extrabold text-[#0f3822] tracking-tight">
             Master Executive Overview
           </h2>
           <p className="text-xs text-slate-600 mt-0.5">
@@ -168,59 +165,72 @@ export default function AdminDashboardPage() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
+        {/* Sleek Action Dock: Icon-only by default, expanding to full name on hover */}
+        <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-slate-50/80 border border-slate-200/80 shadow-2xs self-start sm:self-auto">
+          {/* 1. Sync Live Data */}
+          <button
             onClick={fetchDashboard}
-            isLoading={isLoading}
-            icon={<RefreshCw className="h-3.5 w-3.5" />}
-            className="border-slate-300 text-slate-700 hover:bg-slate-50"
+            disabled={isLoading}
+            className="group relative flex items-center h-9 px-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 shadow-2xs hover:border-slate-300 hover:bg-slate-100/80 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-700/20 disabled:opacity-50"
+            title="Sync Live Data"
+            aria-label="Sync Live Data"
           >
-            Sync Live Data
-          </Button>
+            <RefreshCw className={`h-4 w-4 shrink-0 text-slate-600 group-hover:text-slate-900 transition-colors ${isLoading ? 'animate-spin' : ''}`} />
+            <span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 group-hover:max-w-xs group-hover:opacity-100 group-hover:ml-2 text-xs font-semibold text-slate-800 transition-all duration-300 ease-in-out">
+              Sync Live Data
+            </span>
+          </button>
 
-          <Button
-            variant="primary"
-            size="sm"
+          {/* 2. Add Manual Lead (Primary Action) */}
+          <button
             onClick={() => setIsAddLeadModalOpen(true)}
-            icon={<Plus className="h-3.5 w-3.5" />}
-            className="bg-[#0f3822] hover:bg-[#134e2f] text-white shadow-sm font-semibold"
+            className="group relative flex items-center h-9 px-2.5 rounded-xl border border-emerald-900/40 bg-[#0f3822] text-white shadow-xs hover:bg-[#154d2f] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-700/40"
+            title="Add Manual Lead"
+            aria-label="Add Manual Lead"
           >
-            + Add Manual Lead
-          </Button>
+            <Plus className="h-4 w-4 shrink-0 text-amber-300 group-hover:rotate-90 transition-transform duration-200" />
+            <span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 group-hover:max-w-xs group-hover:opacity-100 group-hover:ml-2 text-xs font-semibold text-white transition-all duration-300 ease-in-out">
+              Add Manual Lead
+            </span>
+          </button>
 
-          <Link href="/admin/products">
-            <Button
-              variant="outline"
-              size="sm"
-              icon={<Leaf className="h-3.5 w-3.5 text-amber-600" />}
-              className="border-amber-300 bg-amber-50/70 hover:bg-amber-100 text-amber-950 font-semibold"
+          {/* 3. Formulations & Products */}
+          <Link href="/admin/products" title="Formulations & Products">
+            <button
+              className="group relative flex items-center h-9 px-2.5 rounded-xl border border-amber-200/80 bg-amber-50/70 text-amber-950 shadow-2xs hover:border-amber-300 hover:bg-amber-100/80 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+              aria-label="Formulations & Products"
             >
-              Formulations & Products
-            </Button>
+              <Leaf className="h-4 w-4 shrink-0 text-amber-600 group-hover:text-amber-800 transition-colors" />
+              <span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 group-hover:max-w-xs group-hover:opacity-100 group-hover:ml-2 text-xs font-semibold text-amber-950 transition-all duration-300 ease-in-out">
+                Formulations & Products
+              </span>
+            </button>
           </Link>
 
-          <Link href="/admin/orders">
-            <Button
-              variant="outline"
-              size="sm"
-              icon={<Package className="h-3.5 w-3.5 text-emerald-700" />}
-              className="border-emerald-300 bg-emerald-50/60 hover:bg-emerald-100 text-emerald-900 font-semibold"
+          {/* 4. Manage Orders */}
+          <Link href="/admin/orders" title="Manage Orders">
+            <button
+              className="group relative flex items-center h-9 px-2.5 rounded-xl border border-emerald-200/80 bg-emerald-50/70 text-emerald-950 shadow-2xs hover:border-emerald-300 hover:bg-emerald-100/80 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-600/20"
+              aria-label="Manage Orders"
             >
-              Manage Orders
-            </Button>
+              <Package className="h-4 w-4 shrink-0 text-emerald-700 group-hover:text-emerald-900 transition-colors" />
+              <span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 group-hover:max-w-xs group-hover:opacity-100 group-hover:ml-2 text-xs font-semibold text-emerald-950 transition-all duration-300 ease-in-out">
+                Manage Orders
+              </span>
+            </button>
           </Link>
 
-          <Link href="/admin/assignments">
-            <Button
-              variant="outline"
-              size="sm"
-              icon={<UserCheck className="h-3.5 w-3.5 text-blue-600" />}
-              className="border-blue-200 bg-blue-50/60 hover:bg-blue-100 text-blue-900 font-semibold"
+          {/* 5. Distribute Leads */}
+          <Link href="/admin/assignments" title="Distribute Leads">
+            <button
+              className="group relative flex items-center h-9 px-2.5 rounded-xl border border-blue-200/80 bg-blue-50/70 text-blue-950 shadow-2xs hover:border-blue-300 hover:bg-blue-100/80 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-600/20"
+              aria-label="Distribute Leads"
             >
-              Distribute Leads
-            </Button>
+              <UserCheck className="h-4 w-4 shrink-0 text-blue-600 group-hover:text-blue-800 transition-colors" />
+              <span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 group-hover:max-w-xs group-hover:opacity-100 group-hover:ml-2 text-xs font-semibold text-blue-950 transition-all duration-300 ease-in-out">
+                Distribute Leads
+              </span>
+            </button>
           </Link>
         </div>
       </div>
