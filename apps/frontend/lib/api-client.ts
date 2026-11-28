@@ -11,15 +11,41 @@ export const apiClient = axios.create({
   timeout: 15000,
 });
 
-// Strictly in-memory access token storage (OWASP compliant: zero tokens in localStorage)
-let accessToken: string | null = null;
+// Persistent access token storage with in-memory caching
+const TOKEN_STORAGE_KEY = 'mel_access_token';
+let inMemoryToken: string | null = null;
 
 export function setAccessToken(token: string | null) {
-  accessToken = token;
+  inMemoryToken = token;
+  if (typeof window !== 'undefined') {
+    try {
+      if (token) {
+        localStorage.setItem(TOKEN_STORAGE_KEY, token);
+      } else {
+        localStorage.removeItem(TOKEN_STORAGE_KEY);
+      }
+    } catch {
+      // Ignore storage errors (e.g. private mode)
+    }
+  }
 }
 
 export function getAccessToken(): string | null {
-  return accessToken;
+  if (inMemoryToken) {
+    return inMemoryToken;
+  }
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem(TOKEN_STORAGE_KEY);
+      if (stored) {
+        inMemoryToken = stored;
+        return stored;
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  }
+  return null;
 }
 
 // Request Interceptor: Attach Bearer Token
@@ -34,23 +60,39 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error),
 );
 
-// Refresh token queue to prevent duplicate refresh calls
-let isRefreshing = false;
-let failedQueue: Array<{
-  resolve: (value?: unknown) => void;
-  reject: (reason?: unknown) => void;
-}> = [];
+// Shared singleton refresh promise to prevent concurrent /auth/refresh theft-detection conflicts
+let refreshPromise: Promise<string | null> | null = null;
 
-const processQueue = (error: any, token: string | null = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
+export async function refreshAuthToken(): Promise<string | null> {
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  refreshPromise = (async () => {
+    try {
+      const refreshResponse = await axios.post(
+        `${API_BASE_URL}/auth/refresh`,
+        {},
+        { withCredentials: true },
+      );
+
+      const newAccessToken = refreshResponse.data?.accessToken;
+      if (newAccessToken) {
+        setAccessToken(newAccessToken);
+        return newAccessToken;
+      }
+      setAccessToken(null);
+      return null;
+    } catch (refreshError) {
+      setAccessToken(null);
+      throw refreshError;
+    } finally {
+      refreshPromise = null;
     }
-  });
-  failedQueue = [];
-};
+  })();
+
+  return refreshPromise;
+}
 
 // Response Interceptor: Handle 401 & Silent Token Rotation
 apiClient.interceptors.response.use(
@@ -58,48 +100,28 @@ apiClient.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/login') && !originalRequest.url?.includes('/auth/refresh')) {
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        })
-          .then((token) => {
-            if (originalRequest.headers) {
-              originalRequest.headers.Authorization = `Bearer ${token}`;
-            }
-            return apiClient(originalRequest);
-          })
-          .catch((err) => Promise.reject(err));
-      }
-
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !originalRequest.url?.includes('/auth/login') &&
+      !originalRequest.url?.includes('/auth/refresh')
+    ) {
       originalRequest._retry = true;
-      isRefreshing = true;
 
       try {
-        const refreshResponse = await axios.post(
-          `${API_BASE_URL}/auth/refresh`,
-          {},
-          { withCredentials: true },
-        );
-
-        const newAccessToken = refreshResponse.data?.accessToken;
+        const newAccessToken = await refreshAuthToken();
         if (newAccessToken) {
-          setAccessToken(newAccessToken);
-          processQueue(null, newAccessToken);
           if (originalRequest.headers) {
             originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
           }
           return apiClient(originalRequest);
         }
       } catch (refreshError) {
-        processQueue(refreshError, null);
         setAccessToken(null);
         if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
           window.location.href = '/login?expired=true';
         }
         return Promise.reject(refreshError);
-      } finally {
-        isRefreshing = false;
       }
     }
 

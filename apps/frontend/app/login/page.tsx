@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, Suspense, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '../../context/auth-context';
 import { Button } from '../../components/ui/button';
 import {
@@ -137,9 +137,16 @@ const SEEDED_PERSONAS: SeededPersona[] = [
 ];
 
 function LoginContent() {
-  const { login } = useAuth();
+  const { login, user, isAuthenticated, isLoading: authLoading, getPanelRoute } = useAuth();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const isExpired = searchParams?.get('expired') === 'true';
+
+  useEffect(() => {
+    if (!authLoading && isAuthenticated && user && !isExpired) {
+      router.replace(getPanelRoute(user.role));
+    }
+  }, [authLoading, isAuthenticated, user, isExpired, router, getPanelRoute]);
 
   const [email, setEmail] = useState('admin@melayurveda.com');
   const [password, setPassword] = useState('Melayurveda@Admin2026!');

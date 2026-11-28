@@ -2,7 +2,10 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiClient, setAccessToken, getAccessToken, getErrorMessage } from '../lib/api-client';
+import { apiClient, setAccessToken, getAccessToken, refreshAuthToken, getErrorMessage } from '../lib/api-client';
+
+const USER_STORAGE_KEY = 'mel_user_profile';
+const TOKEN_STORAGE_KEY = 'mel_access_token';
 
 export type RoleType =
   | 'SUPER_ADMIN'
@@ -69,19 +72,46 @@ export function getPanelRoute(role?: RoleType): string {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [user, setUser] = useState<UserProfile | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(USER_STORAGE_KEY);
+        if (saved) return JSON.parse(saved);
+      } catch {
+        // Ignore JSON parse errors
+      }
+    }
+    return null;
+  });
+
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const savedUser = localStorage.getItem(USER_STORAGE_KEY);
+        const savedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+        if (savedUser && savedToken) {
+          return false; // Already hydrated synchronously!
+        }
+      } catch {}
+    }
+    return true;
+  });
+
   const router = useRouter();
 
   const refreshUser = useCallback(async () => {
     let token = getAccessToken();
     if (!token) {
       try {
-        const refreshRes = await apiClient.post('/auth/refresh');
-        token = refreshRes.data?.accessToken;
-        if (token) setAccessToken(token);
+        token = await refreshAuthToken();
       } catch {
         setUser(null);
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.removeItem(USER_STORAGE_KEY);
+            localStorage.removeItem(TOKEN_STORAGE_KEY);
+          } catch {}
+        }
         setIsLoading(false);
         return;
       }
@@ -89,6 +119,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (!token) {
       setUser(null);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.removeItem(USER_STORAGE_KEY);
+          localStorage.removeItem(TOKEN_STORAGE_KEY);
+        } catch {}
+      }
       setIsLoading(false);
       return;
     }
@@ -96,15 +132,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await apiClient.get('/auth/me');
       setUser(res.data);
-    } catch {
-      setUser(null);
-      setAccessToken(null);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(res.data));
+        } catch {}
+      }
+    } catch (err: any) {
+      // Only clear credentials if backend explicitly reports 401 unauthorized
+      if (err?.response?.status === 401) {
+        setUser(null);
+        setAccessToken(null);
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.removeItem(USER_STORAGE_KEY);
+            localStorage.removeItem(TOKEN_STORAGE_KEY);
+          } catch {}
+        }
+      }
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    // Synchronously ensure state is populated from localStorage on client mount
+    if (typeof window !== 'undefined') {
+      try {
+        const savedUser = localStorage.getItem(USER_STORAGE_KEY);
+        const savedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+        if (savedUser && savedToken) {
+          setUser((prev) => prev || JSON.parse(savedUser));
+          setIsLoading(false);
+        }
+      } catch {}
+    }
     refreshUser();
   }, [refreshUser]);
 
@@ -115,6 +176,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setAccessToken(accessToken);
       setUser(loggedUser);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(loggedUser));
+        } catch {}
+      }
 
       const targetPath = getPanelRoute(loggedUser.role);
       router.push(targetPath);
@@ -146,6 +212,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setAccessToken(null);
       setUser(null);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.removeItem(USER_STORAGE_KEY);
+          localStorage.removeItem(TOKEN_STORAGE_KEY);
+        } catch {}
+      }
       router.push('/login');
     }
   };
