@@ -66,6 +66,7 @@ const CORE_DISEASE_CATEGORIES = [
   { id: 'Men’s Wellness', label: 'Men’s Wellness', sub: 'Amrit Plus, ling Taila, Shilajit, Horse', icon: '⚡' },
   { id: 'Weight Loss', label: 'Weight Loss', sub: 'Fibrolax, Smartlook, Obenew', icon: '⚖️' },
   { id: 'Piles', label: 'Piles / Gas Acidity', sub: 'Suruchi, Arsh Amrit, Jatyadi Malam', icon: '🩹' },
+  { id: 'Alcohol Addiction', label: 'Alcohol Addiction', sub: 'No More Granules, Hepcure, Red & White', icon: '🍷' },
 ];
 
 const FALLBACK_PRODUCTS = [
@@ -321,6 +322,39 @@ const FALLBACK_PRODUCTS = [
     mrpPrice: 500,
     sellingPrice: 380,
     description: 'Classical Jatyadi healing ointment that provides rapid soothing relief from burning sensations, fissure tears and wounds.',
+  },
+  // -------------------------------------------------------------
+  // 7. Alcohol Addiction Products
+  // -------------------------------------------------------------
+  {
+    id: 'prod-alc-01',
+    sku: 'MEL-ALC-NOMORE-01',
+    name: 'No More Granules',
+    targetDisease: 'Alcohol Addiction',
+    dosageForm: 'Herbal Granules (100g)',
+    mrpPrice: 1250,
+    sellingPrice: 950,
+    description: 'Natural Ayurvedic anti-craving herbal granules formulated to suppress alcoholic urges, detoxify brain neurotransmitters, and establish natural sobriety.',
+  },
+  {
+    id: 'prod-alc-02',
+    sku: 'MEL-ALC-HEPCUR-02',
+    name: 'Hepcure Tablet',
+    targetDisease: 'Alcohol Addiction',
+    dosageForm: 'Tablets (60 Tabs)',
+    mrpPrice: 1100,
+    sellingPrice: 850,
+    description: 'High-potency hepato-protective Ayurvedic formulation to repair liver damage, cleanse alcohol toxins, stimulate bile secretion, and restore healthy liver function.',
+  },
+  {
+    id: 'prod-alc-03',
+    sku: 'MEL-ALC-REDWHT-03',
+    name: 'Red & White Tablet',
+    targetDisease: 'Alcohol Addiction',
+    dosageForm: 'Tablets (60 Tabs / Day-Night Combo)',
+    mrpPrice: 1450,
+    sellingPrice: 1150,
+    description: 'Synergistic dual-tablet Ayurvedic regimen. Red tablet calms daytime withdrawal anxiety and cravings; White tablet soothes the nervous system, prevents nighttime restlessness, and induces restorative sleep.',
   },
 ];
 
@@ -874,7 +908,7 @@ export function CreateOrderModal({ isOpen, onClose, lead, onOrderCreated }: Crea
             {/* Disease Categories Chips */}
             <div
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-              className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden"
+              className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden"
             >
               {CORE_DISEASE_CATEGORIES.map((dis) => {
                 const isSelected = selectedDisease === dis.id;

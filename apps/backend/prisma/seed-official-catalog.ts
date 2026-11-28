@@ -343,6 +343,48 @@ const OFFICIAL_CATALOG: ProductDef[] = [
     dosageInstructions: 'Apply locally in the affected anal area before and after bowel movements.',
     initialStock: 260,
   },
+  // -------------------------------------------------------------
+  // 7. Alcohol Addiction Products
+  // -------------------------------------------------------------
+  {
+    name: 'No More Granules',
+    sku: 'MEL-ALC-NOMORE-01',
+    categoryName: 'Alcohol Addiction',
+    targetDisease: 'Alcohol Addiction',
+    dosageForm: 'Herbal Granules (100g)',
+    mrpPrice: 1250.0,
+    sellingPrice: 950.0,
+    description: 'Natural Ayurvedic anti-craving herbal granules formulated to suppress alcoholic urges, detoxify brain neurotransmitters, and establish natural sobriety without side effects.',
+    ingredients: 'Kudzu root (Vidarikand), Shankhpushpi, Brahmi, Ashwagandha, Jyotishmati, Yashtimadhu, Tulsi',
+    dosageInstructions: 'Take 5g granules twice daily with water or mixed in food/milk.',
+    initialStock: 200,
+  },
+  {
+    name: 'Hepcure Tablet',
+    sku: 'MEL-ALC-HEPCUR-02',
+    categoryName: 'Alcohol Addiction',
+    targetDisease: 'Alcohol Addiction',
+    dosageForm: 'Tablets (60 Tabs)',
+    mrpPrice: 1100.0,
+    sellingPrice: 850.0,
+    description: 'High-potency hepato-protective Ayurvedic formulation to repair liver damage, cleanse alcohol toxins, stimulate bile secretion, and restore healthy liver function.',
+    ingredients: 'Bhumi Amla, Kalmegh, Punarnava, Kutki, Kasani, Bhringraj, Giloy, Sharpunkha',
+    dosageInstructions: 'Take 1 to 2 tablets twice daily after meals with water.',
+    initialStock: 200,
+  },
+  {
+    name: 'Red & White Tablet',
+    sku: 'MEL-ALC-REDWHT-03',
+    categoryName: 'Alcohol Addiction',
+    targetDisease: 'Alcohol Addiction',
+    dosageForm: 'Tablets (60 Tabs / Day-Night Combo)',
+    mrpPrice: 1450.0,
+    sellingPrice: 1150.0,
+    description: 'Synergistic dual-tablet Ayurvedic regimen. Red tablet calms morning alcohol withdrawal anxiety and cravings; White tablet soothes the nervous system, prevents nighttime restlessness, and induces restorative sleep.',
+    ingredients: 'Sarpagandha, Jatamansi, Tagara, Vacha, Shuddha Shilajit, Mukta Bhasma, Brahmi, Shankhpushpi',
+    dosageInstructions: 'Take 1 Red Tablet in the morning after breakfast and 1 White Tablet at night before sleep with water or milk.',
+    initialStock: 200,
+  },
 ];
 
 async function seedOfficialCatalog() {
