@@ -527,16 +527,16 @@ export default function StaffActivityPage() {
           <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-100/80 text-[11px] font-bold uppercase tracking-wider text-slate-700">
-                  <th className="py-3.5 px-5">Staff Member</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">Department / Role</th>
-                  <th className="py-3.5 px-4 text-center whitespace-nowrap">Leads Assigned</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">Calls & Talk Time</th>
-                  <th className="py-3.5 px-4 text-center whitespace-nowrap">Orders</th>
-                  <th className="py-3.5 px-4 text-right whitespace-nowrap">Realized Sales (₹)</th>
-                  <th className="py-3.5 px-5 whitespace-nowrap">Monthly Quota / Output</th>
-                  <th className="py-3.5 px-4 text-right whitespace-nowrap">Earned Incentive</th>
-                  <th className="py-3.5 px-4 text-center whitespace-nowrap">Dossier</th>
+                <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                  <th className="py-3 px-5 whitespace-nowrap">Staff Member</th>
+                  <th className="py-3 px-4 whitespace-nowrap">Department / Role</th>
+                  <th className="py-3 px-4 text-center whitespace-nowrap">Leads Assigned</th>
+                  <th className="py-3 px-4 whitespace-nowrap">Calls & Talk Time</th>
+                  <th className="py-3 px-4 text-center whitespace-nowrap">Orders</th>
+                  <th className="py-3 px-4 text-right whitespace-nowrap">Realized Sales (₹)</th>
+                  <th className="py-3 px-5 whitespace-nowrap">Monthly Quota / Output</th>
+                  <th className="py-3 px-4 text-right whitespace-nowrap">Earned Incentive</th>
+                  <th className="py-3 px-4 text-center whitespace-nowrap">Dossier</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -547,12 +547,12 @@ export default function StaffActivityPage() {
                   return (
                     <tr
                       key={staff.id}
-                      className="hover:bg-emerald-50/40 transition-colors group"
+                      className="hover:bg-slate-50/80 transition-colors group"
                     >
                       {/* 1. Staff Member Avatar + Name */}
-                      <td className="py-3.5 px-5">
+                      <td className="py-3 px-5 whitespace-nowrap">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-emerald-100 group-hover:text-emerald-900 group-hover:border-emerald-300 transition">
+                          <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200/80 text-emerald-900 flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs group-hover:bg-[#0f3822] group-hover:text-amber-300 group-hover:border-emerald-800 transition-all">
                             {staff.name
                               ?.split(' ')
                               .map((n: string) => n[0])
@@ -560,15 +560,15 @@ export default function StaffActivityPage() {
                               .toUpperCase() || 'EMP'}
                           </div>
                           <div>
-                            <div className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
-                              {staff.name}
+                            <div className="font-bold text-slate-900 text-xs flex items-center gap-1.5 whitespace-nowrap">
+                              <span>{staff.name}</span>
                               {!staff.isActive && (
-                                <span className="text-[10px] text-rose-600 bg-rose-50 px-1 rounded border border-rose-200">
+                                <span className="text-[10px] text-rose-600 bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200">
                                   Inactive
                                 </span>
                               )}
                             </div>
-                            <span className="font-mono text-[11px] text-slate-500 block">
+                            <span className="font-mono text-[11px] font-semibold text-slate-500 whitespace-nowrap block mt-0.5">
                               {staff.employeeCode}
                             </span>
                           </div>
@@ -576,44 +576,50 @@ export default function StaffActivityPage() {
                       </td>
 
                       {/* 2. Department / Role Badge */}
-                      <td className="py-3.5 px-4">
+                      <td className="py-3 px-4 whitespace-nowrap">
                         {getRoleBadge(staff.role)}
                       </td>
 
                       {/* 3. Leads Assigned */}
-                      <td className="py-3.5 px-4 text-center">
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
                         {staff.leadsAssigned > 0 ? (
-                          <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 font-mono font-bold text-emerald-900 text-xs shadow-2xs">
+                          <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200/90 font-mono font-bold text-emerald-900 text-xs shadow-2xs">
                             {staff.leadsAssigned}
                           </span>
                         ) : (
-                          <span className="text-xs font-mono text-slate-300 font-medium">0</span>
+                          <span className="text-xs font-mono text-slate-300 font-medium">—</span>
                         )}
                       </td>
 
                       {/* 4. Calls & Talk Time */}
-                      <td className="py-3.5 px-4">
+                      <td className="py-3 px-4 whitespace-nowrap">
                         {staff.callsCount > 0 ? (
                           <div className="flex flex-col">
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-mono font-extrabold text-slate-900 text-xs">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-bold text-slate-900 text-xs">
                                 {staff.callsCount} calls
                               </span>
-                              <span className="text-[10px] font-mono font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 shadow-2xs">
+                              <span className="text-[10px] font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 shadow-2xs">
                                 {formatDuration(staff.callDurationSeconds || 0)}
                               </span>
                             </div>
-                            <div className="flex items-center gap-1.5 mt-1 text-[10px] text-slate-500 font-mono">
-                              <span className="text-emerald-700 font-bold">{staff.callOutcomes?.INTERESTED || 0} Int</span>
-                              <span>•</span>
-                              <span className="text-amber-700 font-bold">{staff.callOutcomes?.FOLLOW_UP_REQUIRED || 0} F/U</span>
-                              <span>•</span>
-                              <span className="text-rose-600 font-bold">{staff.callOutcomes?.NOT_INTERESTED || 0} Rej</span>
+                            <div className="flex items-center gap-1.5 mt-1 text-[10px] font-mono">
+                              <span className="text-emerald-700 bg-emerald-50/80 px-1.5 py-0.5 rounded border border-emerald-200 font-semibold">
+                                {staff.callOutcomes?.INTERESTED || 0} Interested
+                              </span>
+                              <span className="text-amber-800 bg-amber-50/80 px-1.5 py-0.5 rounded border border-amber-200 font-semibold">
+                                {staff.callOutcomes?.FOLLOW_UP_REQUIRED || 0} Follow-up
+                              </span>
+                              {staff.callOutcomes?.NOT_INTERESTED > 0 && (
+                                <span className="text-rose-600 bg-rose-50/80 px-1.5 py-0.5 rounded border border-rose-200 font-semibold">
+                                  {staff.callOutcomes?.NOT_INTERESTED} Rejected
+                                </span>
+                              )}
                             </div>
                           </div>
                         ) : (
                           <div className="flex items-center gap-1.5 text-slate-400">
-                            <span className="font-mono text-xs">0 calls</span>
+                            <span className="font-mono text-xs text-slate-400">0 calls</span>
                             <span className="text-[10px] font-mono text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
                               0m
                             </span>
@@ -622,44 +628,44 @@ export default function StaffActivityPage() {
                       </td>
 
                       {/* 5. Orders Booked */}
-                      <td className="py-3.5 px-4 text-center">
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
                         {staff.ordersCount > 0 ? (
-                          <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-300 font-mono font-extrabold text-amber-900 text-xs shadow-2xs">
+                          <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-300/80 font-mono font-black text-amber-900 text-xs shadow-2xs">
                             {staff.ordersCount}
                           </span>
                         ) : (
-                          <span className="text-xs font-mono text-slate-300 font-medium">0</span>
+                          <span className="text-xs font-mono text-slate-300 font-medium">—</span>
                         )}
                       </td>
 
                       {/* 6. Realized Sales */}
-                      <td className="py-3.5 px-4 text-right">
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
                         {staff.revenueRealized > 0 ? (
-                          <div>
-                            <span className="font-mono font-extrabold text-emerald-800 text-xs block">
+                          <div className="flex flex-col items-end">
+                            <span className="font-mono font-black text-emerald-800 text-xs block">
                               {formatCurrency(staff.revenueRealized)}
                             </span>
                             {staff.conversionRate > 0 && (
-                              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200 inline-block mt-0.5 font-mono">
+                              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 inline-block mt-0.5 font-mono shadow-2xs">
                                 {staff.conversionRate}% close
                               </span>
                             )}
                           </div>
                         ) : (
-                          <span className="text-xs font-mono text-slate-300 font-medium">₹0</span>
+                          <span className="text-xs font-mono text-slate-300 font-medium block text-right">—</span>
                         )}
                       </td>
 
                       {/* 7. Monthly Quota / Output (Intelligent Role-specific) */}
-                      <td className="py-3.5 px-5">
+                      <td className="py-3 px-5 whitespace-nowrap">
                         {isSales ? (
-                          <div className="min-w-[170px]">
+                          <div className="min-w-[160px]">
                             <div className="flex items-center justify-between text-[11px] mb-1 font-mono">
-                              <span className="font-bold text-slate-800">
-                                {formatCurrency(staff.monthlyAchieved || 0)}
+                              <span className="text-slate-600 font-semibold text-[11px]">
+                                Target: {formatCurrency(staff.monthlyTarget || 100000)}
                               </span>
                               <span
-                                className={`font-bold px-1.5 py-0.2 rounded text-[10px] ${
+                                className={`font-bold px-1.5 py-0.5 rounded text-[10px] ${
                                   staff.monthlyQuotaPercentage >= 100
                                     ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                                     : staff.monthlyQuotaPercentage >= 50
@@ -670,21 +676,18 @@ export default function StaffActivityPage() {
                                 {staff.monthlyQuotaPercentage || 0}%
                               </span>
                             </div>
-                            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200">
+                            <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200/80">
                               <div
                                 className={`h-full transition-all duration-300 ${
                                   staff.monthlyQuotaPercentage >= 100
-                                    ? 'bg-emerald-600'
+                                    ? 'bg-gradient-to-r from-emerald-500 to-emerald-600'
                                     : staff.monthlyQuotaPercentage >= 50
-                                    ? 'bg-amber-500'
-                                    : 'bg-rose-400'
+                                    ? 'bg-gradient-to-r from-amber-400 to-amber-500'
+                                    : 'bg-slate-300'
                                 }`}
                                 style={{ width: `${quotaPct}%` }}
                               />
                             </div>
-                            <span className="text-[10px] text-slate-400 font-mono block mt-0.5">
-                              Quota: {formatCurrency(staff.monthlyTarget || 100000)}
-                            </span>
                           </div>
                         ) : (
                           <div className="text-slate-500 text-xs">
@@ -722,29 +725,29 @@ export default function StaffActivityPage() {
                       </td>
 
                       {/* 8. Earned Incentive */}
-                      <td className="py-3.5 px-4 text-right">
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
                         {staff.totalIncentive > 0 ? (
                           <div className="inline-flex flex-col items-end">
-                            <span className="font-mono font-extrabold text-xs px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-950 border border-amber-300 shadow-2xs whitespace-nowrap">
+                            <span className="font-mono font-black text-xs px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-50 to-amber-100/90 text-amber-950 border border-amber-300/90 shadow-2xs whitespace-nowrap">
                               {formatCurrency(staff.totalIncentive)}
                             </span>
-                            <span className="text-[10px] text-slate-400 font-mono mt-0.5 whitespace-nowrap">
-                              Base ₹{staff.baseIncentive}
+                            <span className="text-[10px] text-slate-500 font-mono mt-0.5 whitespace-nowrap">
+                              Base {formatCurrency(staff.baseIncentive || 0)}
                               {(staff.milestoneBonus || 0) + (staff.activityBonus || 0) > 0 &&
-                                ` + Bonus ₹${(staff.milestoneBonus || 0) + (staff.activityBonus || 0)}`}
+                                ` + Bonus ${formatCurrency((staff.milestoneBonus || 0) + (staff.activityBonus || 0))}`}
                             </span>
                           </div>
                         ) : (
-                          <span className="text-xs font-mono font-bold text-slate-300">₹0</span>
+                          <span className="text-xs font-mono font-medium text-slate-300 block text-right">—</span>
                         )}
                       </td>
 
                       {/* 9. Action: Inspect Dossier */}
-                      <td className="py-3.5 px-4 text-center">
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
                         <button
                           type="button"
                           onClick={() => setDrawerStaff(staff)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white hover:bg-emerald-800 text-slate-700 hover:text-white border border-slate-300 hover:border-emerald-700 text-xs font-bold transition shadow-2xs cursor-pointer group/btn select-none"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-[#0f3822] text-slate-700 hover:text-white border border-slate-200 hover:border-[#0f3822] text-xs font-bold transition-all shadow-2xs cursor-pointer group/btn select-none"
                           title="Open detailed day log dossier"
                         >
                           <span>Inspect</span>
