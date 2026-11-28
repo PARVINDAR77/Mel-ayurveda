@@ -28,7 +28,7 @@ import {
   Boxes,
 } from 'lucide-react';
 
-export default function FollowUpsAgendaPage() {
+function FollowUpsAgendaContent() {
   const searchParams = useSearchParams();
   const initialTab = searchParams.get('tab') || 'ALL';
 
@@ -519,5 +519,19 @@ export default function FollowUpsAgendaPage() {
         }
       />
     </div>
+  );
+}
+
+export default function FollowUpsAgendaPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="flex h-64 w-full items-center justify-center p-8 text-center text-slate-400 text-xs font-mono">
+          Loading follow-ups agenda...
+        </div>
+      }
+    >
+      <FollowUpsAgendaContent />
+    </React.Suspense>
   );
 }

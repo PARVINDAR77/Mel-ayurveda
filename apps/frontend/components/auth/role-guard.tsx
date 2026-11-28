@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth, RoleType, getPanelRoute } from '../../context/auth-context';
-import { ShieldAlert, Loader2 } from 'lucide-react';
+import { ShieldAlert } from 'lucide-react';
 
 interface RoleGuardProps {
   allowedRoles: RoleType[];
@@ -13,19 +13,32 @@ interface RoleGuardProps {
 export function RoleGuard({ allowedRoles, children }: RoleGuardProps) {
   const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && !isLoading && !isAuthenticated) {
       router.push('/login');
     }
-  }, [isLoading, isAuthenticated, router]);
+  }, [mounted, isLoading, isAuthenticated, router]);
 
-  if (isLoading) {
+  // Before client hydration mounts, render children so SSR includes page shell and never flashes raw unstyled text
+  if (!mounted) {
+    return <>{children}</>;
+  }
+
+  // If client has mounted and still verifying without cached user, render sleek dark luxury loader
+  if (isLoading && !user) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-slate-50">
+      <div className="flex h-screen w-full items-center justify-center bg-[#071912] text-slate-100">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-forest-800" />
-          <p className="text-sm font-medium text-slate-600">Verifying security credentials...</p>
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+          <p className="text-xs font-semibold text-amber-300 font-mono tracking-wider">
+            Mel Ayurveda Enterprise Security
+          </p>
         </div>
       </div>
     );
@@ -51,7 +64,7 @@ export function RoleGuard({ allowedRoles, children }: RoleGuardProps) {
           <div className="mt-6 flex flex-col gap-2">
             <button
               onClick={() => router.push(getPanelRoute(user.role))}
-              className="w-full rounded-lg bg-forest-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-forest-900 shadow-sm"
+              className="w-full rounded-lg bg-[#0f3822] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#154d2f] shadow-sm"
             >
               Return to My Panel ({user.role})
             </button>
