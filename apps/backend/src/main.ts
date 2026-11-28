@@ -10,7 +10,14 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // Security headers & cookies
-  app.use(helmet());
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      hidePoweredBy: true,
+      xssFilter: true,
+      noSniff: true,
+    }),
+  );
   app.use(cookieParser());
 
   // CORS configuration
@@ -65,6 +72,7 @@ async function bootstrap() {
   logger.log(`Melayurveda API Server successfully listening on http://0.0.0.0:${port}${globalPrefix}`);
   logger.log(`Melayurveda CRM Core Backend running at: http://localhost:${port}/${globalPrefix.replace(/^\//, '')}`);
   logger.log(`Swagger OpenAPI Documentation available at: http://localhost:${port}/api/docs`);
+  logger.log(`🛡️ Melayurveda Enterprise WAF (Web Application Firewall) Active: Bot Shield, Anti-Scraping, SQLi/XSS Filters, Brute-Force IP Ban`);
 }
 
 bootstrap();

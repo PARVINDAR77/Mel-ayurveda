@@ -13,6 +13,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { LoginResponseDto, UserSummaryDto } from './dto/auth-response.dto';
 import { verifyPassword, generateSecureToken, hashToken } from '../../common/utils/password.util';
+import { WafService } from '../waf/waf.service';
 
 const HTTP_STATUS_LOCKED = 423;
 
@@ -24,6 +25,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly wafService: WafService,
   ) {}
 
   /**
@@ -59,6 +61,19 @@ export class AuthService {
     userAgent: string,
     res: Response,
   ): Promise<LoginResponseDto> {
+    // WAF IP-Level Brute-Force Check
+    const ipBan = this.wafService.isIpBanned(ipAddress);
+    if (ipBan.isBanned) {
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.TOO_MANY_REQUESTS,
+          error: 'WafIpBanned',
+          message: `Melayurveda WAF: Your IP [${ipAddress}] is temporarily banned: ${ipBan.reason}. Retry in ${ipBan.remainingSeconds || 0} seconds.`,
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
     const normalizedEmail = dto.email.trim().toLowerCase();
 
     const user = await this.prisma.user.findUnique({
@@ -67,6 +82,13 @@ export class AuthService {
 
     if (!user) {
       this.logger.warn(`Failed login attempt for nonexistent user: ${normalizedEmail} from ${ipAddress}`);
+      const wafBan = this.wafService.recordFailedAuth(ipAddress, 'NONEXISTENT_USER');
+      if (wafBan.isBanned) {
+        throw new HttpException(
+          'Melayurveda WAF: Too many failed login attempts. Your IP has been temporarily banned for 15 minutes.',
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
       throw new UnauthorizedException('Invalid email or password');
     }
 
@@ -102,6 +124,14 @@ export class AuthService {
 
     const isPasswordValid = await verifyPassword(user.passwordHash, dto.password);
     if (!isPasswordValid) {
+      const wafBan = this.wafService.recordFailedAuth(ipAddress, 'INVALID_PASSWORD');
+      if (wafBan.isBanned) {
+        throw new HttpException(
+          'Melayurveda WAF: Too many failed login attempts. Your IP has been temporarily banned for 15 minutes.',
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+
       const newFailedAttempts = (user.failedLoginAttempts || 0) + 1;
 
       // Lockout threshold: 5 consecutive failed attempts
@@ -231,6 +261,9 @@ export class AuthService {
         },
       });
     });
+
+    // WAF: Reset failed login count on successful authentication
+    this.wafService.recordSuccessfulAuth(ipAddress);
 
     // Set secure HttpOnly cookie for refresh token
     const isProduction = this.configService.get<string>('NODE_ENV') === 'production';

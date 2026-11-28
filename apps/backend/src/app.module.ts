@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
@@ -23,6 +23,8 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { AuditModule } from './modules/audit/audit.module';
 import { CustomerFollowupsModule } from './modules/customer-followups/customer-followups.module';
 import { RecycleBinModule } from './modules/recycle-bin/recycle-bin.module';
+import { WafModule } from './modules/waf/waf.module';
+import { WafMiddleware } from './modules/waf/waf.middleware';
 
 @Module({
   imports: [
@@ -57,6 +59,7 @@ import { RecycleBinModule } from './modules/recycle-bin/recycle-bin.module';
     AuditModule,
     CustomerFollowupsModule,
     RecycleBinModule,
+    WafModule,
   ],
   providers: [
     {
@@ -65,5 +68,9 @@ import { RecycleBinModule } from './modules/recycle-bin/recycle-bin.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(WafMiddleware).forRoutes('*');
+  }
+}
 

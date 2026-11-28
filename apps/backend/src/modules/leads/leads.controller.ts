@@ -18,6 +18,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { RoleType } from '@prisma/client';
+import { WafAntiScrapingGuard } from '../waf/waf-anti-scraping.guard';
 
 @ApiTags('Lead Management & Intake (Bundle 05)')
 @ApiBearerAuth()
@@ -55,6 +56,7 @@ export class LeadsController {
   }
 
   @Get()
+  @UseGuards(WafAntiScrapingGuard)
   @Roles(RoleType.SUPER_ADMIN, RoleType.MANAGEMENT, RoleType.SALESPERSON)
   @ApiOperation({ summary: 'List leads (Salesperson views assigned only with sources strictly hidden)' })
   @ApiResponse({ status: 200, description: 'Leads returned' })

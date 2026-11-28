@@ -20,6 +20,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { RoleType } from '@prisma/client';
+import { WafAntiScrapingGuard } from '../waf/waf-anti-scraping.guard';
 
 @ApiTags('Customer CRM & Conversion Engine (Bundle 11)')
 @ApiBearerAuth()
@@ -70,6 +71,7 @@ export class CustomersController {
   }
 
   @Get()
+  @UseGuards(WafAntiScrapingGuard)
   @Roles(RoleType.MANAGEMENT, RoleType.SUPER_ADMIN)
   @ApiOperation({ summary: 'List customer CRM profiles with search and pagination' })
   @ApiResponse({ status: 200, description: 'Customers returned' })
